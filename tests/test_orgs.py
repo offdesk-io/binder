@@ -161,3 +161,14 @@ def test_value_estimate_must_be_finite_and_not_negative(client):
 def test_unknown_sort_is_422(client):
     assert client.get("/api/orgs?sort=bogus").status_code == 422
     assert client.get("/api/orgs?sort=name").status_code == 200
+
+
+def test_website_must_be_http_or_bare(client, org):
+    assert client.post("/api/orgs", json={"name": "A", "website": "javascript:alert(1)"}).status_code == 422
+    assert client.post("/api/orgs", json={"name": "B", "website": "https://example.com"}).status_code == 201
+    assert client.post("/api/orgs", json={"name": "C", "website": "example.com"}).status_code == 201
+    assert client.post("/api/orgs", json={"name": "D", "website": "localhost:3000"}).status_code == 201
+    bad = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "website": "data:text/html,x"})
+    assert bad.status_code == 422
+    ok = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "website": None})
+    assert ok.status_code == 200

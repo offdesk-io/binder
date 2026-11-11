@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   ago, day, fromLocalInput, isOverdue, label, money, person, REASON_TEXT, statusLine, statusTone,
-  toLocalInput, todayIso, webHref,
+  toLocalInput, todayIso, safeHref,
 } from './format'
 
 describe('format', () => {
@@ -61,8 +61,15 @@ describe('format', () => {
   test('people, links and status lines', () => {
     expect(person('ana@example.com')).toBe('ana')
     expect(person(null)).toBe('No owner')
-    expect(webHref('acme.example.com')).toBe('https://acme.example.com')
-    expect(webHref('http://acme.example.com')).toBe('http://acme.example.com')
+    expect(safeHref('acme.example.com')).toBe('https://acme.example.com')
+    expect(safeHref('http://acme.example.com')).toBe('http://acme.example.com')
+    expect(safeHref('localhost:3000')).toBe('https://localhost:3000')
+    expect(safeHref(' HTTPS://Acme.example.com ')).toBe('HTTPS://Acme.example.com')
+    expect(safeHref('javascript:alert(1)')).toBeNull()
+    expect(safeHref('  JaVaScRiPt:alert(1)')).toBeNull()
+    expect(safeHref('data:text/html,hi')).toBeNull()
+    expect(safeHref('')).toBeNull()
+    expect(safeHref(null)).toBeNull()
     expect(statusLine(null, 'lead')).toBe('Added as Lead')
     expect(statusLine('lead', 'contacted')).toBe('Moved from Lead to Contacted')
     expect(REASON_TEXT.quiet).toBe('No contact in 14 days')

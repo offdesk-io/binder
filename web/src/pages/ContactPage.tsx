@@ -7,7 +7,7 @@ import { ContactForm } from '../components/ContactForm'
 import { InteractionEntry } from '../components/InteractionEntry'
 import { Loading } from '../components/Loading'
 import { QuickLog } from '../components/QuickLog'
-import { label } from '../lib/format'
+import { label, safeHref } from '../lib/format'
 import { useApi } from '../lib/useApi'
 
 export function ContactPage() {
@@ -26,12 +26,13 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
   const [editing, setEditing] = useState(false)
   const [logging, setLogging] = useState(false)
 
+  const linkedin = safeHref(c.linkedin_url)
   const names = new Map((people.data ?? []).map((p) => [p.id, p.name]))
   const details: [string, ReactNode][] = (
     [
       ['Email', c.email && <a href={`mailto:${c.email}`}>{c.email}</a>],
       ['Phone', c.phone && <a href={`tel:${c.phone}`}>{c.phone}</a>],
-      ['LinkedIn', c.linkedin_url && <a href={c.linkedin_url} target="_blank" rel="noreferrer">Profile</a>],
+      ['LinkedIn', c.linkedin_url && (linkedin ? <a href={linkedin} target="_blank" rel="noreferrer">Profile</a> : c.linkedin_url)],
       ['Relationship', c.relationship && label(c.relationship)],
       ['Talk to', c.is_primary && 'Yes, the one to talk to'],
     ] as [string, ReactNode][]

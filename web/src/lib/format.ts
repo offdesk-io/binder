@@ -96,7 +96,14 @@ export function person(email: string | null | undefined): string {
   return email ? email.split('@')[0] : 'No owner'
 }
 
-/** A website as typed ("acme.com") made into a link. */
-export function webHref(url: string): string {
-  return /^https?:\/\//i.test(url) ? url : `https://${url}`
+/**
+ * A website or profile as typed ("acme.com") made into a link. Only http and
+ * https are linked; any other scheme (javascript:, data:) gives null.
+ */
+export function safeHref(url: string | null | undefined): string | null {
+  const v = (url ?? '').trim()
+  if (!v) return null
+  if (/^https?:\/\//i.test(v)) return v
+  const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) && !/^[^/:]+:\d+(\/|$)/.test(v)
+  return hasScheme ? null : `https://${v}`
 }

@@ -1,6 +1,7 @@
 """Request bodies. Responses are plain dicts from ledger/repo."""
 
 import datetime
+import re
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -42,6 +43,17 @@ def lower_email(v: Optional[str]) -> Optional[str]:
     return v.strip().lower() if v is not None else v
 
 
+def web_url(v: Optional[str]) -> Optional[str]:
+    """A website or profile address: http(s), or bare like example.com."""
+    if v is None:
+        return v
+    s = v.strip()
+    has_scheme = re.match(r"^[a-z][a-z0-9+.-]*:", s, re.I) and not re.match(r"^[^/:]+:\d+(/|$)", s)
+    if has_scheme and not re.match(r"^https?://", s, re.I):
+        raise ValueError("must be an http or https address")
+    return v
+
+
 def not_null(v):
     if v is None:
         raise ValueError("cannot be null")
@@ -66,6 +78,7 @@ class OrgCreate(_Body):
 
     _due = field_validator("next_step_due")(iso_date)
     _owner = field_validator("owner_email")(lower_email)
+    _site = field_validator("website")(web_url)
 
 
 class OrgPatch(_Body):
@@ -87,6 +100,7 @@ class OrgPatch(_Body):
     _name = field_validator("name")(not_null)
     _due = field_validator("next_step_due")(iso_date)
     _owner = field_validator("owner_email")(lower_email)
+    _site = field_validator("website")(web_url)
 
 
 class ContactCreate(_Body):
@@ -100,6 +114,7 @@ class ContactCreate(_Body):
     relationship: Optional[str] = None
 
     _email = field_validator("email")(lower_email)
+    _linkedin = field_validator("linkedin_url")(web_url)
 
 
 class ContactPatch(_Body):
@@ -115,6 +130,7 @@ class ContactPatch(_Body):
 
     _name = field_validator("name")(not_null)
     _email = field_validator("email")(lower_email)
+    _linkedin = field_validator("linkedin_url")(web_url)
 
 
 class InteractionCreate(_Body):

@@ -86,3 +86,13 @@ def test_patch_primary_clears_the_other_primary(client, org):
     got = {c["name"]: c["is_primary"] for c in client.get("/api/orgs/%d/contacts" % org["id"]).json()}
     assert got == {"A": False, "B": True}
     assert a["id"] != b["id"]
+
+
+def test_linkedin_must_be_http_or_bare(client, org):
+    url = "/api/orgs/%d/contacts" % org["id"]
+    assert client.post(url, json={"name": "A", "linkedin_url": "javascript:alert(1)"}).status_code == 422
+    assert client.post(url, json={"name": "B", "linkedin_url": "https://example.com/in/b"}).status_code == 201
+    c = add(client, org, name="C", linkedin_url="example.com/in/c")
+    p = "/api/contacts/%d" % c["id"]
+    assert client.patch(p, json={"updated_at": c["updated_at"], "linkedin_url": "data:x"}).status_code == 422
+    assert client.patch(p, json={"updated_at": c["updated_at"], "linkedin_url": None}).status_code == 200

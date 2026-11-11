@@ -39,3 +39,24 @@ test('a link that is not a number says not found without calling the API', async
   expect(await screen.findByText('Person not found')).toBeInTheDocument()
   expect(calls).toHaveLength(0)
 })
+
+test('a LinkedIn value that is not http(s) is shown as text, not a link', async () => {
+  stubFetch({
+    'GET /api/contacts/5': () => ({ ...bo, linkedin_url: 'javascript:alert(1)' }),
+    'GET /api/contacts/5/interactions': () => [],
+    'GET /api/orgs/1/contacts': () => [bo],
+  })
+  renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
+  expect(await screen.findByText('javascript:alert(1)')).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Profile' })).not.toBeInTheDocument()
+})
+
+test('a bare LinkedIn address becomes an https link', async () => {
+  stubFetch({
+    'GET /api/contacts/5': () => ({ ...bo, linkedin_url: 'linkedin.com/in/bo' }),
+    'GET /api/contacts/5/interactions': () => [],
+    'GET /api/orgs/1/contacts': () => [bo],
+  })
+  renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
+  expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute('href', 'https://linkedin.com/in/bo')
+})

@@ -9,7 +9,7 @@ import { NextStep } from '../components/OrgCard'
 import { OrgForm } from '../components/OrgForm'
 import { QuickLog } from '../components/QuickLog'
 import { StatusPicker } from '../components/StatusPicker'
-import { label, money, person, webHref } from '../lib/format'
+import { label, money, person, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -59,6 +59,8 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
     timeline.reload()
     reloadOrg() // last_contact moves
   }
+  const siteHref = safeHref(org.website)
+  const siteLink = siteHref ? <a href={siteHref} target="_blank" rel="noreferrer">{org.website}</a> : org.website
   const primary = contacts.data?.find((c) => c.is_primary)
 
   async function changeStatus(status: string) {
@@ -86,7 +88,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
         </div>
         <p className="lg-faint">
           {label(org.kind)} · owned by {person(org.owner_email)}
-          {org.website && <> · <a href={webHref(org.website)} target="_blank" rel="noreferrer">{org.website}</a></>}
+          {org.website && <> · {siteLink}</>}
         </p>
         <div className="lg-actions">
           {!phone && <Button onClick={() => setLog('new')}>Log</Button>}

@@ -7,14 +7,17 @@ so a typo cannot leave the app open. Ledger always listens on loopback only:
 dev mode has no sign-in at all, and the header mode's headers are only
 trustworthy when nginx is the only caller. Header mode also needs LEDGER_DB
 set explicitly to an absolute path.
+LEDGER_WEB is the built frontend folder (default: web/dist in the repo).
 """
 
 import os
 import zoneinfo
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping
 
 LOOPBACK = ("127.0.0.1", "::1")
+DEFAULT_WEB = str(Path(__file__).resolve().parent.parent / "web" / "dist")
 
 
 class ConfigError(Exception):
@@ -29,6 +32,7 @@ class Settings:
     port: int
     team: str
     tz: str = "Europe/London"  # the zone that decides what "today" is
+    web_dir: str = DEFAULT_WEB  # the built frontend, see ledger/web.py
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
@@ -58,4 +62,5 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         port=port,
         team=env.get("LEDGER_TEAM", "offdesk"),
         tz=tz,
+        web_dir=env.get("LEDGER_WEB", DEFAULT_WEB),
     )

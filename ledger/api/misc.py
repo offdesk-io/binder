@@ -2,6 +2,7 @@ import sqlite3
 
 from fastapi import APIRouter, Depends, Request
 
+from .. import statuses
 from ..auth import Identity, guard
 from ..db import get_db
 from ..repo import feeds, search
@@ -12,6 +13,18 @@ router = APIRouter()
 @router.get("/whoami")
 def whoami(who: Identity = Depends(guard)):
     return {"email": who.email, "name": who.name, "teams": list(who.teams)}
+
+
+@router.get("/meta")
+def meta():
+    return {
+        "kinds": list(statuses.KINDS),
+        "lead_statuses": list(statuses.LEAD_STATUSES),
+        "open_lead_statuses": list(statuses.OPEN_LEAD_STATUSES),
+        "client_statuses": list(statuses.CLIENT_STATUSES),
+        "interaction_types": list(statuses.INTERACTION_TYPES),
+        "relationships": list(statuses.RELATIONSHIPS),
+    }
 
 
 @router.get("/search")

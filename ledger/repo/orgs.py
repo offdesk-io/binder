@@ -93,7 +93,7 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
             sets["tags"] = json.dumps(sets["tags"] or [])
         new_status = patch.get("status")
         if new_status and new_status != current["status"]:
-            kind, stored = check_transition(current["kind"], current["status"], new_status)
+            kind, stored = check_transition(current["kind"], new_status)
             sets["kind"], sets["status"] = kind, stored
             _history(conn, org_id, current["status"], new_status, by, at)
         sets["updated_at"], sets["updated_by"] = at, by

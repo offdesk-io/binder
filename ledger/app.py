@@ -4,7 +4,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import JSONResponse
 
-from . import errors
+from . import errors, web
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
@@ -19,6 +19,7 @@ def create_app(settings: Settings) -> FastAPI:
     app = FastAPI(title="Ledger", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     errors.install(app)
+    web.install(app, settings.web_dir)
 
     @app.get("/api/health")
     def health():

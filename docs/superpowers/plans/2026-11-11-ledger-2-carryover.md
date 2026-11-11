@@ -3,6 +3,10 @@
 From the final review of plan 1 (core API). Fix these at the start of plan 2,
 before the frontend depends on any response shape.
 
+**Done** on `feature/frontend`: items 1 to 7, with the shapes in the README's
+API section. Search items now call the id `id`, like timeline and activity.
+`check_transition` takes no `current`. The notes for plans 3 and 4 stand.
+
 1. Contact responses: `contacts.get` returns `org_name` and `org_slug`, but
    `list_for_org` does not (`ledger/repo/contacts.py`). Make the two return the
    same fields.

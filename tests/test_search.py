@@ -5,7 +5,7 @@ def test_search_finds_each_kind(client, org):
 
     hits = client.get("/api/search?q=porto").json()
     assert [(h["kind"], h["org_name"]) for h in hits] == [("org", "Acme Studio")]
-    assert "[Porto]" in hits[0]["snippet"]
+    assert "\x02Porto\x03" in hits[0]["snippet"]
 
     assert client.get("/api/search?q=founder").json()[0]["kind"] == "contact"
     assert client.get("/api/search?q=lisb").json()[0]["kind"] == "interaction"  # prefix match
@@ -31,7 +31,7 @@ def test_empty_query(client):
 
 def test_search_ids_are_integers(client, org):
     hit = client.get("/api/search?q=acme").json()[0]
-    assert hit["ref_id"] == org["id"] and hit["org_id"] == org["id"]
+    assert hit["id"] == org["id"] and "ref_id" not in hit and hit["org_id"] == org["id"]
 
 
 def test_search_survives_control_characters(client, org):

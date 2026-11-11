@@ -1,0 +1,30 @@
+import { expect, test, vi } from 'vitest'
+import { api } from './endpoints'
+
+function capture() {
+  const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response('[]', { status: 200 }))
+  vi.stubGlobal('fetch', f)
+  return () => f.mock.calls.map(([url, init]) => `${init?.method} ${url}`)
+}
+
+test('query strings leave out empty filters and encode the rest', async () => {
+  const calls = capture()
+  await api.orgs({ kind: 'lead', status: '', sort: 'name' })
+  await api.search('acme & co')
+  await api.orgBySlug('acme studio')
+  await api.activity(10)
+  expect(calls()).toEqual([
+    'GET /api/orgs?kind=lead&sort=name',
+    'GET /api/search?q=acme+%26+co',
+    'GET /api/orgs/by-slug/acme%20studio',
+    'GET /api/activity?limit=10',
+  ])
+})
+
+test('writes go to the right place with the right method', async () => {
+  const calls = capture()
+  await api.patchOrg(3, { updated_at: 'x', status: 'contacted' })
+  await api.createInteraction(3, { type: 'call', summary: 'Hi' })
+  await api.deleteContact(9)
+  expect(calls()).toEqual(['PATCH /api/orgs/3', 'POST /api/orgs/3/interactions', 'DELETE /api/contacts/9'])
+})

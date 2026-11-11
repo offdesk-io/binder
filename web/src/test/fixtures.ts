@@ -1,0 +1,35 @@
+import type { ActivityItem, Contact, Interaction, Org } from '../api/types'
+
+export const AT = '2026-11-10T12:00:00.000000+00:00'
+
+export function org(o: Partial<Org> = {}): Org {
+  return {
+    id: 1, slug: 'acme', name: 'Acme', kind: 'lead', status: 'lead', website: null, sector: null,
+    size: null, location: null, owner_email: 'ana@example.com', source: null, value_estimate: null,
+    tags: [], summary: null, next_step: null, next_step_due: null, last_contact: null,
+    created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
+  }
+}
+
+export function contact(o: Partial<Contact> = {}): Contact {
+  return {
+    id: 5, org_id: 1, org_name: 'Acme', org_slug: 'acme', name: 'Bo', role: null, email: null,
+    phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null,
+    created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
+  }
+}
+
+export function interaction(o: Partial<Interaction> = {}): Interaction {
+  return {
+    id: 7, org_id: 1, type: 'call', happened_at: AT, summary: 'Talked budgets', next_step: null,
+    next_step_due: null, contact_ids: [], author_email: 'ana@example.com',
+    created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
+  }
+}
+
+export function activity(o: Partial<ActivityItem> = {}): ActivityItem {
+  return {
+    kind: 'status', id: 1, org_id: 2, org_name: 'Bolt', org_slug: 'bolt', at: AT, type: null,
+    summary: null, from_status: 'lead', to_status: 'contacted', by_email: 'ana@example.com', ...o,
+  }
+}

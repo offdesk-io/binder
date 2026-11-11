@@ -16,8 +16,8 @@ def query(conn: sqlite3.Connection, q: str, limit: int = 50) -> List[Dict[str, A
     if not match:
         return []
     rows = conn.execute(
-        "SELECT s.kind, s.ref_id, s.org_id, s.title, o.name AS org_name, o.slug AS org_slug, "
-        "snippet(search, 4, '[', ']', '…', 12) AS snippet "
+        "SELECT s.kind, s.ref_id AS id, s.org_id, s.title, o.name AS org_name, o.slug AS org_slug, "
+        "snippet(search, 4, char(2), char(3), '…', 12) AS snippet "
         "FROM search s JOIN organisations o ON o.id = s.org_id "
         "WHERE search MATCH ? ORDER BY rank LIMIT ?", (match, limit))
-    return [dict(r, ref_id=int(r["ref_id"]), org_id=int(r["org_id"])) for r in rows]
+    return [dict(r, id=int(r["id"]), org_id=int(r["org_id"])) for r in rows]

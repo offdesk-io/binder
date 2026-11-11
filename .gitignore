@@ -9,3 +9,5 @@ dist/
 .pytest_cache/
 *.egg-info/
 *.migrate.lock
+web/test-results/
+web/playwright-report/

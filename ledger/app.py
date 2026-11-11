@@ -1,4 +1,7 @@
+import sqlite3
+
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.responses import JSONResponse
 
 from . import errors
 from .auth import guard
@@ -12,12 +15,20 @@ def create_app(settings: Settings) -> FastAPI:
     migrate(conn, settings.db_path)
     conn.close()
 
-    app = FastAPI(title="Ledger", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Ledger", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     errors.install(app)
 
     @app.get("/api/health")
     def health():
+        try:
+            conn = connect(settings.db_path)
+            try:
+                conn.execute("SELECT 1")
+            finally:
+                conn.close()
+        except sqlite3.Error:
+            return JSONResponse({"ok": False}, status_code=503)
         return {"ok": True}
 
     api = APIRouter(prefix="/api", dependencies=[Depends(guard)])

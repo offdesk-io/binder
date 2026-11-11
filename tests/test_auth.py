@@ -57,3 +57,20 @@ def test_whoami_without_headers_is_401(make_client):
 
 def test_local_mode_whoami_is_dev(make_client):
     assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@ledger.local"
+
+
+def test_openapi_is_closed(make_client):
+    assert make_client().get("/openapi.json").status_code == 404
+
+
+def test_health_is_503_when_database_unreachable(make_client, monkeypatch):
+    import sqlite3
+    c = make_client()
+
+    def boom(path):
+        raise sqlite3.OperationalError("unable to open database file")
+
+    monkeypatch.setattr("ledger.app.connect", boom)
+    r = c.get("/api/health")
+    assert r.status_code == 503
+    assert r.json() == {"ok": False}

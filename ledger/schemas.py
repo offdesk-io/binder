@@ -93,6 +93,8 @@ class ContactCreate(_Body):
     is_primary: bool = False
     relationship: Optional[str] = None
 
+    _email = field_validator("email")(lower_email)
+
 
 class ContactPatch(_Body):
     updated_at: str
@@ -104,6 +106,9 @@ class ContactPatch(_Body):
     notes: Optional[str] = None
     is_primary: Optional[bool] = None
     relationship: Optional[str] = None
+
+    _name = field_validator("name")(not_null)
+    _email = field_validator("email")(lower_email)
 
 
 class InteractionCreate(_Body):

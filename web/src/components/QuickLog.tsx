@@ -50,16 +50,11 @@ export function logBody(f: LogFormState, base?: Loggable): InteractionFields {
 
 const sorted = (ids: number[]) => [...ids].sort((a, b) => a - b)
 
-/** The log with only the people who still exist: a deleted person has no chip to untick. */
-function withKnown(i: Loggable, contacts: Contact[]): Loggable {
-  const known = new Set(contacts.map((c) => c.id))
-  return { ...i, contact_ids: i.contact_ids.filter((id) => known.has(id)) }
-}
-
 interface Props {
   open: boolean
   orgId: number
-  contacts: Contact[]
+  /** Undefined while the list is still loading: nobody is dropped until it is known. */
+  contacts: Contact[] | undefined
   /** Left out to log something new. */
   initial?: Loggable
   /** People ticked on a new log, such as the contact whose page it was opened from. */
@@ -72,6 +67,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
   const { meta } = useSession()
   const phone = useIsPhone()
   const first = meta.interaction_types[0]
+  const people = contacts ?? []
   const [base, setBase] = useState(initial)
   const [form, setForm] = useState(() => logForm(initial, preselect, new Date(), first))
   const [error, setError] = useState<string>()
@@ -82,8 +78,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
   useEffect(() => {
     if (!open) return
     setBase(initial)
-    // A person deleted since the log was written has no chip to untick.
-    setForm(logForm(initial && withKnown(initial, contacts), preselect, new Date(), first))
+    setForm(logForm(initial, preselect, new Date(), first))
     setError(undefined)
     setFieldErrors({})
   }, [open, initial, first])
@@ -105,6 +100,12 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
     setFieldErrors(problems)
     if (problems.summary || problems.when) return
     const body = logBody(form, base)
+    // A person deleted since the log was written has no chip to untick, so drop them now,
+    // against the list as it stands. While it is still loading, keep everyone.
+    if (contacts) {
+      const known = new Set(contacts.map((c) => c.id))
+      body.contact_ids = body.contact_ids.filter((id) => known.has(id))
+    }
     setBusy(true)
     setError(undefined)
     try {
@@ -120,7 +121,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       if (e instanceof ApiError && e.status === 409 && e.current) {
         const current = e.current as Interaction
         setBase(current)
-        setForm(logForm(withKnown(current, contacts)))
+        setForm(logForm(current))
       }
     } finally {
       setBusy(false)
@@ -169,11 +170,11 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
           />
         </div>
         <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />
-        {contacts.length > 0 && (
+        {people.length > 0 && (
           <div className="lg-field">
             <span className="tenon-label">With</span>
             <div className="lg-chips" role="group" aria-label="With">
-              {contacts.map((c) => (
+              {people.map((c) => (
                 <ToggleChip key={c.id} pressed={form.contact_ids.includes(c.id)} onClick={() => toggle(c.id)}>
                   {c.name}
                 </ToggleChip>

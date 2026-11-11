@@ -103,3 +103,14 @@ test('people are sent in id order', async () => {
   await waitFor(() => expect(calls).toHaveLength(1))
   expect((calls[0].body as { contact_ids: number[] }).contact_ids).toEqual([5, 9])
 })
+
+test('a log opened before the people have loaded keeps its people', async () => {
+  const user = userEvent.setup()
+  const i = interaction({ contact_ids: [1] })
+  const calls = stubFetch({ 'PATCH /api/interactions/7': () => i })
+  renderApp(<QuickLog open orgId={1} contacts={undefined} initial={i} onClose={() => {}} onSaved={() => {}} />)
+  await user.type(screen.getByLabelText('Next step'), 'Send rates')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls).toHaveLength(1))
+  expect(calls[0].body).toEqual({ next_step: 'Send rates', updated_at: i.updated_at })
+})

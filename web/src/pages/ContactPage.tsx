@@ -99,7 +99,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
       <QuickLog
         open={logging}
         orgId={c.org_id}
-        contacts={people.data ?? []}
+        contacts={people.data}
         preselect={[c.id]}
         onClose={() => setLogging(false)}
         onSaved={() => {

@@ -136,7 +136,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
       <QuickLog
         open={log !== undefined}
         orgId={org.id}
-        contacts={contacts.data ?? []}
+        contacts={contacts.data}
         initial={log === 'new' ? undefined : log}
         onClose={() => setLog(undefined)}
         onSaved={afterLog}

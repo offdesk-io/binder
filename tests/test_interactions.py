@@ -15,7 +15,7 @@ def test_log_with_contacts(client, org):
     i = log(client, org, contact_ids=[rui["id"]], happened_at="2026-11-01T10:00:00+00:00", next_step="Send deck")
     assert i["contact_ids"] == [rui["id"]]
     assert i["author_email"] == "ana@example.com"
-    assert client.get("/api/orgs/%d" % org["id"]).json()["last_contact"] == "2026-11-01T10:00:00+00:00"
+    assert client.get("/api/orgs/%d" % org["id"]).json()["last_contact"] == "2026-11-01T10:00:00.000000+00:00"
 
 
 def test_happened_at_defaults_to_now(client, org):
@@ -80,7 +80,7 @@ def test_happened_at_must_be_iso_datetime(client, org):
                       json={"type": "call", "summary": "x", "happened_at": "yesterday"})
     assert bad.status_code == 422
     z = log(client, org, happened_at="2026-11-01T10:00:00Z")
-    assert z["happened_at"] == "2026-11-01T10:00:00Z"
+    assert z["happened_at"] == "2026-11-01T10:00:00.000000+00:00"
     r = client.patch("/api/interactions/%d" % z["id"], json={"updated_at": z["updated_at"], "happened_at": "nope"})
     assert r.status_code == 422
 
@@ -112,3 +112,27 @@ def test_contact_ownership_is_checked_inside_the_write_transaction(tmp_path, mon
         interactions.create(conn, org["id"], {"type": "call", "summary": "x", "contact_ids": [99]}, "ana@example.com")
     assert seen == [True]
     assert not conn.in_transaction
+
+
+def test_times_are_normalised_to_utc_and_order_correctly(client, org):
+    a = log(client, org, summary="A", happened_at="2026-11-01T10:00:00+01:00")  # 09:00 UTC
+    b = log(client, org, summary="B", happened_at="2026-11-01T09:30:00Z")
+    assert a["happened_at"] == "2026-11-01T09:00:00.000000+00:00"
+    assert b["happened_at"] == "2026-11-01T09:30:00.000000+00:00"
+    listed = client.get("/api/orgs/%d/interactions" % org["id"]).json()
+    assert [i["summary"] for i in listed] == ["B", "A"]
+    assert client.get("/api/orgs/%d" % org["id"]).json()["last_contact"] == b["happened_at"]
+    r = client.patch("/api/interactions/%d" % a["id"],
+                     json={"updated_at": a["updated_at"], "happened_at": "2026-11-01T12:00:00-03:00"})
+    assert r.json()["happened_at"] == "2026-11-01T15:00:00.000000+00:00"
+
+
+def test_naive_date_only_and_space_separated_times_are_422(client, org):
+    for bad in ("2026-11-01T10:00:00", "2026-11-01", "2026-11-01 10:00:00+00:00"):
+        r = client.post("/api/orgs/%d/interactions" % org["id"],
+                        json={"type": "call", "summary": "x", "happened_at": bad})
+        assert r.status_code == 422, bad
+
+
+def test_interactions_of_missing_contact_is_404(client):
+    assert client.get("/api/contacts/999/interactions").status_code == 404

@@ -49,6 +49,8 @@ def list_for_org(conn: sqlite3.Connection, org_id: int, limit: Optional[int] = N
 
 
 def list_for_contact(conn: sqlite3.Connection, contact_id: int) -> List[Dict[str, Any]]:
+    if conn.execute("SELECT id FROM contacts WHERE id = ?", (contact_id,)).fetchone() is None:
+        raise NotFound("No contact %d" % contact_id)
     return [_with_contacts(conn, row(r)) for r in conn.execute(
         "SELECT i.* FROM interactions i JOIN interaction_contacts ic ON ic.interaction_id = i.id "
         "WHERE ic.contact_id = ? ORDER BY i.happened_at DESC, i.id DESC", (contact_id,))]

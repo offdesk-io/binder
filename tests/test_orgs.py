@@ -74,6 +74,27 @@ def test_patch_name_null_is_422(client, org):
     assert r.status_code == 422
 
 
+def test_integrity_error_backstop_hides_internals_and_logs_them(make_client, caplog):
+    import logging
+    import sqlite3
+    c = make_client()
+
+    @c.app.get("/boom-secret")
+    def boom_secret():
+        raise sqlite3.IntegrityError("NOT NULL constraint failed: organisations.name")
+
+    @c.app.get("/boom-dup")
+    def boom_dup():
+        raise sqlite3.IntegrityError("UNIQUE constraint failed: organisations.slug")
+
+    with caplog.at_level(logging.WARNING, logger="ledger"):
+        r = c.get("/boom-secret")
+        d = c.get("/boom-dup")
+    assert (r.status_code, r.json()) == (422, {"detail": "That breaks a rule on this record"})
+    assert (d.status_code, d.json()) == (409, {"detail": "That conflicts with an existing record"})
+    assert "organisations.name" in caplog.text and "organisations.slug" in caplog.text
+
+
 def test_integrity_error_backstop_is_422_and_unique_is_409(make_client):
     import sqlite3
     c = make_client()

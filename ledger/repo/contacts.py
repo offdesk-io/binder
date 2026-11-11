@@ -45,12 +45,12 @@ def create(conn: sqlite3.Connection, org_id: int, data: Dict[str, Any], by: str)
     conn.execute("BEGIN IMMEDIATE")
     try:
         orgs.get(conn, org_id)  # checked under the write lock, so the org cannot vanish before the insert
+        if data.get("is_primary"):
+            _clear_primary(conn, org_id, 0)  # before the insert: a unique index allows one primary
         cur = conn.execute(
             "INSERT INTO contacts(org_id, created_at, updated_at, updated_by, %s) VALUES (?,?,?,?,%s)"
             % (", ".join(cols), ", ".join("?" * len(cols))),
             [org_id, at, at, by] + [int(data[c]) if c == "is_primary" else data[c] for c in cols])
-        if data.get("is_primary"):
-            _clear_primary(conn, org_id, cur.lastrowid)
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -68,10 +68,10 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
             raise Conflict(current)
         sets = {k: (int(v) if k == "is_primary" else v) for k, v in patch.items() if k in FIELDS}
         sets["updated_at"], sets["updated_by"] = now(), by
+        if patch.get("is_primary"):
+            _clear_primary(conn, current["org_id"], contact_id)  # before the update, see create()
         conn.execute("UPDATE contacts SET %s WHERE id = ?" % ", ".join("%s = ?" % k for k in sets),
                      list(sets.values()) + [contact_id])
-        if patch.get("is_primary"):
-            _clear_primary(conn, current["org_id"], contact_id)
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")

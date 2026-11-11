@@ -22,14 +22,20 @@ def iso_date(v: Optional[str]) -> Optional[str]:
 
 
 def iso_datetime(v: Optional[str]) -> Optional[str]:
-    """An ISO 8601 date-time; a trailing Z means UTC."""
+    """An ISO 8601 date-time with a 'T' and a time zone (a trailing Z means UTC).
+    Returned as UTC with microseconds, the same shape as db.now(), so stored
+    times sort correctly as text."""
     if v is None:
         return v
     try:
-        datetime.datetime.fromisoformat(v[:-1] + "+00:00" if v.endswith("Z") else v)
+        if "T" not in v:
+            raise ValueError
+        d = datetime.datetime.fromisoformat(v[:-1] + "+00:00" if v.endswith("Z") else v)
+        if d.tzinfo is None:
+            raise ValueError
     except ValueError:
-        raise ValueError("must be an ISO 8601 date-time like 2026-11-01T10:00:00+00:00")
-    return v
+        raise ValueError("must be an ISO 8601 date-time with a time zone, like 2026-11-01T10:00:00+00:00")
+    return d.astimezone(datetime.timezone.utc).isoformat(timespec="microseconds")
 
 
 def lower_email(v: Optional[str]) -> Optional[str]:

@@ -1,9 +1,12 @@
+import logging
 import sqlite3
 from typing import Any, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+log = logging.getLogger("ledger")
 
 
 class NotFound(Exception):
@@ -37,9 +40,12 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(sqlite3.IntegrityError)
     def _integrity(request: Request, exc: sqlite3.IntegrityError):
-        # Backstop for a constraint the request checks missed.
-        code = 409 if "UNIQUE" in str(exc) else 422
-        return JSONResponse({"detail": str(exc)}, status_code=code)
+        # Backstop for a constraint the request checks missed. The raw message
+        # names tables and columns, so it goes to the log, not the caller.
+        log.warning("integrity error on %s %s: %s", request.method, request.url.path, exc)
+        if "UNIQUE" in str(exc):
+            return JSONResponse({"detail": "That conflicts with an existing record"}, status_code=409)
+        return JSONResponse({"detail": "That breaks a rule on this record"}, status_code=422)
 
     @app.exception_handler(RequestValidationError)
     def _validation(request: Request, exc: RequestValidationError):

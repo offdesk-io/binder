@@ -76,3 +76,13 @@ def test_failed_create_leaves_no_open_transaction(tmp_path):
     with pytest.raises(sqlite3.InterfaceError):  # the insert fails after the write lock is taken
         contacts.create(conn, org["id"], {"name": "X", "email": object()}, "ana@example.com")
     assert not conn.in_transaction
+
+
+def test_patch_primary_clears_the_other_primary(client, org):
+    a = add(client, org, name="A", is_primary=True)
+    b = add(client, org, name="B")
+    r = client.patch("/api/contacts/%d" % b["id"], json={"updated_at": b["updated_at"], "is_primary": True})
+    assert r.status_code == 200
+    got = {c["name"]: c["is_primary"] for c in client.get("/api/orgs/%d/contacts" % org["id"]).json()}
+    assert got == {"A": False, "B": True}
+    assert a["id"] != b["id"]

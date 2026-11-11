@@ -63,14 +63,21 @@ def test_openapi_is_closed(make_client):
     assert make_client().get("/openapi.json").status_code == 404
 
 
-def test_health_is_503_when_database_unreachable(make_client, monkeypatch):
-    import sqlite3
+def test_health_is_503_when_database_file_is_gone(make_client, tmp_path):
     c = make_client()
-
-    def boom(path):
-        raise sqlite3.OperationalError("unable to open database file")
-
-    monkeypatch.setattr("ledger.app.connect", boom)
+    assert c.get("/api/health").status_code == 200
+    for f in tmp_path.glob("t.db*"):
+        f.unlink()
     r = c.get("/api/health")
     assert r.status_code == 503
     assert r.json() == {"ok": False}
+    assert not (tmp_path / "t.db").exists()  # health never creates the file
+
+
+def test_health_is_503_when_database_is_not_migrated(make_client, tmp_path):
+    import sqlite3
+    c = make_client()
+    for f in tmp_path.glob("t.db*"):
+        f.unlink()
+    sqlite3.connect(str(tmp_path / "t.db")).close()
+    assert c.get("/api/health").status_code == 503

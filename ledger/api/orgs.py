@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Response
 
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/orgs")
 
 @router.get("")
 def list_orgs(kind: str = None, status: str = None, owner: str = None, tag: str = None,
-              q: str = None, sort: str = "updated", db: sqlite3.Connection = Depends(get_db)):
+              q: str = None, sort: Literal["updated", "name", "last_contact", "value"] = "updated", db: sqlite3.Connection = Depends(get_db)):
     return orgs.list_(db, kind=kind, status=status, owner=owner, tag=tag, q=q, sort=sort)
 
 

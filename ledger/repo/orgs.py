@@ -66,13 +66,17 @@ def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str,
     at = now()
     cols = [f for f in FIELDS if f in data]
     conn.execute("BEGIN IMMEDIATE")  # slug lookup and insert under one write lock
-    slug = _unique_slug(conn, slugify(requested_slug or data["name"]))
-    cur = conn.execute(
-        "INSERT INTO organisations(slug, kind, status, created_at, updated_at, updated_by, %s) VALUES (?,?,?,?,?,?,%s)"
-        % (", ".join(cols), ", ".join("?" * len(cols))),
-        [slug, kind, status, at, at, by] + [data[c] for c in cols])
-    _history(conn, cur.lastrowid, None, status, by, at)
-    conn.execute("COMMIT")
+    try:
+        slug = _unique_slug(conn, slugify(requested_slug or data["name"]))
+        cur = conn.execute(
+            "INSERT INTO organisations(slug, kind, status, created_at, updated_at, updated_by, %s) "
+            "VALUES (?,?,?,?,?,?,%s)" % (", ".join(cols), ", ".join("?" * len(cols))),
+            [slug, kind, status, at, at, by] + [data[c] for c in cols])
+        _history(conn, cur.lastrowid, None, status, by, at)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
     return get(conn, cur.lastrowid)
 
 
@@ -116,11 +120,12 @@ def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional
     if status:
         where.append("o.status = ?"); args.append(status)
     if owner:
-        where.append("o.owner_email = ?"); args.append(owner)
+        where.append("o.owner_email = ?"); args.append(owner.strip().lower())
     if tag:
         where.append("EXISTS (SELECT 1 FROM json_each(o.tags) WHERE value = ?)"); args.append(tag)
     if q:
-        where.append("o.name LIKE ?"); args.append("%" + q + "%")
+        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        where.append("o.name LIKE ? ESCAPE '\\'"); args.append("%" + escaped + "%")
     order = {"updated": "o.updated_at DESC", "name": "o.name COLLATE NOCASE",
              "last_contact": "last_contact IS NULL, last_contact DESC",
              "value": "o.value_estimate IS NULL, o.value_estimate DESC"}.get(sort, "o.updated_at DESC")

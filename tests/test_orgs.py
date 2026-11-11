@@ -67,3 +67,76 @@ def test_list_name_query(client):
 def test_delete(client, org):
     assert client.delete("/api/orgs/%d" % org["id"]).status_code == 204
     assert client.get("/api/orgs/%d" % org["id"]).status_code == 404
+
+
+def test_patch_name_null_is_422(client, org):
+    r = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "name": None})
+    assert r.status_code == 422
+
+
+def test_integrity_error_backstop_is_422_and_unique_is_409(make_client):
+    import sqlite3
+    c = make_client()
+
+    @c.app.get("/boom-check")
+    def boom_check():
+        raise sqlite3.IntegrityError("NOT NULL constraint failed: organisations.name")
+
+    @c.app.get("/boom-unique")
+    def boom_unique():
+        raise sqlite3.IntegrityError("UNIQUE constraint failed: organisations.slug")
+
+    assert c.get("/boom-check").status_code == 422
+    assert c.get("/boom-unique").status_code == 409
+
+
+def test_create_failure_leaves_no_open_transaction(tmp_path):
+    import pytest
+    from ledger.db import connect, migrate
+    from ledger.repo import orgs as repo
+    path = str(tmp_path / "x.db")
+    conn = connect(path)
+    migrate(conn, path)
+    with pytest.raises(KeyError):
+        repo.create(conn, {"tags": []}, "ana@example.com")  # no name
+    assert not conn.in_transaction
+
+
+def test_next_step_due_must_be_an_iso_date(client, org):
+    assert client.post("/api/orgs", json={"name": "Z", "next_step_due": "next tuesday"}).status_code == 422
+    assert client.post("/api/orgs", json={"name": "Z", "next_step_due": "2026-11-20"}).status_code == 201
+    base = {"updated_at": org["updated_at"]}
+    assert client.patch("/api/orgs/%d" % org["id"], json=dict(base, next_step_due="soon")).status_code == 422
+    o = client.patch("/api/orgs/%d" % org["id"], json=dict(base, next_step_due="2026-11-20")).json()
+    o = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": o["updated_at"], "next_step_due": None}).json()
+    assert o["next_step_due"] is None
+
+
+def test_name_query_treats_wildcards_literally(client):
+    client.post("/api/orgs", json={"name": "Acme"})
+    client.post("/api/orgs", json={"name": "100% Pure"})
+    client.post("/api/orgs", json={"name": "A_B"})
+    assert [o["name"] for o in client.get("/api/orgs", params={"q": "%"}).json()] == ["100% Pure"]
+    assert [o["name"] for o in client.get("/api/orgs", params={"q": "_"}).json()] == ["A_B"]
+    assert client.get("/api/orgs", params={"q": "\\"}).json() == []
+
+
+def test_owner_email_is_lowercased(client, org):
+    o = client.post("/api/orgs", json={"name": "Own", "owner_email": "Rui@Example.COM"}).json()
+    assert o["owner_email"] == "rui@example.com"
+    p = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "owner_email": "Ines@Example.com"}).json()
+    assert p["owner_email"] == "ines@example.com"
+    assert [x["name"] for x in client.get("/api/orgs", params={"owner": "RUI@example.com"}).json()] == ["Own"]
+
+
+def test_value_estimate_must_be_finite_and_not_negative(client):
+    assert client.post("/api/orgs", json={"name": "V", "value_estimate": -1}).status_code == 422
+    r = client.post("/api/orgs", content='{"name": "V", "value_estimate": NaN}',
+                    headers={"content-type": "application/json"})
+    assert r.status_code == 422
+    assert client.post("/api/orgs", json={"name": "V", "value_estimate": 0}).status_code == 201
+
+
+def test_unknown_sort_is_422(client):
+    assert client.get("/api/orgs?sort=bogus").status_code == 422
+    assert client.get("/api/orgs?sort=name").status_code == 200

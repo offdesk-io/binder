@@ -1,4 +1,5 @@
 import sqlite3
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import JSONResponse
@@ -21,13 +22,16 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.get("/api/health")
     def health():
+        # mode=rw never creates a file, so a moved or deleted database shows up as a failure.
         try:
-            conn = connect(settings.db_path)
+            conn = sqlite3.connect("file:%s?mode=rw" % quote(settings.db_path), uri=True)
             try:
-                conn.execute("SELECT 1")
+                migrated = conn.execute("PRAGMA user_version").fetchone()[0] > 0
             finally:
                 conn.close()
         except sqlite3.Error:
+            migrated = False
+        if not migrated:
             return JSONResponse({"ok": False}, status_code=503)
         return {"ok": True}
 

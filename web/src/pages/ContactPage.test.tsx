@@ -32,3 +32,10 @@ test('Log opens with this person ticked', async () => {
   await user.click(await screen.findByRole('button', { name: 'Log' }))
   expect(await screen.findByRole('button', { name: 'Bo', pressed: true })).toBeInTheDocument()
 })
+
+test('a link that is not a number says not found without calling the API', async () => {
+  const calls = stubFetch({})
+  renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/abc')
+  expect(await screen.findByText('Person not found')).toBeInTheDocument()
+  expect(calls).toHaveLength(0)
+})

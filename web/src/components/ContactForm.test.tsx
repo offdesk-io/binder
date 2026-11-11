@@ -33,3 +33,19 @@ test('an edit sends only what changed', async () => {
   await waitFor(() => expect(calls).toHaveLength(1))
   expect(calls[0].body).toEqual({ phone: '0113', updated_at: bo.updated_at })
 })
+
+test('a conflict loads their version into the form and says so', async () => {
+  const user = userEvent.setup()
+  const bo = contact()
+  const theirs = contact({ role: 'CTO', updated_at: '2026-11-11T08:00:00.000000+00:00' })
+  stubFetch({
+    'PATCH /api/contacts/5': () =>
+      new Response(JSON.stringify({ detail: 'Changed', current: theirs }), { status: 409, headers: { 'Content-Type': 'application/json' } }),
+  })
+  renderApp(<ContactForm open orgId={1} contact={bo} onClose={() => {}} onSaved={() => {}} />)
+  await user.type(screen.getByLabelText('Phone'), '0113')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
+  expect(screen.getByLabelText('Role')).toHaveValue('CTO')
+  expect(screen.getByLabelText('Phone')).toHaveValue('')
+})

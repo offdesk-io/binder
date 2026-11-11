@@ -1,6 +1,7 @@
 import { Alert, Button, LinkButton, Tag } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Org, TimelineInteraction } from '../api/types'
 import { Loading } from '../components/Loading'
@@ -18,9 +19,10 @@ import { TimelineSection } from './org/TimelineSection'
 export function OrgPage() {
   const { slug = '' } = useParams()
   const org = useApi(() => api.orgBySlug(slug), [slug])
-  if (org.error) return <Alert tone="error" title="Could not open this organisation">{org.error.message}</Alert>
+  if (org.error && !org.data) return <Alert tone="error" title="Could not open this organisation">{org.error.message}</Alert>
   if (!org.data) return <Loading />
-  return <OrgView key={org.data.id} org={org.data} setOrg={org.setData} reloadOrg={org.reload} />
+  // A failed refresh keeps the page that is already on screen.
+  return <OrgView key={org.data.id} org={org.data} setOrg={org.setData} reloadOrg={org.reload} refreshError={org.error?.message} />
 }
 
 function facts(org: Org): [string, ReactNode][] {
@@ -36,7 +38,14 @@ function facts(org: Org): [string, ReactNode][] {
   return all.filter(([, v]) => v)
 }
 
-function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => void; reloadOrg: () => void }) {
+interface ViewProps {
+  org: Org
+  setOrg: (o: Org) => void
+  reloadOrg: () => void
+  refreshError?: string
+}
+
+function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
   const phone = useIsPhone()
   const navigate = useNavigate()
   const contacts = useApi(() => api.contacts(org.id), [org.id])
@@ -61,7 +70,8 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
       timeline.reload()
     } catch (e) {
       setNotice(saveErrorText(e))
-      reloadOrg()
+      if (e instanceof ApiError && e.status === 409 && e.current) setOrg(e.current as Org)
+      else reloadOrg()
     } finally {
       setBusy(false)
     }
@@ -72,7 +82,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
       <header className="lg-org-head">
         <div className="lg-org-title">
           <h1 className="tenon-heading-1">{org.name}</h1>
-          <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} />
+          <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
         </div>
         <p className="lg-faint">
           {label(org.kind)} · owned by {person(org.owner_email)}
@@ -84,7 +94,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
           {!phone && primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
           {primary?.email && <LinkButton variant="secondary" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
         </div>
-        {notice && <Alert tone="error">{notice}</Alert>}
+        {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh this page: ${refreshError}`}</Alert>}
       </header>
 
       <div className="lg-org-body">
@@ -101,7 +111,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
         </div>
         <div className="lg-column">
-          <PeopleSection orgId={org.id} contacts={contacts} />
+          <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
         </div>
       </div>
 

@@ -7,11 +7,12 @@ import { Loading } from '../../components/Loading'
 import { label } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
 
-export function PeopleSection({ orgId, contacts }: { orgId: number; contacts: Loaded<Contact[]> }) {
+export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; contacts: Loaded<Contact[]>; onChanged?: () => void }) {
   const [editing, setEditing] = useState<Contact | 'new'>()
   const done = () => {
     setEditing(undefined)
     contacts.reload()
+    onChanged?.()
   }
   return (
     <section className="lg-section">
@@ -35,7 +36,7 @@ export function PeopleSection({ orgId, contacts }: { orgId: number; contacts: Lo
                 {c.relationship && <Tag>{label(c.relationship)}</Tag>}
               </div>
               <div className="lg-faint">{[c.role, c.email, c.phone].filter(Boolean).join(' · ')}</div>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(c)}>Edit</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={`Edit ${c.name}`}>Edit</Button>
             </li>
           ))}
         </ul>

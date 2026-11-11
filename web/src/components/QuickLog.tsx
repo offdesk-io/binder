@@ -42,10 +42,18 @@ export function logBody(f: LogFormState, base?: Loggable): InteractionFields {
     type: f.type,
     summary: f.summary.trim(),
     happened_at: sameTime ? base.happened_at : fromLocalInput(f.when),
-    contact_ids: f.contact_ids,
+    contact_ids: sorted(f.contact_ids),
     next_step: orNull(f.next_step),
     next_step_due: f.next_step_due || null,
   }
+}
+
+const sorted = (ids: number[]) => [...ids].sort((a, b) => a - b)
+
+/** The log with only the people who still exist: a deleted person has no chip to untick. */
+function withKnown(i: Loggable, contacts: Contact[]): Loggable {
+  const known = new Set(contacts.map((c) => c.id))
+  return { ...i, contact_ids: i.contact_ids.filter((id) => known.has(id)) }
 }
 
 interface Props {
@@ -67,15 +75,18 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
   const [base, setBase] = useState(initial)
   const [form, setForm] = useState(() => logForm(initial, preselect, new Date(), first))
   const [error, setError] = useState<string>()
+  const [fieldErrors, setFieldErrors] = useState<{ when?: string; summary?: string }>({})
   const [busy, setBusy] = useState(false)
 
   // Reset on open. `preselect` is left out on purpose: callers pass a new array each render.
   useEffect(() => {
     if (!open) return
     setBase(initial)
-    setForm(logForm(initial, preselect, new Date(), first))
+    // A person deleted since the log was written has no chip to untick.
+    setForm(logForm(initial && withKnown(initial, contacts), preselect, new Date(), first))
     setError(undefined)
-  }, [open, initial])
+    setFieldErrors({})
+  }, [open, initial, first])
 
   const set = (k: 'when' | 'summary' | 'next_step' | 'next_step_due') =>
     (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -88,20 +99,17 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
 
   async function save() {
     if (busy) return
-    if (!form.summary.trim()) {
-      setError('Say what happened.')
-      return
-    }
-    if (!form.when || Number.isNaN(new Date(form.when).getTime())) {
-      setError('Say when it happened.')
-      return
-    }
+    const problems: { when?: string; summary?: string } = {}
+    if (!form.summary.trim()) problems.summary = 'Say what happened.'
+    if (!form.when || Number.isNaN(new Date(form.when).getTime())) problems.when = 'Say when it happened.'
+    setFieldErrors(problems)
+    if (problems.summary || problems.when) return
     const body = logBody(form, base)
     setBusy(true)
     setError(undefined)
     try {
       if (base) {
-        const diff = changed<InteractionFields>(base, body)
+        const diff = changed<InteractionFields>({ ...base, contact_ids: sorted(base.contact_ids) }, body)
         if (Object.keys(diff).length > 0) await api.patchInteraction(base.id, { ...diff, updated_at: base.updated_at })
       } else {
         await api.createInteraction(orgId, body)
@@ -112,7 +120,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       if (e instanceof ApiError && e.status === 409 && e.current) {
         const current = e.current as Interaction
         setBase(current)
-        setForm(logForm(current))
+        setForm(logForm(withKnown(current, contacts)))
       }
     } finally {
       setBusy(false)
@@ -160,11 +168,11 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
             options={meta.interaction_types.map((t) => ({ value: t, label: label(t) }))}
           />
         </div>
-        <Field label="When" type="datetime-local" required value={form.when} onChange={set('when')} />
+        <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />
         {contacts.length > 0 && (
           <div className="lg-field">
             <span className="tenon-label">With</span>
-            <div className="lg-chips">
+            <div className="lg-chips" role="group" aria-label="With">
               {contacts.map((c) => (
                 <ToggleChip key={c.id} pressed={form.contact_ids.includes(c.id)} onClick={() => toggle(c.id)}>
                   {c.name}
@@ -173,7 +181,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
             </div>
           </div>
         )}
-        <Field label="What happened" multiline rows={4} required value={form.summary} onChange={set('summary')} autoFocus />
+        <Field label="What happened" multiline rows={4} required error={fieldErrors.summary} value={form.summary} onChange={set('summary')} autoFocus />
         <Field label="Next step" value={form.next_step} onChange={set('next_step')} />
         <Field label="Next step due" type="date" value={form.next_step_due} onChange={set('next_step_due')} />
       </form>

@@ -64,3 +64,42 @@ test('saving an edit with nothing changed sends nothing', async () => {
   await waitFor(() => expect(onSaved).toHaveBeenCalled())
   expect(calls).toHaveLength(0)
 })
+
+test('a conflict loads their version into the form and says so', async () => {
+  const user = userEvent.setup()
+  const i = interaction()
+  const theirs = interaction({ summary: 'Their version', updated_at: '2026-11-11T08:00:00.000000+00:00' })
+  stubFetch({
+    'PATCH /api/interactions/7': () =>
+      new Response(JSON.stringify({ detail: 'Changed', current: theirs }), { status: 409, headers: { 'Content-Type': 'application/json' } }),
+  })
+  renderApp(<QuickLog open orgId={1} contacts={[]} initial={i} onClose={() => {}} onSaved={() => {}} />)
+  await user.type(screen.getByLabelText('Next step'), 'Mine')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
+  expect(screen.getByLabelText(/What happened/)).toHaveValue('Their version')
+  expect(screen.getByLabelText('Next step')).toHaveValue('')
+})
+
+test('opening a log drops people who no longer exist', async () => {
+  const user = userEvent.setup()
+  const i = interaction({ contact_ids: [5, 99] })
+  const calls = stubFetch({ 'PATCH /api/interactions/7': () => i })
+  renderApp(<QuickLog open orgId={1} contacts={[contact()]} initial={i} onClose={() => {}} onSaved={() => {}} />)
+  expect(screen.getByRole('button', { name: 'Bo' })).toHaveAttribute('aria-pressed', 'true')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls).toHaveLength(1))
+  expect(calls[0].body).toEqual({ contact_ids: [5], updated_at: i.updated_at })
+})
+
+test('people are sent in id order', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({ 'POST /api/orgs/1/interactions': () => interaction() })
+  renderApp(<QuickLog open orgId={1} contacts={[contact({ id: 9, name: 'Cy' }), contact()]} onClose={() => {}} onSaved={() => {}} />)
+  await user.click(screen.getByRole('button', { name: 'Cy' }))
+  await user.click(screen.getByRole('button', { name: 'Bo' }))
+  await user.type(screen.getByLabelText(/What happened/), 'x')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls).toHaveLength(1))
+  expect((calls[0].body as { contact_ids: number[] }).contact_ids).toEqual([5, 9])
+})

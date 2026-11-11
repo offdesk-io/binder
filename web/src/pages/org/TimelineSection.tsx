@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
 import { InteractionEntry } from '../../components/InteractionEntry'
 import { Loading } from '../../components/Loading'
-import { day, person, statusLine } from '../../lib/format'
+import { day, label, person, statusLine } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
 
 interface Props {
@@ -48,7 +48,7 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
                   next_step={i.next_step}
                   next_step_due={i.next_step_due}
                   people={i.contact_ids.map((id) => names.get(id)).filter((n): n is string => !!n)}
-                  action={<Button size="sm" variant="ghost" onClick={() => onEdit(i)}>Edit</Button>}
+                  action={<Button size="sm" variant="ghost" onClick={() => onEdit(i)} aria-label={`Edit ${label(i.type)} on ${day(i.at)}`}>Edit</Button>}
                 />
               </li>
             ),

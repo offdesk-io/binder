@@ -12,7 +12,8 @@ import { useApi } from '../lib/useApi'
 
 export function ContactPage() {
   const id = Number(useParams().id)
-  const contact = useApi(() => api.contact(id), [id])
+  const valid = Number.isInteger(id) && id > 0
+  const contact = useApi(() => (valid ? api.contact(id) : Promise.reject(new Error('Person not found'))), [id])
   if (contact.error) return <Alert tone="error" title="Could not open this person">{contact.error.message}</Alert>
   if (!contact.data) return <Loading />
   return <ContactView key={contact.data.id} c={contact.data} setContact={contact.setData} />
@@ -91,6 +92,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
         onSaved={(saved) => {
           setEditing(false)
           setContact(saved)
+          people.reload()
         }}
         onDeleted={() => navigate(`/o/${c.org_slug}`)}
       />

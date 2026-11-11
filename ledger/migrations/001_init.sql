@@ -29,7 +29,7 @@ CREATE TABLE contacts (
   phone         TEXT,
   linkedin_url  TEXT,
   notes         TEXT,
-  is_primary    INTEGER NOT NULL DEFAULT 0,
+  is_primary    INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0,1)),
   relationship  TEXT CHECK (relationship IN ('cold','warm','strong')),
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL,
@@ -58,6 +58,8 @@ CREATE TABLE interaction_contacts (
   PRIMARY KEY (interaction_id, contact_id)
 );
 
+CREATE INDEX interaction_contacts_contact ON interaction_contacts(contact_id);
+
 CREATE TABLE status_history (
   id           INTEGER PRIMARY KEY,
   org_id       INTEGER NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
@@ -68,6 +70,7 @@ CREATE TABLE status_history (
 );
 CREATE INDEX status_history_org ON status_history(org_id, at);
 
+-- ref_id and org_id are stored as integers; always bind ints when querying them.
 CREATE VIRTUAL TABLE search USING fts5(
   kind UNINDEXED, ref_id UNINDEXED, org_id UNINDEXED, title, body,
   tokenize = 'unicode61 remove_diacritics 2'

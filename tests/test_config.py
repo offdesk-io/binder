@@ -26,3 +26,20 @@ def test_unknown_auth_mode_refuses():
 def test_header_mode_refuses_public_host():
     with pytest.raises(ConfigError):
         load_settings({"LEDGER_AUTH": "header", "LEDGER_HOST": "0.0.0.0"})
+
+
+def test_dev_mode_refuses_public_host():
+    with pytest.raises(ConfigError):
+        load_settings({"LEDGER_HOST": "0.0.0.0"})
+
+
+def test_port_must_be_a_number():
+    with pytest.raises(ConfigError, match="LEDGER_PORT"):
+        load_settings({"LEDGER_PORT": "abc"})
+
+
+def test_header_mode_requires_explicit_absolute_db():
+    with pytest.raises(ConfigError):
+        load_settings({"LEDGER_AUTH": "header"})
+    with pytest.raises(ConfigError):
+        load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "rel/l.db"})

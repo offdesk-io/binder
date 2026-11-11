@@ -7,6 +7,7 @@ so a typo cannot leave the app open. Header mode listens on loopback only,
 because the headers are only trustworthy when nginx is the only caller.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -31,12 +32,20 @@ def load_settings(env: Mapping[str, str]) -> Settings:
     if auth not in ("", "header"):
         raise ConfigError("LEDGER_AUTH=%r is not a known mode; use 'header' or leave it unset." % auth)
     host = env.get("LEDGER_HOST", "127.0.0.1")
-    if auth == "header" and host not in LOOPBACK:
-        raise ConfigError("LEDGER_AUTH=header listens on 127.0.0.1 only, not %s." % host)
+    if host not in LOOPBACK:
+        raise ConfigError("Ledger listens on loopback only (127.0.0.1 or ::1), not %s." % host)
+    raw_port = env.get("LEDGER_PORT", "8770")
+    try:
+        port = int(raw_port)
+    except ValueError:
+        raise ConfigError("LEDGER_PORT=%r is not a number" % raw_port)
+    db_path = env.get("LEDGER_DB", "ledger.db")
+    if auth == "header" and not ("LEDGER_DB" in env and os.path.isabs(db_path)):
+        raise ConfigError("LEDGER_AUTH=header needs LEDGER_DB set to an absolute path.")
     return Settings(
         auth=auth,
-        db_path=env.get("LEDGER_DB", "ledger.db"),
+        db_path=db_path,
         host=host,
-        port=int(env.get("LEDGER_PORT", "8770")),
+        port=port,
         team=env.get("LEDGER_TEAM", "offdesk"),
     )

@@ -43,3 +43,13 @@ def test_header_mode_requires_explicit_absolute_db():
         load_settings({"LEDGER_AUTH": "header"})
     with pytest.raises(ConfigError):
         load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "rel/l.db"})
+
+
+def test_tz_defaults_to_london_and_can_be_set():
+    assert load_settings({}).tz == "Europe/London"
+    assert load_settings({"LEDGER_TZ": "Europe/Lisbon"}).tz == "Europe/Lisbon"
+
+
+def test_unknown_tz_refuses():
+    with pytest.raises(ConfigError, match="LEDGER_TZ"):
+        load_settings({"LEDGER_TZ": "Mars/Olympus"})

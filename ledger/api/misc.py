@@ -1,6 +1,6 @@
 import sqlite3
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from ..auth import Identity, guard
 from ..db import get_db
@@ -16,12 +16,12 @@ def whoami(who: Identity = Depends(guard)):
 
 @router.get("/search")
 def search_all(q: str = "", db: sqlite3.Connection = Depends(get_db)):
-    return search.query(db, q)
+    return search.query(db, q[:200])
 
 
 @router.get("/attention")
-def needs_attention(db: sqlite3.Connection = Depends(get_db)):
-    return feeds.attention(db)
+def needs_attention(request: Request, db: sqlite3.Connection = Depends(get_db)):
+    return feeds.attention(db, tz=request.app.state.settings.tz)
 
 
 @router.get("/activity")

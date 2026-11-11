@@ -6,6 +6,7 @@ built in the same shape and compared as text. `next_step_due` is a plain date.
 
 import datetime
 import sqlite3
+import zoneinfo
 from typing import Any, Dict, List, Optional
 
 from ..statuses import OPEN_LEAD_STATUSES
@@ -15,13 +16,23 @@ QUIET_DAYS = 14
 STUCK_DAYS = 30
 
 
+def _now_utc() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def _today(tz: str) -> str:
+    return _now_utc().astimezone(zoneinfo.ZoneInfo(tz)).date().isoformat()
+
+
 def _cutoff(today: str, days: int) -> str:
     day = datetime.date.fromisoformat(today) - datetime.timedelta(days=days)
     return day.isoformat() + "T00:00:00.000000+00:00"
 
 
-def attention(conn: sqlite3.Connection, today: Optional[str] = None) -> List[Dict[str, Any]]:
-    today = today or datetime.date.today().isoformat()
+def attention(conn: sqlite3.Connection, today: Optional[str] = None,
+              tz: str = "Europe/London") -> List[Dict[str, Any]]:
+    """`today` (YYYY-MM-DD) is for tests; by default it is the date now in `tz`."""
+    today = today or _today(tz)
     quiet_before = _cutoff(today, QUIET_DAYS)
     stuck_before = _cutoff(today, STUCK_DAYS)
     open_list = ",".join("'%s'" % s for s in OPEN_LEAD_STATUSES)
@@ -31,7 +42,7 @@ def attention(conn: sqlite3.Connection, today: Optional[str] = None) -> List[Dic
         "  (o.kind = 'lead' AND o.status IN (%s) AND "
         "     coalesce((SELECT max(happened_at) FROM interactions i WHERE i.org_id = o.id), o.created_at) < ?) AS quiet, "
         "  (o.kind = 'lead' AND o.status IN (%s) AND "
-        "     (SELECT max(at) FROM status_history h WHERE h.org_id = o.id) < ?) AS stuck "
+        "     coalesce((SELECT max(at) FROM status_history h WHERE h.org_id = o.id), o.created_at) < ?) AS stuck "
         "FROM organisations o" % (open_list, open_list),
         (today, quiet_before, stuck_before)).fetchall()
     out = []

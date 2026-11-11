@@ -32,3 +32,23 @@ def test_empty_query(client):
 def test_search_ids_are_integers(client, org):
     hit = client.get("/api/search?q=acme").json()[0]
     assert hit["ref_id"] == org["id"] and hit["org_id"] == org["id"]
+
+
+def test_search_survives_control_characters(client, org):
+    assert client.get("/api/search", params={"q": "\x00"}).json() == []
+    assert client.get("/api/search", params={"q": "a\x00b"}).status_code == 200
+    assert [h["kind"] for h in client.get("/api/search", params={"q": "ac\x00me"}).json()] == ["org"]
+
+
+def test_search_query_is_capped_at_200_chars(client, org):
+    assert client.get("/api/search", params={"q": "x" * 5000}).status_code == 200
+    # the cap cuts the query, it does not reject it: words past 200 characters are ignored
+    assert len(client.get("/api/search", params={"q": "acme" + " " * 300 + "zzz"}).json()) == 1
+
+
+def test_interaction_title_is_type_and_date_only(client, org):
+    client.post("/api/orgs/%d/interactions" % org["id"],
+                json={"type": "call", "summary": "Pricing", "happened_at": "2026-11-01T10:00:00+00:00"})
+    assert client.get("/api/search", params={"q": "000000"}).json() == []
+    hit = client.get("/api/search", params={"q": "pricing"}).json()[0]
+    assert hit["title"] == "call 2026-11-01"

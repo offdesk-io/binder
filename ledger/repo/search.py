@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 
 def _match(q: str) -> str:
-    terms = [t.replace('"', "") for t in q.split()]
+    terms = ["".join(ch for ch in t if ch.isprintable() and ch != '"') for t in q.split()]
     return " ".join('"%s"*' % t for t in terms if t)
 
 

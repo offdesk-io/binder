@@ -10,6 +10,7 @@ set explicitly to an absolute path.
 """
 
 import os
+import zoneinfo
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -27,6 +28,7 @@ class Settings:
     host: str
     port: int
     team: str
+    tz: str = "Europe/London"  # the zone that decides what "today" is
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
@@ -44,10 +46,16 @@ def load_settings(env: Mapping[str, str]) -> Settings:
     db_path = env.get("LEDGER_DB", "ledger.db")
     if auth == "header" and not ("LEDGER_DB" in env and os.path.isabs(db_path)):
         raise ConfigError("LEDGER_AUTH=header needs LEDGER_DB set to an absolute path.")
+    tz = env.get("LEDGER_TZ", "Europe/London")
+    try:
+        zoneinfo.ZoneInfo(tz)
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        raise ConfigError("LEDGER_TZ=%r is not a known time zone" % tz)
     return Settings(
         auth=auth,
         db_path=db_path,
         host=host,
         port=port,
         team=env.get("LEDGER_TEAM", "offdesk"),
+        tz=tz,
     )

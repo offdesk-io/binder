@@ -59,3 +59,20 @@ def test_activity_feed(client, org):
     assert items[0]["kind"] == "interaction" and items[0]["org_name"] == "Acme Studio"
     assert items[0]["type"] == "note" and items[0]["summary"] == "Hello"
     assert items[1]["kind"] == "status" and items[1]["to_status"] == "lead"
+
+
+def test_stuck_without_history_rows_falls_back_to_created_at(client, org):
+    conn = db(client)
+    conn.execute("UPDATE organisations SET created_at = ? WHERE id = ?", (OLD, org["id"]))
+    conn.execute("DELETE FROM status_history WHERE org_id = ?", (org["id"],))
+    items = feeds.attention(conn, today="2026-11-11")
+    assert sorted(items[0]["reasons"]) == ["quiet", "stuck"]
+
+
+def test_today_follows_the_configured_zone(client, monkeypatch):
+    import datetime
+    monkeypatch.setattr(feeds, "_now_utc", lambda: datetime.datetime(2026, 11, 11, 23, 30, tzinfo=datetime.timezone.utc))
+    client.post("/api/orgs", json={"name": "Due", "next_step_due": "2026-11-11"})
+    conn = db(client)
+    assert feeds.attention(conn, tz="Europe/London") == []
+    assert [i["reasons"] for i in feeds.attention(conn, tz="Pacific/Auckland")] == [["overdue"]]  # already the 12th there

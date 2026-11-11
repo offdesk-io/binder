@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Layout } from './Layout'
 import { HomePage } from '../pages/HomePage'
 import { ListPage } from '../pages/ListPage'
+import { PipelinePage } from '../pages/PipelinePage'
 import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
@@ -19,7 +20,7 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
-          <Route path="pipeline" element={<Soon name="Pipeline" />} />
+          <Route path="pipeline" element={<PipelinePage />} />
           <Route path="list" element={<ListPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="o/:slug" element={<Soon name="Organisation" />} />

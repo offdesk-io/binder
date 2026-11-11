@@ -7,3 +7,4 @@ backups/
 node_modules/
 dist/
 .pytest_cache/
+*.egg-info/

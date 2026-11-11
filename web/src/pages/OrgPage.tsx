@@ -11,6 +11,7 @@ import { label, money, person, webHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
+import { PeopleSection } from './org/PeopleSection'
 
 export function OrgPage() {
   const { slug = '' } = useParams()
@@ -92,7 +93,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
           {/* TIMELINE: Task 16 adds it here. */}
         </div>
         <div className="lg-column">
-          {/* PEOPLE: Task 15 adds it here. */}
+          <PeopleSection orgId={org.id} contacts={contacts} />
         </div>
       </div>
 

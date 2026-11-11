@@ -48,3 +48,10 @@ test('an unknown slug says so', async () => {
   page()
   expect(await screen.findByText("No organisation 'acme'")).toBeInTheDocument()
 })
+
+test('lists the people, with who to talk to flagged', async () => {
+  stubs()
+  page()
+  expect(await screen.findByRole('link', { name: 'Bo' })).toHaveAttribute('href', '/c/5')
+  expect(screen.getByText('Talk to')).toBeInTheDocument()
+})

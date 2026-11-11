@@ -60,16 +60,19 @@ def test_email_is_lowercased(client, org):
 
 
 def test_failed_create_leaves_no_open_transaction(tmp_path):
+    import sqlite3
+
     import pytest
     from ledger.db import connect, migrate
     from ledger.errors import NotFound
-    from ledger.repo import contacts
+    from ledger.repo import contacts, orgs
     path = str(tmp_path / "x.db")
     conn = connect(path)
     migrate(conn, path)
     with pytest.raises(NotFound):
         contacts.create(conn, 999, {"name": "X"}, "ana@example.com")
     assert not conn.in_transaction
-    with pytest.raises(KeyError):  # fails after the write lock is taken
-        contacts.create(conn, 999, {}, "ana@example.com")
+    org = orgs.create(conn, {"name": "A", "tags": []}, "ana@example.com")
+    with pytest.raises(sqlite3.InterfaceError):  # the insert fails after the write lock is taken
+        contacts.create(conn, org["id"], {"name": "X", "email": object()}, "ana@example.com")
     assert not conn.in_transaction

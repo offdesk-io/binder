@@ -4,8 +4,8 @@ import { useApi, type Loaded } from './useApi'
 
 let api: Loaded<string>
 
-function Probe({ load, dep }: { load: () => Promise<string>; dep: number }) {
-  const r = useApi(load, [dep])
+function Probe({ load, dep, keep }: { load: () => Promise<string>; dep: number; keep?: boolean }) {
+  const r = useApi(load, [dep], { keep })
   api = r
   if (r.error) return <p>error {r.error.message}</p>
   return <p>{r.data ?? 'nothing'}{r.loading ? ' (loading)' : ''}</p>
@@ -66,4 +66,22 @@ test('a slow first answer never overwrites a newer one', async () => {
 test('an error is kept for the caller to show', async () => {
   render(<Probe load={() => Promise.reject(new Error('down'))} dep={1} />)
   expect(await screen.findByText('error down')).toBeInTheDocument()
+})
+
+test('keep holds the data across a change of deps', async () => {
+  const slow = () => new Promise<string>(() => {})
+  const { rerender } = render(<Probe load={() => Promise.resolve('old')} dep={1} keep />)
+  expect(await screen.findByText('old')).toBeInTheDocument()
+  rerender(<Probe load={slow} dep={2} keep />)
+  expect(screen.getByText('old (loading)')).toBeInTheDocument()
+})
+
+test('setData takes an updater, so two calls build on each other', async () => {
+  render(<Probe load={() => Promise.resolve('a')} dep={1} />)
+  expect(await screen.findByText('a')).toBeInTheDocument()
+  act(() => {
+    api.setData((p) => `${p}b`)
+    api.setData((p) => `${p}c`)
+  })
+  expect(screen.getByText('abc')).toBeInTheDocument()
 })

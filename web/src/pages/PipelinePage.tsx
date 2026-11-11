@@ -33,8 +33,10 @@ export function PipelinePage() {
     setNotice(undefined)
     try {
       const saved = await api.patchOrg(org.id, { updated_at: org.updated_at, status })
-      const rest = (orgs.data ?? []).filter((o) => o.id !== org.id)
-      orgs.setData(saved.kind === 'lead' ? [...rest, saved] : rest)
+      orgs.setData((prev) => {
+        const rest = (prev ?? []).filter((o) => o.id !== org.id)
+        return saved.kind === 'lead' ? [...rest, saved] : rest
+      })
       if (saved.kind === 'client') setNotice({ tone: 'success', text: `${saved.name} is now a client.` })
     } catch (e) {
       setNotice({ tone: 'error', text: saveErrorText(e) })
@@ -44,6 +46,7 @@ export function PipelinePage() {
 
   if (orgs.error) return <Alert tone="error">{orgs.error.message}</Alert>
   if (!orgs.data) return <Loading />
+  // Orgs whose status isn't in meta.lead_statuses aren't shown on the board.
   const groups = byStatus(orgs.data, meta.lead_statuses)
   const note = notice && <Alert tone={notice.tone}>{notice.text}</Alert>
 
@@ -89,7 +92,10 @@ export function PipelinePage() {
               e.preventDefault()
               setOver(s)
             }}
-            onDragLeave={() => setOver((o) => (o === s ? undefined : o))}
+            onDragLeave={(e) => {
+              if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+              setOver((o) => (o === s ? undefined : o))
+            }}
             onDrop={(e) => {
               e.preventDefault()
               setOver(undefined)
@@ -111,6 +117,7 @@ export function PipelinePage() {
                   setDragId(o.id)
                 }}
                 onDragEnd={() => setDragId(undefined)}
+                action={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(st) => void move(o, st)} />}
               />
             ))}
           </Column>

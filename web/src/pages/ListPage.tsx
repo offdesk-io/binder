@@ -43,15 +43,21 @@ export function ListPage() {
   const { meta } = useSession()
   const phone = useIsPhone()
   const [params, setParams] = useSearchParams()
+  // `won` is never stored: a won lead is an active client.
+  const leadStatuses = meta.lead_statuses.filter((s) => s !== 'won')
+  const kindRaw = params.get('kind') ?? ''
+  const kind = (meta.kinds as string[]).includes(kindRaw) ? kindRaw : ''
+  const statuses = kind === 'client' ? meta.client_statuses : kind === 'lead' ? leadStatuses : [...leadStatuses, ...meta.client_statuses]
+  const statusRaw = params.get('status') ?? ''
   const f: ListFilters = {
-    kind: params.get('kind') ?? '',
-    status: params.get('status') ?? '',
+    kind,
+    status: statuses.includes(statusRaw) ? statusRaw : '',
     owner: params.get('owner') ?? '',
     tag: params.get('tag') ?? '',
   }
   const raw = params.get('sort')
   const sort: OrgSort = SORTS.some((s) => s.value === raw) ? (raw as OrgSort) : 'updated'
-  const orgs = useApi(() => api.orgs({ sort }), [sort])
+  const orgs = useApi(() => api.orgs({ sort }), [sort], { keep: true })
 
   const put = (key: string, value: string) => {
     const next = new URLSearchParams(params)
@@ -61,9 +67,6 @@ export function ListPage() {
     setParams(next, { replace: true })
   }
 
-  // `won` is never stored: a won lead is an active client.
-  const leadStatuses = meta.lead_statuses.filter((s) => s !== 'won')
-  const statuses = f.kind === 'client' ? meta.client_statuses : f.kind === 'lead' ? leadStatuses : [...leadStatuses, ...meta.client_statuses]
   const all = orgs.data ?? []
   const rows = filterOrgs(all, f)
 

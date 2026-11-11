@@ -50,3 +50,25 @@ test('delete takes two clicks', async () => {
   await user.click(screen.getByRole('button', { name: 'Delete this organisation' }))
   await waitFor(() => expect(onDeleted).toHaveBeenCalled())
 })
+
+test('saving an edit with nothing changed sends no request', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({})
+  const mine = org()
+  const onSaved = vi.fn()
+  renderApp(<OrgForm open org={mine} onClose={() => {}} onSaved={onSaved} />)
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalledWith(mine))
+  expect(calls).toHaveLength(0)
+})
+
+test('an empty name is refused with a message, even by Cmd+Enter', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({})
+  const onSaved = vi.fn()
+  renderApp(<OrgForm open onClose={() => {}} onSaved={onSaved} />)
+  await user.type(screen.getByLabelText(/^Name/), '   {Meta>}{Enter}{/Meta}')
+  expect(await screen.findByText('Name is required')).toBeInTheDocument()
+  expect(calls).toHaveLength(0)
+  expect(onSaved).not.toHaveBeenCalled()
+})

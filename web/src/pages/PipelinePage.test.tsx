@@ -38,3 +38,33 @@ test('on a phone, a card moves with its status picker, and Won says it became a 
   expect(calls[1].body).toEqual({ updated_at: a.updated_at, status: 'won' })
   await waitFor(() => expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull())
 })
+
+test('desktop cards also carry a status picker, and a failed move shows a notice and reloads', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    'GET /api/orgs?kind=lead': () => [a, b],
+    'PATCH /api/orgs/1': () =>
+      new Response(JSON.stringify({ detail: 'Changed since you loaded it', current: a }), { status: 409 }),
+  })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
+  expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
+  await waitFor(() => expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(2))
+})
+
+test('two quick moves do not undo each other', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    'GET /api/orgs?kind=lead': () => [a, b],
+    'PATCH /api/orgs/1': () => org({ ...a, status: 'contacted' }),
+    'PATCH /api/orgs/2': () => org({ ...b, status: 'parked' }),
+  })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
+  await user.click(await screen.findByRole('button', { name: 'Status of Bolt' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Parked' }))
+  await waitFor(() => expect(within(screen.getByTestId('stage-parked')).getByRole('link', { name: 'Bolt' })).toBeInTheDocument())
+  expect(within(screen.getByTestId('stage-contacted')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+})

@@ -8,13 +8,22 @@ export function SearchBox() {
   const { pathname } = useLocation()
   const [params] = useSearchParams()
   const onSearch = pathname === '/search'
-  const [text, setText] = useState(onSearch ? params.get('q') ?? '' : '')
+  const urlQ = onSearch ? params.get('q') ?? '' : ''
+  const [text, setText] = useState(urlQ)
   const input = useRef<HTMLInputElement>(null)
+  // The last query this box put in the URL or took from it, so the URL and the
+  // text can tell their own changes from the other side's.
+  const lastQ = useRef(urlQ)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (e.isComposing || e.defaultPrevented) return
+      if (e.target instanceof Element) {
+        if (e.target.closest('input, textarea, select')) return
+        if ((e.target as HTMLElement).isContentEditable) return
+      }
+      if (document.querySelector('.tenon-modal')) return
       e.preventDefault()
       input.current?.focus()
     }
@@ -22,16 +31,31 @@ export function SearchBox() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Back and forward change the URL under the box; follow it, but leave
+  // alone text that is only waiting to be sent.
   useEffect(() => {
-    if (!onSearch) setText('')
-  }, [onSearch])
+    if (urlQ === lastQ.current) return
+    lastQ.current = urlQ
+    setText(urlQ)
+  }, [urlQ])
+
+  // Any other page starts with an empty box, so unsent text cannot follow the
+  // visitor there.
+  useEffect(() => {
+    if (onSearch) return
+    lastQ.current = ''
+    setText('')
+  }, [pathname])
 
   useEffect(() => {
     const q = text.trim()
-    if (!q || (onSearch && q === (params.get('q') ?? ''))) return
-    const t = setTimeout(() => navigate(`/search?q=${encodeURIComponent(q)}`, { replace: onSearch }), 200)
+    if (q === lastQ.current || (!onSearch && !q)) return
+    const t = setTimeout(() => {
+      lastQ.current = q
+      navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search', { replace: onSearch })
+    }, 200)
     return () => clearTimeout(t)
-  }, [text])
+  }, [text, pathname])
 
   return (
     <input

@@ -77,6 +77,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   const [base, setBase] = useState(org)
   const [form, setForm] = useState(() => orgForm(org, me))
   const [error, setError] = useState<string>()
+  const [nameError, setNameError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
     setBase(org)
     setForm(orgForm(org, me))
     setError(undefined)
+    setNameError(undefined)
   }, [open, org, me])
 
   const set = (k: keyof OrgFormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -91,13 +93,24 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
 
   async function save() {
     if (busy) return
+    if (form.name.trim() === '') {
+      setNameError('Name is required')
+      return
+    }
+    setNameError(undefined)
     setBusy(true)
     setError(undefined)
     try {
       const body = orgBody(form)
-      const saved = base
-        ? await api.patchOrg(base.id, { ...changed<OrgFields>(base, body), updated_at: base.updated_at })
-        : await api.createOrg({ ...body, kind: form.kind })
+      let saved: Org
+      if (base) {
+        const diff = changed<OrgFields>(base, body)
+        saved = Object.keys(diff).length === 0
+          ? base
+          : await api.patchOrg(base.id, { ...diff, updated_at: base.updated_at })
+      } else {
+        saved = await api.createOrg({ ...body, kind: form.kind })
+      }
       onSaved(saved)
     } catch (e) {
       setError(saveErrorText(e))
@@ -112,12 +125,15 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   }
 
   async function remove() {
-    if (!base) return
+    if (!base || busy) return
+    setBusy(true)
     try {
       await api.deleteOrg(base.id)
       onDeleted?.()
     } catch (e) {
       setError(saveErrorText(e))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -140,7 +156,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
     >
       <form id="org-form" className="lg-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
-        <Field label="Name" required value={form.name} onChange={set('name')} autoFocus />
+        <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         {!base && (
           <div className="lg-field">
             <span className="tenon-label">Kind</span>

@@ -179,3 +179,31 @@ def test_interaction_contacts_contact_index_exists(tmp_path):
     migrate(conn, path)
     names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
     assert "interaction_contacts_contact" in names
+
+
+def _open_and_migrate(path):
+    c = connect(path)
+    migrate(c, path)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert c.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    c.close()
+
+
+def test_four_processes_open_a_fresh_file_at_once(tmp_path):
+    import multiprocessing
+    path = str(tmp_path / "l.db")
+    ctx = multiprocessing.get_context("spawn")
+    procs = [ctx.Process(target=_open_and_migrate, args=(path,)) for _ in range(4)]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join(60)
+    assert [p.exitcode for p in procs] == [0, 0, 0, 0]
+
+
+def test_connect_leaves_journal_mode_to_migrate(tmp_path):
+    path = str(tmp_path / "l.db")
+    conn = connect(path)
+    assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+    migrate(conn, path)
+    assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"

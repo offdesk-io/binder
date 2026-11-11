@@ -5,7 +5,10 @@ transaction together with `PRAGMA user_version = NNN`, so a failed one leaves
 the database exactly as it was. Migration files must not contain BEGIN or
 COMMIT: migrate() wraps them. Foreign keys are switched off while one runs (so
 a table rebuild does not cascade-delete child rows) and `foreign_key_check`
-must come back clean before it commits. A file lock serialises concurrent
+must come back clean before it commits. A migration that rebuilds a table
+(create new, copy, drop old, rename) loses that table's triggers and CHECKs
+with the old one, for example the org_* search triggers, and must recreate
+them. A file lock serialises concurrent
 migrators. Before migrating a database that already has
 a schema, a copy goes to `<db dir>/backups/<name>-v<version>-<stamp>.db`.
 """
@@ -30,9 +33,8 @@ def now() -> str:
 def connect(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
@@ -107,6 +109,9 @@ def migrate(conn: sqlite3.Connection, path: Optional[str] = None) -> None:
     with open(path + ".migrate.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         try:
+            # WAL is set once, under the lock, so processes opening a brand-new
+            # file together do not fight over the journal mode.
+            conn.execute("PRAGMA journal_mode=WAL")
             _migrate_locked(conn, path)  # version is read after the lock is held
         finally:
             fcntl.flock(lock, fcntl.LOCK_UN)

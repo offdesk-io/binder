@@ -3,8 +3,10 @@
 LEDGER_AUTH unset or empty is local development: one fixed identity, no
 sign-in. LEDGER_AUTH=header is the server behind nginx and the Offdesk
 sign-in, which passes X-Offdesk-* headers. Any other value refuses to start,
-so a typo cannot leave the app open. Header mode listens on loopback only,
-because the headers are only trustworthy when nginx is the only caller.
+so a typo cannot leave the app open. Ledger always listens on loopback only:
+dev mode has no sign-in at all, and the header mode's headers are only
+trustworthy when nginx is the only caller. Header mode also needs LEDGER_DB
+set explicitly to an absolute path.
 """
 
 import os

@@ -219,7 +219,9 @@ table by giving them the same slug.
 
 - The Hetzner server runs Bench today. Ledger adds:
   - an nginx server block for `ledger.offdesk.io` (TLS, `auth_request`
-    copied from Bench's block),
+    copied from Bench's block). It must overwrite every `X-Offdesk-*` header
+    with the sign-in service's answer, so a client-sent one never reaches the
+    app. The deploy check sends a forged header and expects it to be ignored,
   - a `ledger.service` systemd unit,
   - a data folder for the SQLite file and nightly backups, outside the repo.
 - Deploys use the same pipeline shape as Bench. A merge to protected `main`

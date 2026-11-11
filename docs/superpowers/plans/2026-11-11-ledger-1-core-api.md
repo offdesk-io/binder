@@ -543,7 +543,7 @@ from fastapi import HTTPException
 from ledger.auth import identity_from_headers, DEV_IDENTITY
 from ledger.config import load_settings
 
-HEADER = load_settings({"LEDGER_AUTH": "header"})
+HEADER = load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "/tmp/ledger-test.db"})
 LOCAL = load_settings({})
 
 
@@ -1215,14 +1215,15 @@ def get_by_slug(conn: sqlite3.Connection, slug: str) -> Dict[str, Any]:
 def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str, Any]:
     kind = data.pop("kind", "lead") or "lead"
     status = initial_status(kind)
-    slug = _unique_slug(conn, slugify(data.pop("slug", None) or data["name"]))
+    requested_slug = data.pop("slug", None)
     data.setdefault("owner_email", None)
     if not data["owner_email"]:
         data["owner_email"] = by
     data["tags"] = json.dumps(data.get("tags") or [])
     at = now()
     cols = [f for f in FIELDS if f in data]
-    conn.execute("BEGIN")
+    conn.execute("BEGIN IMMEDIATE")  # slug lookup and insert under one write lock
+    slug = _unique_slug(conn, slugify(requested_slug or data["name"]))
     cur = conn.execute(
         "INSERT INTO organisations(slug, kind, status, created_at, updated_at, updated_by, %s) VALUES (?,?,?,?,?,?,%s)"
         % (", ".join(cols), ", ".join("?" * len(cols))),

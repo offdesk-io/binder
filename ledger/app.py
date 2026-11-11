@@ -7,7 +7,7 @@ from . import errors
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
-from .api import misc
+from .api import misc, orgs
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -33,5 +33,6 @@ def create_app(settings: Settings) -> FastAPI:
 
     api = APIRouter(prefix="/api", dependencies=[Depends(guard)])
     api.include_router(misc.router)
+    api.include_router(orgs.router)
     app.include_router(api)
     return app

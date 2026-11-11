@@ -16,8 +16,9 @@ Read before changing anything:
 There are five plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
-2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): **next**.
-   Begin with the carry-over fixes to response shapes, then write the plan.
+2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): built on
+   `feature/frontend`, plan `docs/superpowers/plans/2026-11-11-ledger-2-frontend.md`.
+   Review, then merge.
 3. AI: research briefs and paste-and-summarise.
 4. Bench link and import: the `[lead:: <slug>]` field, card chip and Lead
    picker in Bench, plus the import of the offdesk board's **Leads** bucket.
@@ -29,9 +30,11 @@ There are five plans, each one spec → plan → build → review:
 python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest -q
 LEDGER_DB=ledger.db .venv/bin/python -m ledger      # http://127.0.0.1:8770
+(cd web && npm install && npm run check && npm test)   # frontend
+(cd web && npm run e2e)                                # Playwright, builds first
 ```
 
-Run the whole suite before every commit. `pytest -m online` tests hit real
+Run both suites before every commit. `pytest -m online` tests hit real
 services and never run in CI.
 
 ## Rules for the code
@@ -69,6 +72,22 @@ services and never run in CI.
   - Both modes listen on loopback only.
   - Every non-GET request needs `X-Ledger: 1`.
   - Only the team named by `LEDGER_TEAM` gets in.
+
+## Rules for the frontend
+
+- The app lives in `web/`. FastAPI serves its build (`ledger/web.py`), with
+  `index.html` for any path not under `/api`, so `/o/<slug>` links work.
+- Use a Tenon component before writing one. CSS in `web/src/styles.css` reads
+  `var(--tenon-…)` tokens only: no hex colours, no font names.
+- `web/src/api/types.ts` and the README's API section describe the same
+  shapes. Change them together.
+- Every fetch goes through `web/src/api/client.ts`, which adds `X-Ledger: 1`
+  to writes. Every edit form PATCHes only what changed, plus `updated_at`, and
+  on a 409 loads `current` into the form. A save with nothing changed sends
+  nothing.
+- Lists, filters and vocabularies come from `GET /api/meta`, never a copy in
+  the frontend.
+- One breakpoint: below 768px is the phone layout (`useIsPhone`).
 
 ## Ledger and Bench
 

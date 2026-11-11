@@ -6,8 +6,17 @@ Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`.
 ```
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
+(cd web && npm install && npm run build)
 LEDGER_DB=ledger.db .venv/bin/python -m ledger     # http://127.0.0.1:8770
 ```
+
+The backend serves the built app from `web/dist` (`LEDGER_WEB` points elsewhere).
+For frontend work, run the backend as above and `cd web && npm run dev`, then
+open `http://127.0.0.1:5173`, which sends `/api` to the backend.
+
+From `web/`: `npm run check` type-checks, `npm test` runs the Vitest suite, and
+`npm run e2e` builds and runs the Playwright flows at 390px and 1280px against a
+throwaway database (`npx playwright install chromium` once first).
 
 `LEDGER_AUTH=header` is the server behind nginx, and needs `LEDGER_DB` set to an absolute path; unset is local development. Ledger listens on loopback only in both modes. `LEDGER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
 

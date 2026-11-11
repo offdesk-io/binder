@@ -1,0 +1,76 @@
+import { expect, test, type APIRequestContext } from '@playwright/test'
+
+interface Org { id: number; slug: string; name: string }
+
+let n = 0
+/** A name whose last word is unique, so a search for that word finds one organisation. */
+function unique(base: string): string {
+  n += 1
+  return `${base} ${Date.now().toString(36)}x${n}`
+}
+
+async function newOrg(request: APIRequestContext, name: string): Promise<Org> {
+  const r = await request.post('/api/orgs', { data: { name } })
+  expect(r.ok()).toBeTruthy()
+  return r.json()
+}
+
+test('search finds an organisation and opens it', async ({ page, request }) => {
+  const name = unique('Searchable Studio')
+  const org = await newOrg(request, name)
+  await page.goto('/')
+  await page.keyboard.press('/')
+  await page.keyboard.type(name.split(' ').pop()!)
+  await page.getByRole('link', { name }).click()
+  await expect(page).toHaveURL(new RegExp(`/o/${org.slug}$`))
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+})
+
+test('the list opens an organisation', async ({ page, request }) => {
+  const name = unique('Listed Ltd')
+  await newOrg(request, name)
+  await page.goto('/list')
+  await page.getByRole('link', { name }).click()
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+})
+
+test('quick log adds to the timeline', async ({ page, request }) => {
+  const org = await newOrg(request, unique('Logged Co'))
+  await page.goto(`/o/${org.slug}`)
+  await page.getByRole('button', { name: 'Log', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: 'Meeting' }).click()
+  await dialog.getByLabel('What happened').fill('Talked budgets over coffee')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText('Talked budgets over coffee')).toBeVisible()
+})
+
+test('status changes on the organisation page', async ({ page, request }) => {
+  const org = await newOrg(request, unique('Status Group'))
+  await page.goto(`/o/${org.slug}`)
+  await page.getByRole('button', { name: 'Status', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Contacted' }).click()
+  await expect(page.getByText('Moved from Lead to Contacted')).toBeVisible()
+  const saved = await (await request.get(`/api/orgs/${org.id}`)).json()
+  expect(saved.status).toBe('contacted')
+})
+
+test('the pipeline moves a lead to the next stage', async ({ page, request }, info) => {
+  const name = unique('Pipeline Partners')
+  const org = await newOrg(request, name)
+  await page.goto('/pipeline')
+  if (info.project.name === 'desktop') {
+    const card = page.locator('.tenon-card', { hasText: name })
+    const target = page.getByTestId('stage-contacted')
+    await card.dragTo(target)
+    await expect(target.getByRole('link', { name })).toBeVisible()
+  } else {
+    await page.getByRole('button', { name: `Status of ${name}` }).click()
+    await page.getByRole('menuitemradio', { name: 'Contacted' }).click()
+    await page.getByRole('radio', { name: /^Contacted/ }).click()
+    await expect(page.getByRole('link', { name })).toBeVisible()
+  }
+  const saved = await (await request.get(`/api/orgs/${org.id}`)).json()
+  expect(saved.status).toBe('contacted')
+})

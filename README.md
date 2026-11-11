@@ -14,6 +14,8 @@ The backend serves the built app from `web/dist` (`LEDGER_WEB` points elsewhere)
 For frontend work, run the backend as above and `cd web && npm run dev`, then
 open `http://127.0.0.1:5173`, which sends `/api` to the backend.
 
+Sign out posts to nginx's `/auth/logout`, so it does nothing useful in local development.
+
 From `web/`: `npm run check` type-checks, `npm test` runs the Vitest suite, and
 `npm run e2e` builds and runs the Playwright flows at 390px and 1280px against a
 throwaway database (`npx playwright install chromium` once first).

@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './Layout'
+import { HomePage } from '../pages/HomePage'
 import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
@@ -16,7 +17,7 @@ export function App() {
     <SessionProvider>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Soon name="Home" />} />
+          <Route index element={<HomePage />} />
           <Route path="pipeline" element={<Soon name="Pipeline" />} />
           <Route path="list" element={<Soon name="List" />} />
           <Route path="search" element={<SearchPage />} />

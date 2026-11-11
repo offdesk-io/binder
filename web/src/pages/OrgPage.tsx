@@ -2,16 +2,18 @@ import { Alert, Button, LinkButton, Tag } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
-import type { Org } from '../api/types'
+import type { Org, TimelineInteraction } from '../api/types'
 import { Loading } from '../components/Loading'
 import { NextStep } from '../components/OrgCard'
 import { OrgForm } from '../components/OrgForm'
+import { QuickLog } from '../components/QuickLog'
 import { StatusPicker } from '../components/StatusPicker'
 import { label, money, person, webHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { PeopleSection } from './org/PeopleSection'
+import { TimelineSection } from './org/TimelineSection'
 
 export function OrgPage() {
   const { slug = '' } = useParams()
@@ -42,6 +44,12 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string>()
+  const [log, setLog] = useState<'new' | TimelineInteraction>()
+  const afterLog = () => {
+    setLog(undefined)
+    timeline.reload()
+    reloadOrg() // last_contact moves
+  }
   const primary = contacts.data?.find((c) => c.is_primary)
 
   async function changeStatus(status: string) {
@@ -71,7 +79,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
           {org.website && <> · <a href={webHref(org.website)} target="_blank" rel="noreferrer">{org.website}</a></>}
         </p>
         <div className="lg-actions">
-          {/* LOG BUTTON: Task 16 adds it here. */}
+          {!phone && <Button onClick={() => setLog('new')}>Log</Button>}
           <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
           {!phone && primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
           {primary?.email && <LinkButton variant="secondary" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
@@ -90,7 +98,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
               ))}
             </dl>
           </section>
-          {/* TIMELINE: Task 16 adds it here. */}
+          <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
         </div>
         <div className="lg-column">
           <PeopleSection orgId={org.id} contacts={contacts} />
@@ -99,7 +107,7 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
 
       {phone && (
         <div className="lg-bar">
-          {/* LOG BAR BUTTON: Task 16 adds it here. */}
+          <Button onClick={() => setLog('new')}>Log</Button>
           {primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call</LinkButton>}
         </div>
       )}
@@ -114,6 +122,14 @@ function OrgView({ org, setOrg, reloadOrg }: { org: Org; setOrg: (o: Org) => voi
           timeline.reload()
         }}
         onDeleted={() => navigate('/list')}
+      />
+      <QuickLog
+        open={log !== undefined}
+        orgId={org.id}
+        contacts={contacts.data ?? []}
+        initial={log === 'new' ? undefined : log}
+        onClose={() => setLog(undefined)}
+        onSaved={afterLog}
       />
     </div>
   )

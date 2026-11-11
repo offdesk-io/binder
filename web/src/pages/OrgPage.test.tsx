@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { expect, test } from 'vitest'
-import { contact, org } from '../test/fixtures'
+import { contact, interaction, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { OrgPage } from './OrgPage'
 
@@ -54,4 +54,17 @@ test('lists the people, with who to talk to flagged', async () => {
   page()
   expect(await screen.findByRole('link', { name: 'Bo' })).toHaveAttribute('href', '/c/5')
   expect(screen.getByText('Talk to')).toBeInTheDocument()
+})
+
+test('the timeline mixes logs and status changes', async () => {
+  stubs({
+    'GET /api/orgs/1/timeline': () => [
+      { kind: 'status', id: 1, org_id: 1, from_status: 'lead', to_status: 'contacted', at: acme.updated_at, by_email: 'ana@example.com' },
+      { ...interaction({ contact_ids: [5] }), author_email: undefined, kind: 'interaction', at: acme.updated_at, by_email: 'ana@example.com' },
+    ],
+  })
+  page()
+  expect(await screen.findByText('Talked budgets')).toBeInTheDocument()
+  expect(screen.getByText('Moved from Lead to Contacted')).toBeInTheDocument()
+  expect(await screen.findByText(/with Bo/)).toBeInTheDocument()
 })

@@ -1,0 +1,91 @@
+# Ledger
+
+The Offdesk leads and clients manager, at `https://ledger.offdesk.io`. It is a
+sibling to Bench, the team's to-do board: the two share the Offdesk sign-in and
+the Tenon design system, and run on the same Hetzner server. Ledger owns the
+record for each lead and client. Bench owns the work.
+
+Read before changing anything:
+
+- Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`
+- Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-ledger-1-core-api.md`
+- Start of plan 2: `docs/superpowers/plans/2026-11-11-ledger-2-carryover.md`
+
+## Where the work stands
+
+There are five plans, each one spec → plan → build → review:
+
+1. Core API: merged to `main`.
+2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): **next**.
+   Begin with the carry-over fixes to response shapes, then write the plan.
+3. AI: research briefs and paste-and-summarise.
+4. Bench link and import: the `[lead:: <slug>]` field, card chip and Lead
+   picker in Bench, plus the import of the offdesk board's **Leads** bucket.
+5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner.
+
+## Run and test
+
+```
+python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -e '.[dev]'
+.venv/bin/pytest -q
+LEDGER_DB=ledger.db .venv/bin/python -m ledger      # http://127.0.0.1:8770
+```
+
+Run the whole suite before every commit. `pytest -m online` tests hit real
+services and never run in CI.
+
+## Rules for the code
+
+- **Python 3.9.** Use `Optional`/`List`/`Dict` from `typing`, never `X | Y`.
+- **Layers.** `ledger/repo/` holds plain functions `(conn, ...) -> dict` with no
+  HTTP in them. `ledger/api/` holds routers that validate with pydantic
+  (`ledger/schemas.py`) and call the repo. Every `/api` route sits behind
+  `guard()`, except `/api/health`.
+- **Every write** runs `BEGIN IMMEDIATE`, then `try: … COMMIT`, then
+  `except: ROLLBACK; raise`. Existence and ownership checks go inside that
+  transaction.
+- **SQL.** Only column names from a whitelist (`FIELDS`) are formatted into SQL.
+  Every value is bound.
+- **Stale saves.** Every PATCH carries `updated_at`. A stale one raises
+  `Conflict(current)`, which returns 409.
+- **Times.** Store times as UTC ISO with microseconds, as `db.now()` and
+  `schemas.iso_datetime` produce, because feeds and sorting compare them as
+  strings. Dates are `YYYY-MM-DD`. "Today" uses `LEDGER_TZ`
+  (default `Europe/London`).
+- **Migrations.**
+  - Files are named `ledger/migrations/NNN_name.sql` and applied in order at
+    startup. Each runs in one transaction with foreign keys off and a
+    `foreign_key_check` before commit, so a file must not contain its own
+    `BEGIN`/`COMMIT`.
+  - Rebuilding a table drops its triggers and CHECKs (for example the `search`
+    triggers), so recreate them in the same migration.
+  - Once a migration has been deployed, never edit it: add a new one.
+- **Search.** The FTS5 table is `search(kind, ref_id, org_id, title, body)`.
+  Triggers keep it up to date. Bind `ref_id` and `org_id` as ints.
+- **Sign-in.**
+  - `LEDGER_AUTH=header` trusts the `X-Offdesk-Email`, `X-Offdesk-Name` and
+    `X-Offdesk-Teams` headers from nginx. Unset means local development with a
+    fixed identity.
+  - Both modes listen on loopback only.
+  - Every non-GET request needs `X-Ledger: 1`.
+  - Only the team named by `LEDGER_TEAM` gets in.
+
+## Ledger and Bench
+
+- **Ledger never writes Bench's `todo.md`.** Changes to a Bench task go through
+  Bench's own PA (`pa_save`), against the server's offdesk board.
+- **Changes on the Bench side** (plan 4) are made in the Bench repo, on a branch
+  and through a PR, following Bench's own `CLAUDE.md`. In particular, the task
+  format lives in both `core/todo.js` and `core/todo.py`, which must change
+  together.
+- **Ledger reads Bench's tasks** server to server, through Bench's
+  `core/todo.py`.
+
+## Commits and privacy
+
+- Work on a branch and merge to `main` through a PR. `main` is the branch that
+  will deploy.
+- Commit messages and PR bodies are plain. Add no attribution lines of any kind
+  and never mention AI tools, in commits, PRs or code comments.
+- Keep real people's emails, names, account details and key paths out of every
+  tracked file. Tests use `@example.com` addresses.

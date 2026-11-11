@@ -9,9 +9,6 @@ export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value'
 export interface OrgFilters {
   kind?: Kind | ''
   status?: string
-  owner?: string
-  tag?: string
-  q?: string
   sort?: OrgSort
 }
 
@@ -32,7 +29,6 @@ export const api = {
   activity: (limit = 30) => request<ActivityItem[]>('GET', `/api/activity?limit=${limit}`),
 
   orgs: (f: OrgFilters = {}) => request<Org[]>('GET', `/api/orgs${query({ ...f })}`),
-  org: (id: number) => request<Org>('GET', `/api/orgs/${id}`),
   orgBySlug: (s: string) => request<Org>('GET', `/api/orgs/by-slug/${slug(s)}`),
   createOrg: (body: OrgInput) => request<Org>('POST', '/api/orgs', body),
   patchOrg: (id: number, body: OrgPatch) => request<Org>('PATCH', `/api/orgs/${id}`, body),

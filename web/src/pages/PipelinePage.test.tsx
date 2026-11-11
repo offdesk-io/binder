@@ -44,12 +44,12 @@ test('desktop cards also carry a status picker, and a failed move shows a notice
   const calls = stubFetch({
     'GET /api/orgs?kind=lead': () => [a, b],
     'PATCH /api/orgs/1': () =>
-      new Response(JSON.stringify({ detail: 'Changed since you loaded it', current: a }), { status: 409 }),
+      new Response(JSON.stringify({ detail: 'Server error' }), { status: 500 }),
   })
   renderApp(<PipelinePage />)
   await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
-  expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
+  expect(await screen.findByText('Server error')).toBeInTheDocument()
   await waitFor(() => expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(2))
 })
 
@@ -67,4 +67,31 @@ test('two quick moves do not undo each other', async () => {
   await user.click(screen.getByRole('menuitemradio', { name: 'Parked' }))
   await waitFor(() => expect(within(screen.getByTestId('stage-parked')).getByRole('link', { name: 'Bolt' })).toBeInTheDocument())
   expect(within(screen.getByTestId('stage-contacted')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('on a phone the empty Won stage does not tell you to drag', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?kind=lead': () => [a, b] })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('radio', { name: /Won/ }))
+  expect(screen.getByText('No won leads yet.')).toBeInTheDocument()
+  expect(screen.queryByText(/Drop a lead/)).toBeNull()
+})
+
+test('a stale move shows the current record without reloading the list', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    'GET /api/orgs?kind=lead': () => [a, b],
+    'PATCH /api/orgs/1': () =>
+      new Response(JSON.stringify({ detail: 'Changed', current: { ...a, name: 'Acme Ltd', status: 'lead' } }), {
+        status: 409, headers: { 'Content-Type': 'application/json' },
+      }),
+  })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
+  expect(await screen.findByRole('link', { name: 'Acme Ltd' })).toBeInTheDocument()
+  expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(1)
 })

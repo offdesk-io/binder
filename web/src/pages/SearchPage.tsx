@@ -17,12 +17,12 @@ export function hitLink(h: SearchHit): string {
   return `/o/${h.org_slug}`
 }
 
-/** The API marks matches as [word]. */
+/** The API wraps each match in \u0002 and \u0003, which never occur in typed text. */
 export function Snippet({ text }: { text: string }) {
   return (
     <span className="lg-faint">
-      {text.split(/(\[[^\]]*\])/).map((part, i) =>
-        part.startsWith('[') && part.endsWith(']') ? <mark key={i}>{part.slice(1, -1)}</mark> : part,
+      {text.split(/(\u0002[^\u0003]*\u0003)/).map((part, i) =>
+        part.startsWith('\u0002') && part.endsWith('\u0003') ? <mark key={i}>{part.slice(1, -1)}</mark> : part,
       )}
     </span>
   )
@@ -31,7 +31,7 @@ export function Snippet({ text }: { text: string }) {
 export function SearchPage() {
   const [params] = useSearchParams()
   const q = (params.get('q') ?? '').trim()
-  const hits = useApi(() => (q ? api.search(q) : Promise.resolve([] as SearchHit[])), [q])
+  const hits = useApi(() => (q ? api.search(q) : Promise.resolve([] as SearchHit[])), [q], { keep: true })
 
   if (!q) return <p className="lg-faint">Type in the search box to find organisations, people and notes.</p>
   if (hits.error) return <Alert tone="error">{hits.error.message}</Alert>

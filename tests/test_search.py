@@ -5,7 +5,7 @@ def test_search_finds_each_kind(client, org):
 
     hits = client.get("/api/search?q=porto").json()
     assert [(h["kind"], h["org_name"]) for h in hits] == [("org", "Acme Studio")]
-    assert "[Porto]" in hits[0]["snippet"]
+    assert "\x02Porto\x03" in hits[0]["snippet"]
 
     assert client.get("/api/search?q=founder").json()[0]["kind"] == "contact"
     assert client.get("/api/search?q=lisb").json()[0]["kind"] == "interaction"  # prefix match

@@ -21,6 +21,9 @@ test('shows what needs attention, with its reasons, and recent activity', async 
   expect(screen.getByText(/Send the deck/)).toHaveClass('lg-overdue')
   expect(await screen.findByText('Moved from Lead to Contacted')).toBeInTheDocument()
   expect(screen.getByText('Call: Rang about rates')).toBeInTheDocument()
+  const hrefs = screen.getAllByRole('link').map((l) => l.getAttribute('href'))
+  expect(hrefs).toContain('/o/bolt#i-2')
+  expect(hrefs).toContain('/o/bolt')
 })
 
 test('says so when nothing needs attention', async () => {

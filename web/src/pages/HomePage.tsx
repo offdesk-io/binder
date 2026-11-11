@@ -47,7 +47,7 @@ export function HomePage() {
           <ul className="lg-activity">
             {activity.data.map((a) => (
               <li key={`${a.kind}${a.id}`}>
-                <span><Link to={`/o/${a.org_slug}`}>{a.org_name}</Link></span>
+                <span><Link to={`/o/${a.org_slug}${a.kind === 'interaction' ? `#i-${a.id}` : ''}`}>{a.org_name}</Link></span>
                 <span>{what(a)}</span>
                 <span className="lg-faint">{person(a.by_email)} · {ago(a.at)}</span>
               </li>

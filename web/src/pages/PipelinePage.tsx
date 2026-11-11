@@ -1,5 +1,6 @@
 import { Alert, Column, ColumnEmpty, SegmentedControl } from '@tiagopedras/tenon'
 import { useState } from 'react'
+import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useSession } from '../app/session'
@@ -18,6 +19,13 @@ export function byStatus(orgs: Org[], statuses: string[]): Record<string, Org[]>
 }
 
 const EMPTY: Record<string, string> = { won: 'Drop a lead here when it is won.' }
+const EMPTY_PHONE: Record<string, string> = { won: 'No won leads yet.' }
+
+/** A changed lead goes to the front, where the API's newest-first order puts it. */
+function place(prev: Org[] | undefined, org: Org): Org[] {
+  const rest = (prev ?? []).filter((o) => o.id !== org.id)
+  return org.kind === 'lead' ? [org, ...rest] : rest
+}
 
 export function PipelinePage() {
   const { meta } = useSession()
@@ -33,14 +41,12 @@ export function PipelinePage() {
     setNotice(undefined)
     try {
       const saved = await api.patchOrg(org.id, { updated_at: org.updated_at, status })
-      orgs.setData((prev) => {
-        const rest = (prev ?? []).filter((o) => o.id !== org.id)
-        return saved.kind === 'lead' ? [...rest, saved] : rest
-      })
+      orgs.setData((prev) => place(prev, saved))
       if (saved.kind === 'client') setNotice({ tone: 'success', text: `${saved.name} is now a client.` })
     } catch (e) {
       setNotice({ tone: 'error', text: saveErrorText(e) })
-      orgs.reload()
+      if (e instanceof ApiError && e.status === 409 && e.current) orgs.setData((prev) => place(prev, e.current as Org))
+      else orgs.reload()
     }
   }
 
@@ -66,7 +72,7 @@ export function PipelinePage() {
           />
         </div>
         <div className="lg-cards">
-          {groups[stage].length === 0 && <ColumnEmpty>{EMPTY[stage] ?? 'None at this stage.'}</ColumnEmpty>}
+          {groups[stage].length === 0 && <ColumnEmpty>{EMPTY_PHONE[stage] ?? 'None at this stage.'}</ColumnEmpty>}
           {groups[stage].map((o) => (
             <OrgCard key={o.id} org={o}
               action={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(s) => void move(o, s)} />} />

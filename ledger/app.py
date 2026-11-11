@@ -8,7 +8,7 @@ from . import errors
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
-from .api import contacts, misc, orgs
+from .api import contacts, interactions, misc, orgs
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -39,5 +39,6 @@ def create_app(settings: Settings) -> FastAPI:
     api.include_router(misc.router)
     api.include_router(orgs.router)
     api.include_router(contacts.router)
+    api.include_router(interactions.router)
     app.include_router(api)
     return app

@@ -119,6 +119,9 @@ class InteractionCreate(_Body):
     next_step_due: Optional[str] = None
     contact_ids: List[int] = []
 
+    _when = field_validator("happened_at")(iso_datetime)
+    _due = field_validator("next_step_due")(iso_date)
+
 
 class InteractionPatch(_Body):
     updated_at: str
@@ -128,3 +131,7 @@ class InteractionPatch(_Body):
     next_step: Optional[str] = None
     next_step_due: Optional[str] = None
     contact_ids: Optional[List[int]] = None
+
+    _required = field_validator("type", "summary", "happened_at")(not_null)
+    _when = field_validator("happened_at")(iso_datetime)
+    _due = field_validator("next_step_due")(iso_date)

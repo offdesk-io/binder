@@ -3,10 +3,12 @@ from typing import Any, Dict, List
 
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
+from ..statuses import RELATIONSHIPS
 from . import orgs, row
 
 FIELDS = ("name", "role", "email", "phone", "linkedin_url", "notes", "is_primary", "relationship")
-RELATIONSHIPS = (None, "cold", "warm", "strong")
+SELECT = ("SELECT c.*, o.name AS org_name, o.slug AS org_slug FROM contacts c "
+          "JOIN organisations o ON o.id = c.org_id ")
 
 
 def _out(r) -> Dict[str, Any]:
@@ -16,13 +18,12 @@ def _out(r) -> Dict[str, Any]:
 
 
 def _check(data: Dict[str, Any]) -> None:
-    if data.get("relationship", None) not in RELATIONSHIPS:
+    if data.get("relationship") not in (None,) + RELATIONSHIPS:
         raise Invalid("relationship must be cold, warm or strong")
 
 
 def get(conn: sqlite3.Connection, contact_id: int) -> Dict[str, Any]:
-    r = conn.execute("SELECT c.*, o.name AS org_name, o.slug AS org_slug FROM contacts c "
-                     "JOIN organisations o ON o.id = c.org_id WHERE c.id = ?", (contact_id,)).fetchone()
+    r = conn.execute(SELECT + "WHERE c.id = ?", (contact_id,)).fetchone()
     if r is None:
         raise NotFound("No contact %d" % contact_id)
     return _out(r)
@@ -31,7 +32,7 @@ def get(conn: sqlite3.Connection, contact_id: int) -> Dict[str, Any]:
 def list_for_org(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:
     orgs.get(conn, org_id)
     return [_out(r) for r in conn.execute(
-        "SELECT * FROM contacts WHERE org_id = ? ORDER BY is_primary DESC, name COLLATE NOCASE", (org_id,))]
+        SELECT + "WHERE c.org_id = ? ORDER BY c.is_primary DESC, c.name COLLATE NOCASE", (org_id,))]
 
 
 def _clear_primary(conn, org_id: int, keep: int) -> None:

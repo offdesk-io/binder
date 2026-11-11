@@ -9,25 +9,25 @@ def test_initial_status():
 
 
 def test_lead_moves_within_lead_statuses():
-    assert check_transition("lead", "lead", "contacted") == ("lead", "contacted")
+    assert check_transition("lead", "contacted") == ("lead", "contacted")
 
 
 def test_won_turns_lead_into_active_client():
-    assert check_transition("lead", "proposal_sent", "won") == ("client", "active")
+    assert check_transition("lead", "won") == ("client", "active")
 
 
 def test_client_cannot_take_lead_status():
     with pytest.raises(Invalid):
-        check_transition("client", "active", "contacted")
+        check_transition("client", "contacted")
 
 
 def test_unknown_status_rejected():
     with pytest.raises(Invalid):
-        check_transition("lead", "lead", "maybe")
+        check_transition("lead", "maybe")
 
 
 def test_lost_lead_can_reopen():
-    assert check_transition("lead", "lost", "in_conversation") == ("lead", "in_conversation")
+    assert check_transition("lead", "in_conversation") == ("lead", "in_conversation")
 
 
 def test_status_change_writes_history(client, org):

@@ -3,9 +3,9 @@ from typing import Any, Dict, List, Optional
 
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
+from ..statuses import INTERACTION_TYPES as TYPES
 from . import orgs, row
 
-TYPES = ("call", "email", "meeting", "note")
 FIELDS = ("type", "summary", "happened_at", "next_step", "next_step_due")
 
 

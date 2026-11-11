@@ -31,7 +31,7 @@ def test_empty_query(client):
 
 def test_search_ids_are_integers(client, org):
     hit = client.get("/api/search?q=acme").json()[0]
-    assert hit["ref_id"] == org["id"] and hit["org_id"] == org["id"]
+    assert hit["id"] == org["id"] and "ref_id" not in hit and hit["org_id"] == org["id"]
 
 
 def test_search_survives_control_characters(client, org):

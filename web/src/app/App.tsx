@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './Layout'
 import { HomePage } from '../pages/HomePage'
+import { ListPage } from '../pages/ListPage'
 import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
@@ -19,7 +20,7 @@ export function App() {
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="pipeline" element={<Soon name="Pipeline" />} />
-          <Route path="list" element={<Soon name="List" />} />
+          <Route path="list" element={<ListPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="o/:slug" element={<Soon name="Organisation" />} />
           <Route path="c/:id" element={<Soon name="Contact" />} />

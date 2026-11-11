@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './Layout'
+import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
 function NotFound() {
@@ -18,7 +19,7 @@ export function App() {
           <Route index element={<Soon name="Home" />} />
           <Route path="pipeline" element={<Soon name="Pipeline" />} />
           <Route path="list" element={<Soon name="List" />} />
-          <Route path="search" element={<Soon name="Search" />} />
+          <Route path="search" element={<SearchPage />} />
           <Route path="o/:slug" element={<Soon name="Organisation" />} />
           <Route path="c/:id" element={<Soon name="Contact" />} />
           <Route path="*" element={<NotFound />} />

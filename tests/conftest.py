@@ -11,7 +11,7 @@ WRITE = dict(TEAM, **{"x-ledger": "1"})
 @pytest.fixture
 def make_client(tmp_path):
     def _make(auth="header"):
-        env = {"LEDGER_DB": str(tmp_path / "t.db")}
+        env = {"LEDGER_DB": str(tmp_path / "t.db"), "LEDGER_WEB": str(tmp_path / "no-web")}  # never the real build
         if auth:
             env["LEDGER_AUTH"] = auth
         return TestClient(create_app(load_settings(env)))

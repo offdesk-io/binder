@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import { SessionContext, type Session } from '../app/session'
 
+const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true }
+
 export const SESSION: Session = {
   meta: {
     kinds: ['lead', 'client'],
@@ -20,7 +22,7 @@ export const SESSION: Session = {
 export function renderApp(ui: ReactElement, path = '/') {
   return render(
     <SessionContext.Provider value={SESSION}>
-      <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]} future={ROUTER_FUTURE}>{ui}</MemoryRouter>
     </SessionContext.Provider>,
   )
 }

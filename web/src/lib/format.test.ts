@@ -22,6 +22,14 @@ describe('format', () => {
     expect(day(null)).toBe('')
   })
 
+  test('microsecond times parse, and a bad date shows nothing', () => {
+    expect(day('2026-11-12T09:00:00.123456+00:00')).toBe('12 Nov 2026')
+    expect(toLocalInput('2026-11-12T09:00:00.123456+00:00')).not.toBe('')
+    expect(day('not a date')).toBe('')
+    expect(toLocalInput('not a date')).toBe('')
+    expect(ago('not a date', new Date(2026, 10, 12))).toBe('')
+  })
+
   test('ago counts calendar days', () => {
     const now = new Date(2026, 10, 12, 15, 0)
     expect(ago(new Date(2026, 10, 12, 1, 0).toISOString(), now)).toBe('today')

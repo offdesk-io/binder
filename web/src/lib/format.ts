@@ -44,13 +44,16 @@ function parse(value: string): Date {
     const [y, m, d] = value.split('-').map(Number)
     return new Date(y, m - 1, d)
   }
-  return new Date(value)
+  // Safari rejects more than three fractional digits
+  return new Date(value.replace(/(\.\d{3})\d+/, '$1'))
 }
 
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
 export function day(value: string | null | undefined): string {
-  return value ? DAY.format(parse(value)) : ''
+  if (!value) return ''
+  const d = parse(value)
+  return Number.isNaN(d.getTime()) ? '' : DAY.format(d)
 }
 
 export function todayIso(now: Date = new Date()): string {
@@ -78,7 +81,8 @@ export function money(n: number | null | undefined): string {
 
 /** The value for an <input type="datetime-local">, in the browser's zone. */
 export function toLocalInput(iso: string): string {
-  const d = new Date(iso)
+  const d = parse(iso)
+  if (Number.isNaN(d.getTime())) return ''
   return `${isoDay(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 

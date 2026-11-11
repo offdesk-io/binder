@@ -35,7 +35,12 @@ def install(app: FastAPI, web_dir: str) -> None:
         if not index.is_file():
             return JSONResponse({"detail": "The frontend is not built. Run npm run build in web/."}, status_code=404)
         rel = request.url.path.lstrip("/")
-        target = (root / rel).resolve()
-        if rel and target.is_file() and target.is_relative_to(root):
-            return FileResponse(target, headers=FOREVER if rel.startswith("assets/") else NO_CACHE)
+        try:
+            target = (root / rel).resolve()
+            if rel and target.is_relative_to(root) and target.is_file():
+                return FileResponse(target, headers=FOREVER if rel.startswith("assets/") else NO_CACHE)
+        except (OSError, ValueError):
+            pass  # a name the file system rejects is no file
+        if rel.startswith("assets/"):
+            return JSONResponse({"detail": "Not found"}, status_code=404)
         return FileResponse(index, headers=NO_CACHE)

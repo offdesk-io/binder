@@ -65,8 +65,25 @@ def test_a_route_added_later_still_answers(web):
 
 
 def test_no_file_outside_the_build_is_served(web):
-    r = web.get("/%2e%2e/secret.txt")
-    assert "not for you" not in r.text
+    for path in ("/%2e%2e/secret.txt", "/..%2fsecret.txt", "/assets/../../secret.txt"):
+        r = web.get(path)
+        assert "not for you" not in r.text, path
+
+
+def test_a_null_byte_in_the_path_is_not_a_server_error(web):
+    r = web.get("/%00")
+    assert r.status_code == 200 and "id=root" in r.text
+
+
+def test_a_very_long_path_is_not_a_server_error(web):
+    r = web.get("/" + "a" * 5000)
+    assert r.status_code == 200 and "id=root" in r.text
+
+
+def test_a_missing_asset_is_a_json_404(web):
+    r = web.get("/assets/gone-123.js")
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Not found"}
 
 
 def test_unbuilt_frontend_says_so(tmp_path):

@@ -14,20 +14,26 @@ export interface Loaded<T> {
  * Only the newest call's answer is kept, so a slow old answer cannot
  * overwrite a newer one. */
 export function useApi<T>(load: () => Promise<T>, deps: readonly unknown[]): Loaded<T> {
-  const [data, setData] = useState<T>()
+  const [data, setDataState] = useState<T>()
   const [error, setError] = useState<Error>()
   const [loading, setLoading] = useState(true)
   const [tick, setTick] = useState(0)
   const latest = useRef(0)
+  const lastDeps = useRef(deps)
 
   useEffect(() => {
     const call = ++latest.current
+    const changed =
+      lastDeps.current.length !== deps.length || deps.some((d, i) => !Object.is(d, lastDeps.current[i]))
+    lastDeps.current = deps
+    // A reload keeps the old data on screen; a new set of deps starts clean.
+    if (changed) setDataState(undefined)
+    setError(undefined)
     setLoading(true)
     load().then(
       (d) => {
         if (call !== latest.current) return
-        setData(d)
-        setError(undefined)
+        setDataState(d)
         setLoading(false)
       },
       (e: unknown) => {
@@ -39,5 +45,11 @@ export function useApi<T>(load: () => Promise<T>, deps: readonly unknown[]): Loa
   }, [...deps, tick])
 
   const reload = useCallback(() => setTick((t) => t + 1), [])
+  const setData = useCallback((d: T) => {
+    latest.current++ // cancels any load in flight
+    setDataState(d)
+    setError(undefined)
+    setLoading(false)
+  }, [])
   return { data, error, loading, reload, setData }
 }

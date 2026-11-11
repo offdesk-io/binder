@@ -9,6 +9,7 @@ export function useIsPhone(): boolean {
     const m = window.matchMedia(QUERY)
     const on = () => setPhone(m.matches)
     m.addEventListener('change', on)
+    on()
     return () => m.removeEventListener('change', on)
   }, [])
   return phone

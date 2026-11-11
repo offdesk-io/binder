@@ -37,3 +37,23 @@ def test_wrong_team_is_403():
 def test_name_falls_back_to_email():
     who = identity_from_headers({"x-offdesk-email": "a@example.com", "x-offdesk-teams": "offdesk"}, HEADER)
     assert who.name == "a@example.com"
+
+
+from tests.conftest import TEAM
+
+
+def test_health_needs_no_sign_in(make_client):
+    assert make_client().get("/api/health").json() == {"ok": True}
+
+
+def test_whoami_signed_in(make_client):
+    r = make_client().get("/api/whoami", headers=TEAM)
+    assert r.json() == {"email": "ana@example.com", "name": "Ana", "teams": ["offdesk"]}
+
+
+def test_whoami_without_headers_is_401(make_client):
+    assert make_client().get("/api/whoami").status_code == 401
+
+
+def test_local_mode_whoami_is_dev(make_client):
+    assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@ledger.local"

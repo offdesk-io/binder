@@ -114,3 +114,24 @@ def test_research_needs_sign_in_and_the_header(make_client, org):
     assert c.get("/api/research/1").status_code == 401
     c.headers.update(TEAM)  # signed in, but no X-Ledger
     assert c.post("/api/orgs/%d/research" % org["id"]).status_code == 403
+
+
+def test_a_brief_cannot_point_at_a_contact_outside_the_organisation(make_client, org):
+    class Wrong(FakeAI):
+        def research(self, subject):
+            out = super().research(subject)
+            out.brief["people"] = [
+                {"name": "Bo", "role": "", "contact_id": bo["id"], "why": "Runs it."},
+                {"name": "Ghost", "role": "", "contact_id": 999, "why": "Made up."},
+                {"name": "Cy", "role": "", "contact_id": elsewhere["id"], "why": "Other company."},
+            ]
+            return out
+
+    c = make(make_client, Wrong(), run_job=run_now)
+    bo = c.post("/api/orgs/%d/contacts" % org["id"], json={"name": "Bo"}).json()
+    other = c.post("/api/orgs", json={"name": "Other Studio"}).json()
+    elsewhere = c.post("/api/orgs/%d/contacts" % other["id"], json={"name": "Cy"}).json()
+    run = c.post("/api/orgs/%d/research" % org["id"]).json()
+    done = c.get("/api/research/%d" % run["id"]).json()
+    assert done["status"] == "done"
+    assert [p["contact_id"] for p in done["brief"]["people"]] == [bo["id"], None, None]

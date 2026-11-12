@@ -10,7 +10,7 @@ Read before changing anything:
 - Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`
 - Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-ledger-1-core-api.md`
 - Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-ledger-2-frontend.md`
-- Plan 3, AI: `docs/superpowers/plans/2026-11-11-ledger-3-ai.md`
+- Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-ledger-3-ai.md`
 
 ## Where the work stands
 
@@ -18,8 +18,7 @@ There are five plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
-3. AI (research briefs and paste-and-summarise): built on `feature/ai`, plan
-   `docs/superpowers/plans/2026-11-11-ledger-3-ai.md`. Review, then merge.
+3. AI (research briefs and paste-and-summarise): done.
 4. Bench link and import: the `[lead:: <slug>]` field, card chip and Lead
    picker in Bench, plus the import of the offdesk board's **Leads** bucket:
    **next**.

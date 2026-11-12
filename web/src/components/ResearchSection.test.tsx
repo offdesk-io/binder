@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { api } from '../api/endpoints'
 import type { Contact, Research } from '../api/types'
 import { useApi } from '../lib/useApi'
@@ -117,4 +117,90 @@ test('without AI there is no button, and it says why', async () => {
   renderApp(<Section />, '/', { ...SESSION, meta: { ...SESSION.meta, ai: false } })
   expect(await screen.findByText(/AI is not set up on this server/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Research' })).not.toBeInTheDocument()
+})
+
+test('the #research hash scrolls once, not on every poll', async () => {
+  const scroll = vi.fn()
+  const proto = Element.prototype as { scrollIntoView?: unknown }
+  const before = proto.scrollIntoView
+  proto.scrollIntoView = scroll
+  let gets = 0
+  stubFetch({
+    'GET /api/orgs/1/research': () => {
+      gets++
+      return gets < 4 ? [research({ id: 9, status: 'running', brief: null, finished_at: null, cost_usd: null })] : [research({ id: 9 })]
+    },
+    'GET /api/orgs/1/contacts': () => [],
+  })
+  try {
+    renderApp(<Section pollMs={20} />, '/#research')
+    expect(await screen.findByText('A made-up pottery.')).toBeInTheDocument()
+    expect(gets).toBeGreaterThanOrEqual(4)
+    expect(scroll).toHaveBeenCalledTimes(1)
+  } finally {
+    proto.scrollIntoView = before
+  }
+})
+
+test('a newer run that finishes replaces the older run that was picked', async () => {
+  const user = userEvent.setup()
+  let finished = false
+  let runs: Research[] = [
+    research({ id: 9, status: 'running', brief: null, finished_at: null, cost_usd: null }),
+    research({ id: 4, run_at: '2026-10-01T09:00:00.000000+00:00', brief: brief({ overview: 'The October brief.' }) }),
+  ]
+  stubFetch({
+    'GET /api/orgs/1/research': () => {
+      if (finished) runs = [research({ id: 9, brief: brief({ overview: 'The new brief.' }) }), runs[1]]
+      return runs
+    },
+    'GET /api/orgs/1/contacts': () => [],
+  })
+  renderApp(<Section pollMs={20} />)
+  await user.click(await screen.findByRole('button', { name: /1 Oct 2026/ }))
+  expect(screen.getByText('The October brief.')).toBeInTheDocument()
+  finished = true
+  expect(await screen.findByText('The new brief.')).toBeInTheDocument()
+  expect(screen.queryByText('The October brief.')).not.toBeInTheDocument()
+})
+
+test('a javascript: link in the news is text, and a source with no title shows its URL', async () => {
+  stubFetch({
+    'GET /api/orgs/1/research': () => [
+      research({
+        brief: brief({ recent_news: [{ headline: 'Bad link', date: '2026-10-01', url: 'javascript:alert(1)' }] }),
+        sources: [{ url: 'https://example.com/untitled', title: '' }],
+      }),
+    ],
+    'GET /api/orgs/1/contacts': () => [],
+  })
+  renderApp(<Section />)
+  const item = await screen.findByText(/Bad link/)
+  expect(item.closest('a')).toBeNull()
+  expect(screen.getByRole('link', { name: 'https://example.com/untitled' })).toHaveAttribute('href', 'https://example.com/untitled')
+})
+
+test('the Add? button is replaced by the link as soon as the contact is created, not when the list reloads', async () => {
+  const user = userEvent.setup()
+  let people: Contact[] = [contact()]
+  let listed = 0
+  let release = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  stubFetch({
+    'GET /api/orgs/1/research': () => [research({ brief: withPeople })],
+    'GET /api/orgs/1/contacts': async () => {
+      if (++listed > 1) await held
+      return people
+    },
+    'POST /api/orgs/1/contacts': () => {
+      const sam = contact({ id: 6, name: 'Sam Example', role: 'Head of Product' })
+      people = [...people, sam]
+      return sam
+    },
+  })
+  renderApp(<Section />)
+  await user.click(await screen.findByRole('button', { name: 'Add Sam Example' }))
+  expect(await screen.findByRole('link', { name: 'Sam Example' })).toHaveAttribute('href', '/c/6')
+  expect(screen.queryByRole('button', { name: 'Add Sam Example' })).not.toBeInTheDocument()
+  release()
 })

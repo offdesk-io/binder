@@ -1,9 +1,9 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { toLocalInput } from '../lib/format'
 import { contact, interaction } from '../test/fixtures'
-import { renderApp, SESSION, stubFetch } from '../test/render'
+import { appTree, renderApp, SESSION, stubFetch } from '../test/render'
 import { fromSummary, logBody, logForm, QuickLog } from './QuickLog'
 
 test('a new log defaults to now and to the preselected people', () => {
@@ -169,4 +169,25 @@ test('paste and summarise is only for new logs, and only with AI', () => {
   unmount()
   renderApp(<QuickLog open orgId={1} contacts={[]} onClose={() => {}} onSaved={() => {}} />, '/', { ...SESSION, meta: { ...SESSION.meta, ai: false } })
   expect(screen.queryByRole('button', { name: 'Paste and summarise' })).not.toBeInTheDocument()
+})
+
+test('a summary that arrives after the log was closed and reopened does not fill the new one', async () => {
+  const user = userEvent.setup()
+  let answer = () => {}
+  const held = new Promise<unknown>((resolve) => (answer = () => resolve(summary)))
+  const calls = stubFetch({ 'POST /api/summarise': () => held })
+  const props = { orgId: 1, contacts: [contact()], onClose: () => {}, onSaved: () => {} }
+  const { rerender } = renderApp(<QuickLog open {...props} />)
+  await user.click(screen.getByRole('button', { name: 'Paste and summarise' }))
+  await user.type(screen.getByLabelText('Pasted text'), 'Notes from the meeting with Bo')
+  await user.click(screen.getByRole('button', { name: 'Summarise' }))
+  await waitFor(() => expect(calls).toHaveLength(1))
+  rerender(appTree(<QuickLog open={false} {...props} />))
+  rerender(appTree(<QuickLog open {...props} />))
+  await user.click(screen.getByRole('button', { name: 'Paste and summarise' }))
+  await user.type(screen.getByLabelText('Pasted text'), 'Other notes')
+  expect(screen.getByRole('button', { name: 'Summarise' })).toBeEnabled()
+  await act(async () => answer())
+  expect(screen.getByLabelText(/What happened/)).toHaveValue('')
+  expect(screen.queryByText(/Filled in from the pasted text/)).not.toBeInTheDocument()
 })

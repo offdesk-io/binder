@@ -44,7 +44,9 @@ export function BriefView({ run, orgId, people }: Props) {
     setAdding(true)
     setError(undefined)
     try {
-      await api.createContact(orgId, { name: p.name, role: p.role || null })
+      const created = await api.createContact(orgId, { name: p.name, role: p.role || null })
+      // Put the new person in the list now, so the suggestion stops offering to add them while the list reloads.
+      people.setData((prev) => [...(prev ?? []), created])
       people.reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add them.')

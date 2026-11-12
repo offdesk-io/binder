@@ -1,5 +1,5 @@
 import { Alert, Button, Spinner } from '@tiagopedras/tenon'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
@@ -40,15 +40,27 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
   const [picked, setPicked] = useState<number>()
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string>()
+  const wasRunning = useRef(false)
+  const scrolledFor = useRef<string>()
 
   const list = runs.data ?? []
   const running = list.some((r) => r.status === 'running')
   usePoll(running ? pollMs : null, runs.reload)
 
-  // The header's Research link and search hits point at #research.
+  // A run that was going has finished: show the newest brief, not the one picked before.
   useEffect(() => {
-    if (hash === '#research' && runs.data) document.getElementById('research')?.scrollIntoView?.({ block: 'start' })
-  }, [hash, runs.data])
+    if (wasRunning.current && !running) setPicked(undefined)
+    wasRunning.current = running
+  }, [running])
+
+  // The header's Research link and search hits point at #research. Scroll once per hash and subject,
+  // so that a poll refreshing the runs does not drag the page back to the section.
+  const target = `${hash} ${subject.kind}:${subject.id}`
+  useEffect(() => {
+    if (hash !== '#research' || !runs.data || scrolledFor.current === target) return
+    scrolledFor.current = target
+    document.getElementById('research')?.scrollIntoView?.({ block: 'start' })
+  }, [hash, target, runs.data])
 
   const latest = list[0]
   const shown = list.find((r) => r.id === picked && r.brief) ?? list.find((r) => r.status === 'done')

@@ -1,5 +1,5 @@
 import { Alert, Button, Field, Modal, SegmentedControl, ToggleChip } from '@tiagopedras/tenon'
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Contact, Interaction, InteractionFields, Summary } from '../api/types'
@@ -90,6 +90,13 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
   const [paste, setPaste] = useState('')
   const [summarising, setSummarising] = useState(false)
   const [filled, setFilled] = useState(false)
+  // Bumped on each open or close and on each summarise: an answer from an earlier one is dropped.
+  const generation = useRef(0)
+
+  useEffect(() => {
+    generation.current++
+    setSummarising(false)
+  }, [open])
 
   // Reset on open. `preselect` is left out on purpose: callers pass a new array each render.
   useEffect(() => {
@@ -114,19 +121,21 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
 
   async function summarise() {
     if (summarising || !paste.trim()) return
+    const mine = ++generation.current
     setSummarising(true)
     setError(undefined)
     try {
       const s = await api.summarise(orgId, paste)
+      if (mine !== generation.current) return
       const known = contacts ? new Set(contacts.map((c) => c.id)) : undefined
       setForm((f) => fromSummary(f, s, meta.interaction_types, known))
       setPasting(false)
       setPaste('')
       setFilled(true)
     } catch (e) {
-      setError(saveErrorText(e))
+      if (mine === generation.current) setError(saveErrorText(e))
     } finally {
-      setSummarising(false)
+      if (mine === generation.current) setSummarising(false)
     }
   }
 

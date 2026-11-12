@@ -129,8 +129,21 @@ def _end(conn: sqlite3.Connection, research_id: int, sets: Dict[str, Any]) -> No
         raise
 
 
+def _checked_people(conn: sqlite3.Connection, org_id: int, brief: Dict[str, Any]) -> Dict[str, Any]:
+    """The model's contact_id is kept only when it is one of this organisation's contacts; anything else becomes null."""
+    known = {r[0] for r in conn.execute("SELECT id FROM contacts WHERE org_id = ?", (org_id,))}
+    people = []
+    for p in brief.get("people", []):
+        cid = p.get("contact_id")
+        ok = isinstance(cid, int) and not isinstance(cid, bool) and cid in known
+        people.append(dict(p, contact_id=cid if ok else None))
+    return dict(brief, people=people)
+
+
 def finish(conn: sqlite3.Connection, research_id: int, brief: Dict[str, Any], sources: List[Dict[str, str]],
            usage: Any) -> None:
+    org_id = conn.execute("SELECT org_id FROM research WHERE id = ?", (research_id,)).fetchone()[0]
+    brief = _checked_people(conn, org_id, brief)
     _end(conn, research_id, dict(_usage(usage), status="done", brief=json.dumps(brief, ensure_ascii=False),
                                  sources=json.dumps(sources, ensure_ascii=False)))
 

@@ -9,7 +9,7 @@ from . import ai as ai_module, errors, jobs, web
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
-from .api import contacts, interactions, misc, orgs, research
+from .api import contacts, interactions, misc, orgs, research, summarise
 from .repo import research as research_repo
 
 _FROM_SETTINGS = object()
@@ -52,5 +52,6 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     api.include_router(contacts.router)
     api.include_router(interactions.router)
     api.include_router(research.router)
+    api.include_router(summarise.router)
     app.include_router(api)
     return app

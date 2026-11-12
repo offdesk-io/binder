@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-import { contact, interaction, org } from '../test/fixtures'
+import { contact, interaction, org, research } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { OrgPage } from './OrgPage'
 
@@ -17,6 +17,7 @@ function stubs(extra: Record<string, (b: unknown) => unknown> = {}) {
     'GET /api/orgs/by-slug/acme': () => acme,
     'GET /api/orgs/1/contacts': () => [contact({ is_primary: true, phone: '+44 20 0000 0000', email: 'bo@example.com' })],
     'GET /api/orgs/1/timeline': () => [],
+    'GET /api/orgs/1/research': () => [],
     ...extra,
   })
 }
@@ -150,4 +151,11 @@ test('deleting a person reloads the timeline, and the log no longer offers them'
     contact_ids: [],
     updated_at: withBo.updated_at,
   })
+})
+
+test('the research section shows the latest brief, and the header links to it', async () => {
+  stubs({ 'GET /api/orgs/1/research': () => [research()] })
+  page()
+  expect(await screen.findByText('A made-up pottery.')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Research' })).toHaveAttribute('href', '#research')
 })

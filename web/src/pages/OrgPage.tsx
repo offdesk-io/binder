@@ -8,7 +8,9 @@ import { Loading } from '../components/Loading'
 import { NextStep } from '../components/OrgCard'
 import { OrgForm } from '../components/OrgForm'
 import { QuickLog } from '../components/QuickLog'
+import { ResearchSection } from '../components/ResearchSection'
 import { StatusPicker } from '../components/StatusPicker'
+import { useSession } from '../app/session'
 import { label, money, person, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
@@ -48,6 +50,7 @@ interface ViewProps {
 function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
   const phone = useIsPhone()
   const navigate = useNavigate()
+  const { meta } = useSession()
   const contacts = useApi(() => api.contacts(org.id), [org.id])
   const timeline = useApi(() => api.timeline(org.id), [org.id])
   const [editing, setEditing] = useState(false)
@@ -93,6 +96,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
         <div className="lg-actions">
           {!phone && <Button onClick={() => setLog('new')}>Log</Button>}
           <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+          {meta.ai && <LinkButton variant="secondary" href="#research">Research</LinkButton>}
           {!phone && primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
           {primary?.email && <LinkButton variant="secondary" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
         </div>
@@ -111,6 +115,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
             </dl>
           </section>
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
+          <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
         </div>
         <div className="lg-column">
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />

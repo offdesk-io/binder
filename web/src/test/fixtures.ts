@@ -1,4 +1,4 @@
-import type { ActivityItem, Contact, Interaction, Org } from '../api/types'
+import type { ActivityItem, Brief, Contact, Interaction, Org, Research } from '../api/types'
 
 export const AT = '2026-11-10T12:00:00.000000+00:00'
 
@@ -31,5 +31,22 @@ export function activity(o: Partial<ActivityItem> = {}): ActivityItem {
   return {
     kind: 'status', id: 1, org_id: 2, org_name: 'Bolt', org_slug: 'bolt', at: AT, type: null,
     summary: null, from_status: 'lead', to_status: 'contacted', by_email: 'ana@example.com', ...o,
+  }
+}
+
+export function brief(o: Partial<Brief> = {}): Brief {
+  return {
+    overview: 'A made-up pottery.', what_they_do: 'Kilns.', size_and_funding: 'Twelve people.', people: [],
+    recent_news: [], likely_needs: ['A web shop'], offdesk_angle: 'Build the shop.',
+    open_questions: ['Who holds the budget?'], ...o,
+  }
+}
+
+export function research(o: Partial<Research> = {}): Research {
+  return {
+    id: 3, org_id: 1, contact_id: null, status: 'done', brief: brief(),
+    sources: [{ url: 'https://example.com/about', title: 'About' }], model: 'claude-opus-5-5',
+    input_tokens: 1000, output_tokens: 500, web_searches: 2, cost_usd: 0.034, error: null,
+    run_at: AT, finished_at: AT, author_email: 'ana@example.com', ...o,
   }
 }

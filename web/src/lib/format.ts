@@ -107,3 +107,12 @@ export function safeHref(url: string | null | undefined): string | null {
   const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) && !/^[^/:]+:\d+(\/|$)/.test(v)
   return hasScheme ? null : `https://${v}`
 }
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+/** What a research run cost. Anthropic bills in US dollars. */
+export function usd(n: number | null | undefined): string {
+  if (n == null) return ''
+  if (n > 0 && n < 0.01) return '<$0.01'
+  return USD.format(n)
+}

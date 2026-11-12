@@ -157,3 +157,16 @@ class InteractionPatch(_Body):
     _required = field_validator("type", "summary", "happened_at")(not_null)
     _when = field_validator("happened_at")(iso_datetime)
     _due = field_validator("next_step_due")(iso_date)
+
+
+def not_blank(v: str) -> str:
+    if not v.strip():
+        raise ValueError("cannot be empty")
+    return v
+
+
+class SummariseBody(_Body):
+    org_id: int
+    text: str = Field(min_length=1, max_length=30000)
+
+    _text = field_validator("text")(not_blank)

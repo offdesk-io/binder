@@ -28,3 +28,21 @@ test('writes go to the right place with the right method', async () => {
   await api.deleteContact(9)
   expect(calls()).toEqual(['PATCH /api/orgs/3', 'POST /api/orgs/3/interactions', 'DELETE /api/contacts/9'])
 })
+
+test('research and summarise routes', async () => {
+  const calls = capture()
+  await api.orgResearch(3)
+  await api.contactResearch(5)
+  await api.research(8)
+  await api.startOrgResearch(3)
+  await api.startContactResearch(5)
+  await api.summarise(3, 'Hi')
+  expect(calls()).toEqual([
+    'GET /api/orgs/3/research',
+    'GET /api/contacts/5/research',
+    'GET /api/research/8',
+    'POST /api/orgs/3/research',
+    'POST /api/contacts/5/research',
+    'POST /api/summarise',
+  ])
+})

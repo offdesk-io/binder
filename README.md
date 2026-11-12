@@ -22,6 +22,14 @@ throwaway database (`npx playwright install chromium` once first).
 
 `LEDGER_AUTH=header` is the server behind nginx, and needs `LEDGER_DB` set to an absolute path; unset is local development. Ledger listens on loopback only in both modes. `LEDGER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
 
+Research and "Paste and summarise" call the Anthropic API from the server.
+`ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides
+their buttons. `LEDGER_AI=fake` gives canned answers instead, for local
+development and the Playwright flows (it refuses to start in header mode), and
+`LEDGER_AI=off` turns them off with a key set. `pytest -m online` makes one
+real research call and one real summarise call about a made-up company: it
+costs money and never runs in CI.
+
 ## API
 
 Every route sits under `/api` and needs sign-in, except `GET /api/health`.
@@ -46,6 +54,20 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `updated_by`.
 - **Status change** (`/api/orgs/{id}/status-history`): `id`, `org_id`,
   `from_status`, `to_status`, `at`, `by_email`.
+- **Research** (`/api/orgs/{id}/research` and `/api/contacts/{id}/research`
+  list a record's runs, newest first; `/api/research/{id}` is one run): `id`,
+  `org_id`, `contact_id` (null for an organisation's own brief), `status`
+  (`running`, `done` or `failed`), `brief` (null until done), `sources` (a
+  list of `{url, title}`), `model`, `input_tokens`, `output_tokens`,
+  `web_searches`, `cost_usd` (US dollars, or null for a model with no listed
+  price), `error` (why it failed), `run_at`, `finished_at`, `author_email`.
+  A `brief` has `overview`, `what_they_do`, `size_and_funding`, `people` (each
+  `{name, role, contact_id, why}`, where `contact_id` is null for someone not
+  yet in Ledger), `recent_news` (each `{headline, date, url}`),
+  `likely_needs`, `offdesk_angle` and `open_questions`.
+  `POST` to either list starts a run and answers 202 with the running row. A
+  record can have one run going at a time: a second `POST` gets 409 with
+  `current`, the running row. Poll until `status` is no longer `running`.
 
 A record's `kind` is `lead` or `client`, and only organisations have one.
 
@@ -55,8 +77,10 @@ Search, timeline and activity return items, not records. On an item, `kind` is
 what the item is, and the pair (`kind`, `id`) identifies it: an interaction and
 a status change can share an `id`.
 
-- **Search** (`/api/search?q=`): `kind` (`org`, `contact` or `interaction`),
-  `id`, `org_id`, `org_name`, `org_slug`, `title`, `snippet` (each match wrapped in the control characters `\u0002` and `\u0003`).
+- **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
+  `research`), `id`, `org_id`, `org_name`, `org_slug`, `title`, `snippet`
+  (each match wrapped in the control characters `\u0002` and `\u0003`), and
+  `contact_id`: the person a research brief is about, null otherwise.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**
   (`/api/activity?limit=`): `kind` (`interaction` or `status`), `id`,
   `org_id`, `at`, `by_email`. Interaction items add `type` and `summary`;
@@ -66,11 +90,19 @@ a status change can share an `id`.
 - **Needs attention** (`/api/attention`): `{org, reasons}`, where `org` is an
   organisation and `reasons` is a list of `overdue`, `quiet` and `stuck`.
 
+### Summarise
+
+`POST /api/summarise` with `{org_id, text}` turns pasted text into the fields
+of a log entry: `{summary, type, happened_at, next_step, next_step_due,
+contact_ids}`. It saves nothing. Values the model got wrong are dropped:
+`type` falls back to `note`, dates that do not parse are null, and
+`contact_ids` keeps only that organisation's people. A failed AI call is 502.
+
 ### Vocabularies
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
 `client_statuses`, `interaction_types` and `relationships`, from
-`ledger/statuses.py`. Status moves are unordered within a kind: a lead can go
+`ledger/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
 it an active client, and a client never goes back to a lead.
 

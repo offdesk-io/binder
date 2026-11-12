@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { expect, test } from 'vitest'
-import { contact, interaction } from '../test/fixtures'
+import { brief, contact, interaction, research } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { ContactPage } from './ContactPage'
 
@@ -13,6 +13,7 @@ function page() {
     'GET /api/contacts/5': () => bo,
     'GET /api/contacts/5/interactions': () => [interaction({ contact_ids: [5] })],
     'GET /api/orgs/1/contacts': () => [bo],
+    'GET /api/contacts/5/research': () => [],
   })
   return renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
 }
@@ -45,6 +46,7 @@ test('a LinkedIn value that is not http(s) is shown as text, not a link', async 
     'GET /api/contacts/5': () => ({ ...bo, linkedin_url: 'javascript:alert(1)' }),
     'GET /api/contacts/5/interactions': () => [],
     'GET /api/orgs/1/contacts': () => [bo],
+    'GET /api/contacts/5/research': () => [],
   })
   renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
   expect(await screen.findByText('javascript:alert(1)')).toBeInTheDocument()
@@ -56,7 +58,20 @@ test('a bare LinkedIn address becomes an https link', async () => {
     'GET /api/contacts/5': () => ({ ...bo, linkedin_url: 'linkedin.com/in/bo' }),
     'GET /api/contacts/5/interactions': () => [],
     'GET /api/orgs/1/contacts': () => [bo],
+    'GET /api/contacts/5/research': () => [],
   })
   renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
   expect(await screen.findByRole('link', { name: 'Profile' })).toHaveAttribute('href', 'https://linkedin.com/in/bo')
+})
+
+test("shows the person's research", async () => {
+  stubFetch({
+    'GET /api/contacts/5': () => bo,
+    'GET /api/contacts/5/interactions': () => [],
+    'GET /api/orgs/1/contacts': () => [bo],
+    'GET /api/contacts/5/research': () => [research({ contact_id: 5, brief: brief({ overview: 'Bo collects teapots.' }) })],
+  })
+  renderApp(<Routes><Route path="/c/:id" element={<ContactPage />} /></Routes>, '/c/5')
+  expect(await screen.findByText('Bo collects teapots.')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Research' })).toHaveAttribute('href', '#research')
 })

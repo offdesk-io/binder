@@ -10,6 +10,7 @@ Read before changing anything:
 - Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`
 - Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-ledger-1-core-api.md`
 - Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-ledger-2-frontend.md`
+- Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-ledger-3-ai.md`
 
 ## Where the work stands
 
@@ -17,9 +18,10 @@ There are five plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
-3. AI: research briefs and paste-and-summarise: **next**.
+3. AI (research briefs and paste-and-summarise): done.
 4. Bench link and import: the `[lead:: <slug>]` field, card chip and Lead
-   picker in Bench, plus the import of the offdesk board's **Leads** bucket.
+   picker in Bench, plus the import of the offdesk board's **Leads** bucket:
+   **next**.
 5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner.
 
 ## Run and test
@@ -28,6 +30,7 @@ There are five plans, each one spec → plan → build → review:
 python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest -q
 LEDGER_DB=ledger.db .venv/bin/python -m ledger      # http://127.0.0.1:8770
+LEDGER_AI=fake LEDGER_DB=ledger.db .venv/bin/python -m ledger   # canned AI answers, no key
 (cd web && npm install && npm run check && npm test)   # frontend
 (cd web && npm run e2e)                                # Playwright, builds first
 ```
@@ -37,6 +40,13 @@ services and never run in CI.
 
 ## Rules for the code
 
+- **AI.** Only `ledger/ai.py` imports `anthropic`, and only on the server:
+  the browser never sees the key. Everything else goes through
+  `from_settings()`, which is `FakeAI` in tests. Tests never call the real
+  API, except `tests/test_ai_online.py` (`pytest -m online`), which is run
+  only when the owner asks, since it costs money. A research run never
+  writes to an organisation or its contacts; "Add?" on a suggested person is
+  the only way a brief becomes a contact, and it is a click.
 - **Python 3.9.** Use `Optional`/`List`/`Dict` from `typing`, never `X | Y`.
 - **Layers.** `ledger/repo/` holds plain functions `(conn, ...) -> dict` with no
   HTTP in them. `ledger/api/` holds routers that validate with pydantic

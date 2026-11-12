@@ -1,7 +1,7 @@
 import { request } from './client'
 import type {
   ActivityItem, AttentionItem, Contact, ContactInput, ContactPatch, Interaction, InteractionInput,
-  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, SearchHit, TimelineItem, Who,
+  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who,
 } from './types'
 
 export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value'
@@ -46,4 +46,10 @@ export const api = {
     request<Interaction>('POST', `/api/orgs/${orgId}/interactions`, body),
   patchInteraction: (id: number, body: InteractionPatch) => request<Interaction>('PATCH', `/api/interactions/${id}`, body),
   deleteInteraction: (id: number) => request<void>('DELETE', `/api/interactions/${id}`),
+  orgResearch: (orgId: number) => request<Research[]>('GET', `/api/orgs/${orgId}/research`),
+  contactResearch: (contactId: number) => request<Research[]>('GET', `/api/contacts/${contactId}/research`),
+  research: (id: number) => request<Research>('GET', `/api/research/${id}`),
+  startOrgResearch: (orgId: number) => request<Research>('POST', `/api/orgs/${orgId}/research`),
+  startContactResearch: (contactId: number) => request<Research>('POST', `/api/contacts/${contactId}/research`),
+  summarise: (orgId: number, text: string) => request<Summary>('POST', '/api/summarise', { org_id: orgId, text }),
 }

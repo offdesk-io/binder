@@ -23,10 +23,11 @@ class Invalid(Exception):
 
 
 class Conflict(Exception):
-    """A save carried a stale updated_at. `current` is the row as it is now."""
+    """A save carried a stale updated_at, or a job is already running.
+    `current` is the row as it is now."""
 
-    def __init__(self, current: Optional[Any] = None):
-        super().__init__("Changed since you loaded it")
+    def __init__(self, current: Optional[Any] = None, message: str = "Changed since you loaded it"):
+        super().__init__(message)
         self.current = current
 
 

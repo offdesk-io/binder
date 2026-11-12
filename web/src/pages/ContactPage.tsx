@@ -7,6 +7,8 @@ import { ContactForm } from '../components/ContactForm'
 import { InteractionEntry } from '../components/InteractionEntry'
 import { Loading } from '../components/Loading'
 import { QuickLog } from '../components/QuickLog'
+import { ResearchSection } from '../components/ResearchSection'
+import { useSession } from '../app/session'
 import { label, safeHref } from '../lib/format'
 import { useApi } from '../lib/useApi'
 
@@ -21,6 +23,7 @@ export function ContactPage() {
 
 function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) => void }) {
   const navigate = useNavigate()
+  const { meta } = useSession()
   const history = useApi(() => api.contactInteractions(c.id), [c.id])
   const people = useApi(() => api.contacts(c.org_id), [c.org_id])
   const [editing, setEditing] = useState(false)
@@ -49,6 +52,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
         <div className="lg-actions">
           <Button onClick={() => setLogging(true)}>Log</Button>
           <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
+          {meta.ai && <LinkButton variant="secondary" href="#research">Research</LinkButton>}
           {c.phone && <LinkButton variant="secondary" href={`tel:${c.phone}`}>Call</LinkButton>}
           {c.email && <LinkButton variant="secondary" href={`mailto:${c.email}`}>Email</LinkButton>}
         </div>
@@ -84,6 +88,8 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
           </ol>
         )}
       </section>
+
+      <ResearchSection subject={{ kind: 'contact', id: c.id }} orgId={c.org_id} people={people} />
 
       <ContactForm
         open={editing}

@@ -5,7 +5,7 @@ import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
 const hit = (o: Partial<SearchHit>): SearchHit => ({
-  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', title: 'Acme', snippet: '\u0002Acme\u0003 studio', ...o,
+  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
 })
 
 test('each kind of hit links to its page', () => {
@@ -39,4 +39,16 @@ test('no hits says so', async () => {
   stubFetch({ 'GET /api/search?q=zzz': () => [] })
   renderApp(<SearchPage />, '/search?q=zzz')
   expect(await screen.findByText('No matches for “zzz”.')).toBeInTheDocument()
+})
+
+test('a research hit links to the brief on its page', () => {
+  expect(hitLink(hit({ kind: 'research', id: 3 }))).toBe('/o/acme#research')
+  expect(hitLink(hit({ kind: 'research', id: 4, contact_id: 5 }))).toBe('/c/5#research')
+})
+
+test('research hits have their own group', async () => {
+  stubFetch({ 'GET /api/search?q=kilns': () => [hit({ kind: 'research', id: 3, title: 'Research brief', snippet: 'makes \u0002kilns\u0003' })] })
+  renderApp(<SearchPage />, '/search?q=kilns')
+  expect(await screen.findByRole('heading', { name: 'Research' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Research brief' })).toHaveAttribute('href', '/o/acme#research')
 })

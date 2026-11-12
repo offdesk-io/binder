@@ -9,11 +9,13 @@ const GROUPS: { kind: SearchHit['kind']; title: string }[] = [
   { kind: 'org', title: 'Organisations' },
   { kind: 'contact', title: 'Contacts' },
   { kind: 'interaction', title: 'Interactions' },
+  { kind: 'research', title: 'Research' },
 ]
 
 export function hitLink(h: SearchHit): string {
   if (h.kind === 'contact') return `/c/${h.id}`
   if (h.kind === 'interaction') return `/o/${h.org_slug}#i-${h.id}`
+  if (h.kind === 'research') return h.contact_id ? `/c/${h.contact_id}#research` : `/o/${h.org_slug}#research`
   return `/o/${h.org_slug}`
 }
 

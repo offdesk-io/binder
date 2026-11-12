@@ -16,7 +16,7 @@ def whoami(who: Identity = Depends(guard)):
 
 
 @router.get("/meta")
-def meta():
+def meta(request: Request):
     return {
         "kinds": list(statuses.KINDS),
         "lead_statuses": list(statuses.LEAD_STATUSES),
@@ -24,6 +24,7 @@ def meta():
         "client_statuses": list(statuses.CLIENT_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
+        "ai": request.app.state.ai is not None,
     }
 
 

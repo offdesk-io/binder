@@ -14,17 +14,23 @@ export const SESSION: Session = {
     client_statuses: ['active', 'paused', 'past'],
     interaction_types: ['call', 'email', 'meeting', 'note'],
     relationships: ['cold', 'warm', 'strong'],
+    ai: true,
   },
   me: { email: 'ana@example.com', name: 'Ana', teams: ['offdesk'] },
 }
 
-/** Render inside the session and a router at `path`. */
-export function renderApp(ui: ReactElement, path = '/') {
-  return render(
-    <SessionContext.Provider value={SESSION}>
+/** The providers every test renders inside: a session (the default one, or `session`) and a router at `path`.
+ * Rerendering with this tree keeps the components' state, which a test can need. */
+export function appTree(ui: ReactElement, path = '/', session: Session = SESSION): ReactElement {
+  return (
+    <SessionContext.Provider value={session}>
       <MemoryRouter initialEntries={[path]} future={ROUTER_FUTURE}>{ui}</MemoryRouter>
-    </SessionContext.Provider>,
+    </SessionContext.Provider>
   )
+}
+
+export function renderApp(ui: ReactElement, path = '/', session: Session = SESSION) {
+  return render(appTree(ui, path, session))
 }
 
 export interface Call {
@@ -33,9 +39,9 @@ export interface Call {
 }
 
 /** Stub fetch with one handler per "METHOD /path?query". A handler returns
- * the JSON body, a Response, or undefined for 204. An unstubbed call is a 500,
- * which the test will show as an error on screen. */
-export function stubFetch(routes: Record<string, (body: unknown) => unknown>): Call[] {
+ * the JSON body, a Response, undefined for 204, or a promise of one to hold the answer. An unstubbed call is
+ * a 500, which the test will show as an error on screen. */
+export function stubFetch(routes: Record<string, (body: unknown) => unknown | Promise<unknown>>): Call[] {
   const calls: Call[] = []
   vi.stubGlobal(
     'fetch',
@@ -45,7 +51,7 @@ export function stubFetch(routes: Record<string, (body: unknown) => unknown>): C
       calls.push({ key, body })
       const handler = routes[key]
       if (!handler) return new Response(JSON.stringify({ detail: `No stub for ${key}` }), { status: 500 })
-      const out = handler(body)
+      const out = await handler(body)
       if (out instanceof Response) return out
       if (out === undefined) return new Response(null, { status: 204 })
       return new Response(JSON.stringify(out), { status: 200, headers: { 'Content-Type': 'application/json' } })

@@ -97,6 +97,16 @@ def test_a_refusal_says_so_and_keeps_the_usage():
     assert e.value.usage.input_tokens == 100
 
 
+def test_an_answer_split_across_text_blocks_after_a_web_search_parses():
+    text = json.dumps(BRIEF)
+    split = [NS(type="text", text=text[:40]), NS(type="text", text=text[40:])]
+    content = [NS(type="server_tool_use"), NS(type="web_search_tool_result")] + split
+    client = Client(message(content=content, searches=1))
+    out = AnthropicAI(client).research(SUBJECT)
+    assert out.brief["overview"] == "A pottery."
+    assert out.sources == BRIEF["sources"]
+
+
 def test_a_cut_off_or_misshapen_answer_is_an_error():
     with pytest.raises(AIError, match="cut off"):
         AnthropicAI(Client(message(stop="max_tokens", text="{"))).research(SUBJECT)

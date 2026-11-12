@@ -14,6 +14,8 @@ PRICES = {
 WEB_SEARCH = 0.01  # each search: $10 per 1,000
 
 
+# Approximate by design: cost ignores prompt-cache tokens, and prices a whole run at the model of
+# its last step, so a run partly served by a fallback model shows the cost of that last model.
 def cost_usd(model: Optional[str], input_tokens: Optional[int], output_tokens: Optional[int],
              web_searches: Optional[int]) -> Optional[float]:
     price = PRICES.get(model or "")

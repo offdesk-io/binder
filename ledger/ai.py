@@ -174,6 +174,18 @@ class AnthropicAI:
             if msg.stop_reason == "max_tokens":
                 raise AIError("The answer was cut off before it finished. Try again.", usage)
             texts = [b.text for b in msg.content if b.type == "text"]
+            # With web search the answer can come as several text blocks (citations split it), so
+            # join the trailing run of text blocks first; fall back to the last block alone.
+            trailing: List[str] = []
+            for b in reversed(msg.content):
+                if b.type != "text":
+                    break
+                trailing.append(b.text)
+            joined = "".join(reversed(trailing))
+            try:
+                return json.loads(joined), usage
+            except ValueError:
+                pass
             try:
                 return json.loads(texts[-1]), usage
             except (IndexError, ValueError):

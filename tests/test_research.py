@@ -1,3 +1,5 @@
+import pytest
+
 from ledger.ai import FakeAI
 from ledger.repo.research import INTERRUPTED
 from tests.conftest import TEAM, WRITE, run_now
@@ -80,6 +82,17 @@ def test_without_ai_research_says_so(client, org):
 
 def test_meta_says_when_ai_is_on(ai_client):
     assert ai_client.get("/api/meta").json()["ai"] is True
+
+
+def test_a_run_that_cannot_start_is_marked_failed(make_client, org):
+    def cannot_start(job):
+        raise RuntimeError("no thread")
+
+    c = make(make_client, FakeAI(), run_job=cannot_start)
+    with pytest.raises(RuntimeError):
+        c.post("/api/orgs/%d/research" % org["id"])
+    run = c.get("/api/orgs/%d/research" % org["id"]).json()[0]
+    assert (run["status"], run["error"]) == ("failed", "Could not start the research. Try again.")
 
 
 def test_a_restart_fails_a_running_run(make_client, org):

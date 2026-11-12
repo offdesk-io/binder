@@ -22,10 +22,15 @@ def need_ai(request: Request) -> Any:
     return ai
 
 
-def _launch(request: Request, run: Dict[str, Any]) -> Dict[str, Any]:
+def _launch(request: Request, db: sqlite3.Connection, run: Dict[str, Any]) -> Dict[str, Any]:
     ai = request.app.state.ai
     db_path = request.app.state.settings.db_path
-    request.app.state.run_job(lambda: jobs.run_research(db_path, ai, run["id"]))
+    try:
+        request.app.state.run_job(lambda: jobs.run_research(db_path, ai, run["id"]))
+    except Exception:
+        # The run never started, so nothing will end it: mark it failed rather than leave it running.
+        research.fail(db, run["id"], "Could not start the research. Try again.")
+        raise
     return run
 
 
@@ -33,14 +38,14 @@ def _launch(request: Request, run: Dict[str, Any]) -> Dict[str, Any]:
 def research_org(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db),
                  who: Identity = Depends(guard)):
     need_ai(request)
-    return _launch(request, research.start(db, who.email, org_id=org_id))
+    return _launch(request, db, research.start(db, who.email, org_id=org_id))
 
 
 @router.post("/contacts/{contact_id}/research", status_code=202)
 def research_contact(contact_id: int, request: Request, db: sqlite3.Connection = Depends(get_db),
                      who: Identity = Depends(guard)):
     need_ai(request)
-    return _launch(request, research.start(db, who.email, contact_id=contact_id))
+    return _launch(request, db, research.start(db, who.email, contact_id=contact_id))
 
 
 @router.get("/orgs/{org_id}/research")

@@ -1,4 +1,4 @@
-import { Alert, Button, Card, LinkButton, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, Column, LinkButton, Tag } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
@@ -107,14 +107,14 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
 
       <div className="tn-grid tn-custom-split">
         <div className="tn-col-8 tn-stack">
-          <Card titleAs="h2" title="Overview">
-            {org.summary ? <p className="tn-custom-body">{org.summary}</p> : <p className="tn-custom-faint">No summary yet.</p>}
+          <Column titleAs="h2" title="Overview">
+            {org.summary ? <p className="tenon-body tn-custom-body">{org.summary}</p> : <p className="tenon-body tn-custom-faint">No summary yet.</p>}
             <dl className="tn-custom-facts">
               {facts(org).map(([k, v]) => (
                 <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>
               ))}
             </dl>
-          </Card>
+          </Column>
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
           <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
         </div>

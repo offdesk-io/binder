@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Spinner } from '@tiagopedras/tenon'
+import { Alert, Button, Column, Spinner } from '@tiagopedras/tenon'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
@@ -82,7 +82,7 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
   }
 
   return (
-    <Card
+    <Column
       id="research"
       titleAs="h2"
       title="Research"
@@ -139,6 +139,6 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
           )}
         </div>
       )}
-    </Card>
+    </Column>
   )
 }

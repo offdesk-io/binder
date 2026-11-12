@@ -4,15 +4,19 @@
 .tn-custom-header {
   padding-block: var(--tenon-dimension-100);
 }
+/* Links underline on hover only: dense lists would otherwise be all rule. */
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
 .tn-custom-brand {
   display: flex; align-items: center; gap: var(--tenon-dimension-300);
-  flex-wrap: wrap; min-width: 0;
+  min-width: 0;
 }
 .tn-custom-tools {
   display: flex; align-items: center; gap: var(--tenon-dimension-100);
-  flex: 1 1 auto; justify-content: flex-end; min-width: 0;
+  order: 3; min-width: 0;
 }
-.tn-custom-search { flex: 1 1 14rem; max-width: 24rem; min-width: 0; width: 100%; }
+.tn-custom-search { order: 2; flex: 1 1 14rem; max-width: 24rem; min-width: 0; margin-left: auto; }
 .tn-custom-me { white-space: nowrap; }
 .tn-custom-signout { margin: 0; }
 
@@ -36,20 +40,19 @@
 .tn-custom-cards { display: flex; flex-direction: column; gap: var(--tenon-dimension-100); min-width: 0; }
 .tn-custom-empty { color: var(--tenon-text-faint); }
 .tn-custom-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tn-custom-lead { margin: 0; font-weight: var(--tenon-text-body-weight); overflow-wrap: anywhere; }
 
 /* Tenon Card: the summary and footer carry a line of metadata. */
-.tn-custom-card-meta { color: var(--tenon-text-faint); }
-.tn-custom-card-foot { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-075); align-items: center; }
 
 /* Home */
 .tn-custom-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .tn-custom-activity li {
-  display: flex; flex-direction: column; gap: 0;
+  display: flex; flex-direction: column; gap: var(--tenon-dimension-025);
   padding-block: var(--tenon-dimension-100);
   border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle);
 }
 .tn-custom-activity li:first-child { border-top: 0; padding-top: 0; }
-.tn-custom-activity-what { overflow-wrap: anywhere; }
+.tn-custom-activity-line { margin: 0; overflow-wrap: anywhere; }
 
 /* Search */
 .tn-custom-hits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-150); }
@@ -70,6 +73,7 @@
 /* Organisation and contact pages */
 .tn-custom-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--tenon-dimension-075) var(--tenon-dimension-200); margin: 0; }
 .tn-custom-facts dt { color: var(--tenon-text-faint); }
+.tn-custom-fact { display: contents; }
 .tn-custom-facts dd { margin: 0; display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); min-width: 0; overflow-wrap: anywhere; }
 .tn-custom-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .tn-custom-people li {
@@ -89,9 +93,9 @@
 .tn-custom-timeline > li:last-child { padding-bottom: 0; }
 .tn-custom-tl-status { color: var(--tenon-text-subtle); }
 .tn-custom-entry { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
-.tn-custom-entry-head { display: flex; align-items: center; gap: var(--tenon-dimension-100); flex-wrap: wrap; min-width: 0; }
-.tn-custom-entry-head > button { margin-left: auto; }
-.tn-custom-entry-meta { color: var(--tenon-text-faint); overflow-wrap: anywhere; }
+.tn-custom-entry-head { display: flex; align-items: center; gap: var(--tenon-dimension-100); min-width: 0; }
+.tn-custom-entry-head > button { margin-left: auto; flex: 0 0 auto; }
+.tn-custom-entry-meta { flex: 1 1 auto; min-width: 0; color: var(--tenon-text-faint); overflow-wrap: anywhere; }
 
 /* Sticky bar on the organisation page, phone only. */
 .tn-custom-bar {
@@ -108,18 +112,25 @@
 .tn-custom-field { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
 .tn-custom-chips { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-075); }
 .tn-custom-check { display: flex; align-items: center; gap: var(--tenon-dimension-100); }
-.tn-custom-paste { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tenon-dimension-100); }
-.tn-custom-paste > :first-child { align-self: stretch; }
-
-/* Research */
+/* Research brief: a lead, a short fact list, people, then lists side by side on a wide screen. */
 .tn-custom-running { display: flex; align-items: center; gap: var(--tenon-dimension-100); color: var(--tenon-text-subtle); }
-.tn-custom-brief { display: flex; flex-direction: column; gap: var(--tenon-dimension-200); min-width: 0; }
-.tn-custom-brief-part { display: flex; flex-direction: column; gap: var(--tenon-dimension-075); min-width: 0; }
-.tn-custom-brief-part ul, .tn-custom-brief-part ol { margin: 0; padding-left: var(--tenon-dimension-300); }
-.tn-custom-brief-part .tn-custom-brief-people { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-100); }
-.tn-custom-brief-people li > div:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tenon-dimension-075); }
+.tn-custom-brief { display: flex; flex-direction: column; gap: var(--tenon-dimension-150); min-width: 0; }
+.tn-custom-brief-part { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
+.tn-custom-brief-title { margin: 0; color: var(--tenon-text-subtle); }
+.tn-custom-brief-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--tenon-dimension-150) var(--tenon-dimension-300); }
+@media (min-width: 768px) {
+  .tn-custom-brief-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.tn-custom-brief-part ul, .tn-custom-brief-part ol { margin: 0; padding-left: var(--tenon-dimension-200); }
+.tn-custom-tight { display: flex; flex-direction: column; gap: var(--tenon-dimension-025); }
+.tn-custom-tight li { overflow-wrap: anywhere; }
+.tn-custom-brief-people { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-100); }
+.tn-custom-brief-people li { display: flex; flex-direction: column; gap: var(--tenon-dimension-025); min-width: 0; }
+.tn-custom-person-line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tenon-dimension-075); min-width: 0; }
 .tn-custom-foot { color: var(--tenon-text-faint); }
 .tn-custom-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); }
+.tn-custom-paste { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tenon-dimension-100); }
+.tn-custom-paste > :first-child { align-self: stretch; }
 
 /* Bottom tab bar on a phone. */
 .tn-custom-tabs {
@@ -144,18 +155,16 @@
 }
 
 @media (max-width: 767px) {
+  /* One row for the identity and the buttons, the search on a row of its own. */
   .tn-custom-header { gap: var(--tenon-dimension-100); }
-  .tn-custom-brand { width: 100%; justify-content: space-between; }
-  .tn-custom-tools { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
-  .tn-custom-search { flex: 1 1 100%; max-width: none; order: -1; }
+  .tn-custom-brand { order: 1; flex: 1 1 auto; }
+  .tn-custom-tools { order: 2; margin-left: auto; }
+  .tn-custom-search { order: 3; flex: 1 1 100%; max-width: none; margin-left: 0; }
   .tn-custom-me { display: none; }
   .tn-custom-main { padding-block: var(--tenon-dimension-200) calc(56px + var(--tenon-dimension-500)); }
   .tn-custom-main:has(.tn-custom-bar) { padding-bottom: calc(112px + var(--tenon-dimension-400)); }
   .tn-custom-title h1 { font-size: var(--tenon-text-heading-4-size); }
   .tn-custom-status { min-width: 0; flex: 1 1 100%; }
-  .tn-custom-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .tn-custom-facts dt { margin-top: var(--tenon-dimension-100); }
-  .tn-custom-facts dt:first-child { margin-top: 0; }
   /* A modal is a bottom sheet on a phone. Modal puts className on its box. */
   .tenon-modal:has(.tn-custom-sheet) { align-items: flex-end; padding: 0; }
   .tn-custom-sheet { width: 100%; max-height: 92vh; border-radius: var(--tenon-radius-xl) var(--tenon-radius-xl) 0 0; }

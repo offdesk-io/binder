@@ -42,8 +42,8 @@ export function Layout() {
           <Link to="/" className="tn-identity">Ledger</Link>
           {!phone && <Nav />}
         </div>
+        <SearchBox />
         <div className="tn-custom-tools">
-          <SearchBox />
           <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
           {!phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
           {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}

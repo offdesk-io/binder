@@ -1,4 +1,4 @@
-import { Alert, Button, Card, LinkButton } from '@tiagopedras/tenon'
+import { Alert, Button, Column, LinkButton } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
@@ -64,13 +64,13 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
 
       <div className="tn-grid tn-custom-split">
         <div className="tn-col-8 tn-stack">
-          <Card titleAs="h2" title={`With ${c.name}`}>
+          <Column titleAs="h2" title={`With ${c.name}`}>
             {history.error ? (
               <Alert tone="error">{history.error.message}</Alert>
             ) : !history.data ? (
               <Loading />
             ) : history.data.length === 0 ? (
-              <p className="tn-custom-faint">Nothing logged with {c.name} yet.</p>
+              <p className="tenon-body tn-custom-faint">Nothing logged with {c.name} yet.</p>
             ) : (
               <ol className="tn-custom-timeline">
                 {history.data.map((i) => (
@@ -84,16 +84,16 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
                 ))}
               </ol>
             )}
-          </Card>
+          </Column>
           <ResearchSection subject={{ kind: 'contact', id: c.id }} orgId={c.org_id} people={people} />
         </div>
         <div className="tn-col-4 tn-stack">
-          <Card titleAs="h2" title="Details">
+          <Column titleAs="h2" title="Details">
             <dl className="tn-custom-facts">
               {details.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
             </dl>
-            {c.notes && <p className="tn-custom-body">{c.notes}</p>}
-          </Card>
+            {c.notes && <p className="tenon-body tn-custom-body">{c.notes}</p>}
+          </Column>
         </div>
       </div>
 

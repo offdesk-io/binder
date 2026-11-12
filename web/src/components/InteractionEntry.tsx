@@ -19,13 +19,13 @@ export function InteractionEntry({ type, at, by, summary, next_step, next_step_d
     <article className="tn-custom-entry">
       <div className="tn-custom-entry-head">
         <Tag>{label(type)}</Tag>
-        <span className="tn-custom-entry-meta">
+        <span className="tenon-caption tn-custom-entry-meta">
           {day(at)} · {person(by)}
           {people.length > 0 && ` · with ${people.join(', ')}`}
         </span>
         {action}
       </div>
-      <p className="tn-custom-body">{summary}</p>
+      <p className="tenon-body tn-custom-body">{summary}</p>
       {next_step && (
         <p className={isOverdue(next_step_due) ? 'tn-custom-overdue' : 'tn-custom-muted'}>
           Next: {next_step}

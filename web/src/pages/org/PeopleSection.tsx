@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, Column, Tag } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
@@ -16,7 +16,7 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
   }
   return (
     <>
-      <Card
+      <Column
         titleAs="h2"
         title="People"
         action={<Button size="sm" variant="secondary" onClick={() => setEditing('new')}>Add person</Button>}
@@ -26,7 +26,7 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
         ) : !contacts.data ? (
           <Loading />
         ) : contacts.data.length === 0 ? (
-          <p className="tn-custom-faint">No one yet. Add the people you talk to.</p>
+          <p className="tenon-body tn-custom-faint">No one yet. Add the people you talk to.</p>
         ) : (
           <ul className="tn-custom-people">
             {contacts.data.map((c) => (
@@ -42,7 +42,7 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
             ))}
           </ul>
         )}
-      </Card>
+      </Column>
       <ContactForm
         open={editing !== undefined}
         orgId={orgId}

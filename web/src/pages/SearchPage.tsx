@@ -1,4 +1,4 @@
-import { Alert, Card } from '@tiagopedras/tenon'
+import { Alert, Column } from '@tiagopedras/tenon'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
@@ -49,7 +49,7 @@ export function SearchPage() {
         const list = hits.data!.filter((h) => h.kind === g.kind)
         if (list.length === 0) return null
         return (
-          <Card key={g.kind} titleAs="h2" title={g.title}>
+          <Column key={g.kind} titleAs="h2" title={g.title}>
             <ul className="tn-custom-hits">
               {list.map((h) => (
                 <li key={`${h.kind}${h.id}`}>
@@ -59,7 +59,7 @@ export function SearchPage() {
                 </li>
               ))}
             </ul>
-          </Card>
+          </Column>
         )
       })}
     </div>

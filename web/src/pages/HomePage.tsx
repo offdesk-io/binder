@@ -1,4 +1,4 @@
-import { Alert, Card, Column, ColumnEmpty, Tag } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty, Tag } from '@tiagopedras/tenon'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { ActivityItem } from '../api/types'
@@ -40,25 +40,28 @@ export function HomePage() {
             ))
           )}
         </Column>
-        <Card className="tn-col-4" titleAs="h2" title="Recent activity">
+        <Column className="tn-col-4" titleAs="h2" title="Recent activity">
           {activity.error ? (
             <Alert tone="error">{activity.error.message}</Alert>
           ) : !activity.data ? (
             <Loading />
           ) : activity.data.length === 0 ? (
-            <p className="tn-custom-empty">Nothing has happened yet.</p>
+            <p className="tenon-body tn-custom-faint">Nothing has happened yet.</p>
           ) : (
             <ul className="tn-custom-activity">
               {activity.data.map((a) => (
                 <li key={`${a.kind}${a.id}`}>
-                  <Link to={`/o/${a.org_slug}${a.kind === 'interaction' ? `#i-${a.id}` : ''}`}>{a.org_name}</Link>
-                  <span className="tn-custom-activity-what">{what(a)}</span>
+                  <p className="tenon-body tn-custom-activity-line">
+                    <Link to={`/o/${a.org_slug}${a.kind === 'interaction' ? `#i-${a.id}` : ''}`}>{a.org_name}</Link>
+                    <span className="tn-custom-faint" aria-hidden="true"> · </span>
+                    <span className="tn-custom-activity-what">{what(a)}</span>
+                  </p>
                   <span className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</span>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </Column>
       </div>
     </div>
   )

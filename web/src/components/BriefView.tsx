@@ -1,4 +1,4 @@
-import { Alert, Button } from '@tiagopedras/tenon'
+import { Alert, Button, Tag } from '@tiagopedras/tenon'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
@@ -12,10 +12,11 @@ export function knownAs(p: BriefPerson, people: Contact[]): Contact | undefined 
   return people.find((c) => c.id === p.contact_id) ?? people.find((c) => c.name.trim().toLowerCase() === name)
 }
 
+/** A small heading over a part of the brief. */
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="tn-custom-brief-part">
-      <h3 className="tenon-heading-5">{title}</h3>
+      <h3 className="tenon-label tn-custom-brief-title">{title}</h3>
       {children}
     </div>
   )
@@ -38,6 +39,11 @@ export function BriefView({ run, orgId, people }: Props) {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string>()
   const known = people.data ?? []
+  const facts: [string, string][] = [
+    ['What they do', b.what_they_do],
+    ['Size and funding', b.size_and_funding],
+    ['Offdesk angle', b.offdesk_angle],
+  ].filter((f): f is [string, string] => !!f[1])
 
   async function add(p: BriefPerson) {
     if (adding) return
@@ -57,9 +63,17 @@ export function BriefView({ run, orgId, people }: Props) {
 
   return (
     <div className="tn-custom-brief">
-      <p className="tn-custom-body">{b.overview}</p>
-      {b.what_they_do && <Part title="What they do"><p className="tn-custom-body">{b.what_they_do}</p></Part>}
-      {b.size_and_funding && <Part title="Size and funding"><p className="tn-custom-body">{b.size_and_funding}</p></Part>}
+      <p className="tenon-body tn-custom-lead">{b.overview}</p>
+      {facts.length > 0 && (
+        <dl className="tn-custom-facts">
+          {facts.map(([k, v]) => (
+            <div key={k} className="tn-custom-fact">
+              <dt>{k}</dt>
+              <dd className="tenon-body">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {b.people.length > 0 && (
         <Part title="People">
           {error && <Alert tone="error">{error}</Alert>}
@@ -68,41 +82,51 @@ export function BriefView({ run, orgId, people }: Props) {
               const c = knownAs(p, known)
               return (
                 <li key={i}>
-                  <div>
+                  <div className="tn-custom-person-line">
                     {c ? <Link to={`/c/${c.id}`}>{p.name}</Link> : <span>{p.name}</span>}
                     {p.role && <span className="tn-custom-faint"> · {p.role}</span>}
+                    {c && <Tag>In Ledger</Tag>}
                     {!c && people.data && (
                       <Button size="sm" variant="secondary" disabled={adding} onClick={() => void add(p)} aria-label={`Add ${p.name}`}>
                         Add?
                       </Button>
                     )}
                   </div>
-                  {p.why && <div className="tn-custom-faint">{p.why}</div>}
+                  {p.why && <span className="tenon-caption tn-custom-faint">{p.why}</span>}
                 </li>
               )
             })}
           </ul>
         </Part>
       )}
-      {b.recent_news.length > 0 && (
-        <Part title="Recent news">
-          <ul>
-            {b.recent_news.map((n, i) => (
-              <li key={i}><Out url={n.url}>{n.headline}</Out>{n.date && <span className="tn-custom-faint"> · {n.date}</span>}</li>
-            ))}
-          </ul>
-        </Part>
-      )}
-      {b.likely_needs.length > 0 && (
-        <Part title="Likely needs"><ul>{b.likely_needs.map((t, i) => <li key={i}>{t}</li>)}</ul></Part>
-      )}
-      {b.offdesk_angle && <Part title="Offdesk angle"><p className="tn-custom-body">{b.offdesk_angle}</p></Part>}
-      {b.open_questions.length > 0 && (
-        <Part title="Open questions"><ul>{b.open_questions.map((t, i) => <li key={i}>{t}</li>)}</ul></Part>
+      {(b.recent_news.length > 0 || b.likely_needs.length > 0 || b.open_questions.length > 0) && (
+        <div className="tn-custom-brief-cols">
+          {b.recent_news.length > 0 && (
+            <Part title="Recent news">
+              <ul className="tn-custom-tight">
+                {b.recent_news.map((n, i) => (
+                  <li key={i}><Out url={n.url}>{n.headline}</Out>{n.date && <span className="tn-custom-faint"> · {n.date}</span>}</li>
+                ))}
+              </ul>
+            </Part>
+          )}
+          {b.likely_needs.length > 0 && (
+            <Part title="Likely needs">
+              <ul className="tn-custom-tight">{b.likely_needs.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            </Part>
+          )}
+          {b.open_questions.length > 0 && (
+            <Part title="Open questions">
+              <ul className="tn-custom-tight">{b.open_questions.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            </Part>
+          )}
+        </div>
       )}
       {run.sources.length > 0 && (
         <Part title="Sources">
-          <ol>{run.sources.map((s, i) => <li key={i}><Out url={s.url}>{s.title || s.url}</Out></li>)}</ol>
+          <ol className="tn-custom-tight tenon-caption">
+            {run.sources.map((s, i) => <li key={i}><Out url={s.url}>{s.title || s.url}</Out></li>)}
+          </ol>
         </Part>
       )}
       <p className="tenon-caption tn-custom-foot">

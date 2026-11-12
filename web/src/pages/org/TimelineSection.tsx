@@ -1,4 +1,4 @@
-import { Alert, Button, Card } from '@tiagopedras/tenon'
+import { Alert, Button, Column } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
@@ -23,13 +23,13 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
   }, [hash, items.data])
 
   return (
-    <Card titleAs="h2" title="Timeline">
+    <Column titleAs="h2" title="Timeline">
       {items.error ? (
         <Alert tone="error">{items.error.message}</Alert>
       ) : !items.data ? (
         <Loading />
       ) : items.data.length === 0 ? (
-        <p className="tn-custom-faint">Nothing logged yet.</p>
+        <p className="tenon-body tn-custom-faint">Nothing logged yet.</p>
       ) : (
         <ol className="tn-custom-timeline">
           {items.data.map((i) =>
@@ -54,6 +54,6 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
           )}
         </ol>
       )}
-    </Card>
+    </Column>
   )
 }

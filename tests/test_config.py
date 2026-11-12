@@ -53,3 +53,31 @@ def test_tz_defaults_to_london_and_can_be_set():
 def test_unknown_tz_refuses():
     with pytest.raises(ConfigError, match="LEDGER_TZ"):
         load_settings({"LEDGER_TZ": "Mars/Olympus"})
+
+
+def test_ai_is_off_without_a_key():
+    assert load_settings({}).ai == "off"
+
+
+def test_ai_uses_anthropic_when_a_key_is_set():
+    assert load_settings({"ANTHROPIC_API_KEY": "k"}).ai == "anthropic"
+
+
+def test_ai_can_be_switched_off_or_faked():
+    assert load_settings({"ANTHROPIC_API_KEY": "k", "LEDGER_AI": "off"}).ai == "off"
+    assert load_settings({"LEDGER_AI": "fake"}).ai == "fake"
+
+
+def test_ai_anthropic_needs_a_key():
+    with pytest.raises(ConfigError, match="ANTHROPIC_API_KEY"):
+        load_settings({"LEDGER_AI": "anthropic"})
+
+
+def test_unknown_ai_mode_refuses_to_start():
+    with pytest.raises(ConfigError, match="LEDGER_AI"):
+        load_settings({"LEDGER_AI": "openai"})
+
+
+def test_fake_ai_is_refused_on_the_server():
+    with pytest.raises(ConfigError, match="fake"):
+        load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "/x/l.db", "LEDGER_AI": "fake"})

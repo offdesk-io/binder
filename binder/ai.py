@@ -22,11 +22,17 @@ MODEL = "claude-opus-5-5"
 BETAS = ["server-side-fallback-2026-07-01"]
 MAX_STEPS = 6  # a turn with web tools can pause; resume it this many times at most
 
-# What the research prompt says Offdesk is. Replace it with what Offdesk sells:
+# What the research prompt says Offdesk is, from its November 2026 press pack:
 # `offdesk_angle` in each brief is written against it.
 ABOUT_OFFDESK = (
-    "Offdesk is a small studio that takes on client projects. Its team uses Binder "
-    "to keep track of the organisations it talks to about work."
+    "Offdesk is a small agency in Portugal that builds AI agents for the repetitive work "
+    "teams do by hand and that has to be right, such as quotes, tenders, applications and "
+    "long documents that are replicated and personalised. Its customers are owners and "
+    "managers of small, admin-heavy companies. It first studies how a company's people "
+    "already work, then fits the agents into the tools and channels they already use "
+    "(files, email, WhatsApp) rather than asking them to learn a new tool, so their people "
+    "stay on the work only they can do. It works with clients directly and through brokers "
+    "and complementary service providers."
 )
 
 

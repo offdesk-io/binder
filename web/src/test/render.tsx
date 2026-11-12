@@ -15,6 +15,7 @@ export const SESSION: Session = {
     interaction_types: ['call', 'email', 'meeting', 'note'],
     relationships: ['cold', 'warm', 'strong'],
     ai: true,
+    bench: true,
   },
   me: { email: 'ana@example.com', name: 'Ana', teams: ['offdesk'] },
 }

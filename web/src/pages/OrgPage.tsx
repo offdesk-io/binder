@@ -17,6 +17,7 @@ import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { PeopleSection } from './org/PeopleSection'
 import { TimelineSection } from './org/TimelineSection'
+import { WorkSection } from './org/WorkSection'
 
 export function OrgPage() {
   const { slug = '' } = useParams()
@@ -120,6 +121,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
         </div>
         <div className="tn-col-4 tn-stack">
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
+          {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
         </div>
       </div>
 

@@ -56,6 +56,13 @@ export function day(value: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '' : DAY.format(d)
 }
 
+/** The time of day, `09:30`, for something read a moment ago. */
+export function clock(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = parse(value)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
 export function todayIso(now: Date = new Date()): string {
   return isoDay(now)
 }

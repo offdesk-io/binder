@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
 import { InteractionEntry } from '../../components/InteractionEntry'
 import { Loading } from '../../components/Loading'
-import { day, label, person, statusLine } from '../../lib/format'
+import { day, label, person, safeHref, statusLine } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
 
 interface Props {
@@ -36,6 +36,11 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
             i.kind === 'status' ? (
               <li key={`s${i.id}`} className="tn-custom-tl-status">
                 {statusLine(i.from_status, i.to_status)} <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
+              </li>
+            ) : i.kind === 'bench' ? (
+              <li key={`b${i.id}`} className="tn-custom-tl-status">
+                Finished in Bench: <a href={safeHref(i.url) ?? undefined} target="_blank" rel="noopener noreferrer">{i.title}</a>{' '}
+                <span className="tn-custom-entry-meta">· {day(i.at)}</span>
               </li>
             ) : (
               <li key={`i${i.id}`} id={`i-${i.id}`}>

@@ -1,6 +1,5 @@
-"""Full-text search over organisations, contacts and interactions (and
-research, from plan 3). Each word becomes a quoted prefix term, so user
-input can never be read as FTS5 syntax."""
+"""Full-text search over organisations, contacts, interactions and research briefs.
+Each word becomes a quoted prefix term, so user input can never be read as FTS5 syntax."""
 
 import sqlite3
 from typing import Any, Dict, List
@@ -17,7 +16,8 @@ def query(conn: sqlite3.Connection, q: str, limit: int = 50) -> List[Dict[str, A
         return []
     rows = conn.execute(
         "SELECT s.kind, s.ref_id AS id, s.org_id, s.title, o.name AS org_name, o.slug AS org_slug, "
-        "snippet(search, 4, char(2), char(3), '…', 12) AS snippet "
+        "r.contact_id, snippet(search, 4, char(2), char(3), '…', 12) AS snippet "
         "FROM search s JOIN organisations o ON o.id = s.org_id "
+        "LEFT JOIN research r ON s.kind = 'research' AND r.id = s.ref_id "
         "WHERE search MATCH ? ORDER BY rank LIMIT ?", (match, limit))
     return [dict(r, id=int(r["id"]), org_id=int(r["org_id"])) for r in rows]

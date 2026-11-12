@@ -52,3 +52,17 @@ def test_interaction_title_is_type_and_date_only(client, org):
     assert client.get("/api/search", params={"q": "000000"}).json() == []
     hit = client.get("/api/search", params={"q": "pricing"}).json()[0]
     assert hit["title"] == "call 2026-11-01"
+
+
+def test_research_hits_say_whose_brief_they_are(ai_client, org):
+    bo = ai_client.post("/api/orgs/%d/contacts" % org["id"], json={"name": "Bo"}).json()
+    ai_client.post("/api/orgs/%d/research" % org["id"])
+    ai_client.post("/api/contacts/%d/research" % bo["id"])
+    hits = [h for h in ai_client.get("/api/search?q=fake").json() if h["kind"] == "research"]
+    assert sorted((h["title"], h["contact_id"]) for h in hits) == [
+        ("Research brief", None), ("Research brief: Bo", bo["id"])]
+
+
+def test_other_hits_have_no_contact_id(client, org):
+    hits = client.get("/api/search?q=acme").json()
+    assert hits and all(h["contact_id"] is None for h in hits)

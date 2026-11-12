@@ -61,7 +61,7 @@ def test_http_source_sends_the_token_and_checks_the_board(monkeypatch):
         seen["url"], seen["headers"], seen["method"] = req.full_url, dict(req.header_items()), req.get_method()
         return _Resp("## 1. Leads\n", "work")
 
-    monkeypatch.setattr(bench.urllib.request, "urlopen", fake_open)
+    monkeypatch.setattr(bench, "_open", fake_open)
     text = bench.HttpSource("https://bench.example.com", "t0ken", "work").fetch()
     assert text == "## 1. Leads\n"
     assert seen["method"] == "GET"
@@ -71,7 +71,7 @@ def test_http_source_sends_the_token_and_checks_the_board(monkeypatch):
 
 
 def test_http_source_refuses_another_board(monkeypatch):
-    monkeypatch.setattr(bench.urllib.request, "urlopen", lambda req, timeout: _Resp("x", "personal"))
+    monkeypatch.setattr(bench, "_open", lambda req, timeout: _Resp("x", "personal"))
     with pytest.raises(bench.BenchError, match="personal"):
         bench.HttpSource("https://bench.example.com", "t", "work").fetch()
 
@@ -80,6 +80,13 @@ def test_http_errors_become_bench_errors(monkeypatch):
     def boom(req, timeout):
         raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", {}, None)
 
-    monkeypatch.setattr(bench.urllib.request, "urlopen", boom)
+    monkeypatch.setattr(bench, "_open", boom)
     with pytest.raises(bench.BenchError, match="401"):
         bench.HttpSource("https://bench.example.com", "t", "work").fetch()
+
+
+def test_http_source_refuses_a_redirect():
+    handler = bench._NoRedirect()
+    req = bench.urllib.request.Request("https://bench.example.com/data/todo.md")
+    with pytest.raises(bench.urllib.error.HTTPError):
+        handler.redirect_request(req, None, 302, "Found", {}, "http://elsewhere.example.com/")

@@ -50,6 +50,20 @@ class FileSource:
             raise BenchError("Could not read %s: %s" % (self.path, e.strerror))
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect would resend the token to wherever it points, so refuse it."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        raise urllib.error.HTTPError(req.full_url, code, "redirect refused", headers, fp)
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def _open(req: urllib.request.Request, timeout: float) -> Any:
+    return _OPENER.open(req, timeout=timeout)
+
+
 class HttpSource:
     """The board over HTTP with Binder's token, the way the PA's pa_save reads it."""
 
@@ -60,7 +74,7 @@ class HttpSource:
         req = urllib.request.Request(self.base_url + "/data/todo.md", method="GET", headers={
             "Authorization": "Bearer " + self.token, "X-Offdesk-Board": self.board})
         try:
-            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+            with _open(req, timeout=TIMEOUT_S) as resp:
                 served = resp.headers.get("X-Bench-Board")
                 if served != self.board:
                     raise BenchError("Bench served the %s board, not %s." % (served or "wrong", self.board))

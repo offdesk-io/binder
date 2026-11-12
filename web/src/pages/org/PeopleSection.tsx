@@ -1,4 +1,4 @@
-import { Alert, Button, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, Column, Tag } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
@@ -15,32 +15,34 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
     onChanged?.()
   }
   return (
-    <section className="lg-section">
-      <div className="lg-section-head">
-        <h2 className="tenon-heading-3">People</h2>
-        <Button size="sm" variant="secondary" onClick={() => setEditing('new')}>Add person</Button>
-      </div>
-      {contacts.error ? (
-        <Alert tone="error">{contacts.error.message}</Alert>
-      ) : !contacts.data ? (
-        <Loading />
-      ) : contacts.data.length === 0 ? (
-        <p className="lg-faint">No one yet. Add the people you talk to.</p>
-      ) : (
-        <ul className="lg-people">
-          {contacts.data.map((c) => (
-            <li key={c.id}>
-              <div>
-                <Link to={`/c/${c.id}`}>{c.name}</Link>
-                {c.is_primary && <Tag tone="accent">Talk to</Tag>}
-                {c.relationship && <Tag>{label(c.relationship)}</Tag>}
-              </div>
-              <div className="lg-faint">{[c.role, c.email, c.phone].filter(Boolean).join(' · ')}</div>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={`Edit ${c.name}`}>Edit</Button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <>
+      <Column
+        titleAs="h2"
+        title="People"
+        action={<Button size="sm" variant="secondary" onClick={() => setEditing('new')}>Add person</Button>}
+      >
+        {contacts.error ? (
+          <Alert tone="error">{contacts.error.message}</Alert>
+        ) : !contacts.data ? (
+          <Loading />
+        ) : contacts.data.length === 0 ? (
+          <p className="tenon-body tn-custom-faint">No one yet. Add the people you talk to.</p>
+        ) : (
+          <ul className="tn-custom-people">
+            {contacts.data.map((c) => (
+              <li key={c.id}>
+                <div className="tn-custom-person-name">
+                  <Link to={`/c/${c.id}`}>{c.name}</Link>
+                  {c.is_primary && <Tag tone="accent">Talk to</Tag>}
+                  {c.relationship && <Tag>{label(c.relationship)}</Tag>}
+                </div>
+                <div className="tenon-caption tn-custom-faint">{[c.role, c.email, c.phone].filter(Boolean).join(' · ')}</div>
+                <Button className="tn-custom-person-edit" size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={`Edit ${c.name}`}>Edit</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Column>
       <ContactForm
         open={editing !== undefined}
         orgId={orgId}
@@ -49,6 +51,6 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
         onSaved={done}
         onDeleted={done}
       />
-    </section>
+    </>
   )
 }

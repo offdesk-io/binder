@@ -128,25 +128,25 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
       onClose={onClose}
       title={base ? `Edit ${base.name}` : 'Add a person'}
       size="md"
-      className={phone ? 'lg-sheet' : undefined}
+      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
           {base && onDeleted && <ConfirmDelete what="person" onConfirm={() => void remove()} />}
-          <span className="lg-grow" />
+          <span className="tn-custom-grow" />
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="contact-form" disabled={busy}>Save</Button>
+          <Button variant="primary" type="submit" form="contact-form" disabled={busy}>Save</Button>
         </>
       }
     >
-      <form id="contact-form" className="lg-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="contact-form" className="tn-custom-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         <Field label="Role" value={form.role} onChange={set('role')} />
         <Field label="Email" type="email" value={form.email} onChange={set('email')} />
         <Field label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
         <Field label="LinkedIn" type="url" value={form.linkedin_url} onChange={set('linkedin_url')} />
-        <div className="lg-field">
+        <div className="tn-custom-field">
           <span className="tenon-label">Relationship</span>
           <SegmentedControl
             aria-label="Relationship"
@@ -155,7 +155,7 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
             options={[{ value: '', label: 'Not sure' }, ...meta.relationships.map((r) => ({ value: r, label: label(r) }))]}
           />
         </div>
-        <label className="lg-check">
+        <label className="tn-custom-check">
           <input
             type="checkbox"
             checked={form.is_primary}

@@ -1,4 +1,4 @@
-import { Alert, Button, LinkButton } from '@tiagopedras/tenon'
+import { Alert, Button, Column, LinkButton } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
@@ -42,54 +42,60 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
   ).filter(([, v]) => v)
 
   return (
-    <div className="lg-page">
-      <header className="lg-org-head">
-        <h1 className="tenon-heading-1">{c.name}</h1>
-        <p className="lg-faint">
+    <div className="tn-stack">
+      <header className="tn-stack">
+        <div className="tn-toolbar">
+          <div className="tn-custom-title">
+            <h1 className="tenon-heading-3">{c.name}</h1>
+          </div>
+          <div className="tn-cluster tn-custom-actions">
+            <Button variant="primary" onClick={() => setLogging(true)}>Log</Button>
+            <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+            {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
+            {c.phone && <LinkButton variant="ghost" href={`tel:${c.phone}`}>Call</LinkButton>}
+            {c.email && <LinkButton variant="ghost" href={`mailto:${c.email}`}>Email</LinkButton>}
+          </div>
+        </div>
+        <p className="tenon-caption tn-custom-faint">
           {c.role && `${c.role} at `}
           <Link to={`/o/${c.org_slug}`}>{c.org_name}</Link>
         </p>
-        <div className="lg-actions">
-          <Button onClick={() => setLogging(true)}>Log</Button>
-          <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
-          {meta.ai && <LinkButton variant="secondary" href="#research">Research</LinkButton>}
-          {c.phone && <LinkButton variant="secondary" href={`tel:${c.phone}`}>Call</LinkButton>}
-          {c.email && <LinkButton variant="secondary" href={`mailto:${c.email}`}>Email</LinkButton>}
-        </div>
       </header>
 
-      <section className="lg-section">
-        <h2 className="tenon-heading-3">Details</h2>
-        <dl className="lg-facts">
-          {details.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
-        </dl>
-        {c.notes && <p className="lg-entry-text">{c.notes}</p>}
-      </section>
-
-      <section className="lg-section">
-        <h2 className="tenon-heading-3">With {c.name}</h2>
-        {history.error ? (
-          <Alert tone="error">{history.error.message}</Alert>
-        ) : !history.data ? (
-          <Loading />
-        ) : history.data.length === 0 ? (
-          <p className="lg-faint">Nothing logged with {c.name} yet.</p>
-        ) : (
-          <ol className="lg-timeline">
-            {history.data.map((i) => (
-              <li key={i.id}>
-                <InteractionEntry
-                  type={i.type} at={i.happened_at} by={i.author_email} summary={i.summary}
-                  next_step={i.next_step} next_step_due={i.next_step_due}
-                  people={i.contact_ids.filter((p) => p !== c.id).map((p) => names.get(p)).filter((n): n is string => !!n)}
-                />
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      <ResearchSection subject={{ kind: 'contact', id: c.id }} orgId={c.org_id} people={people} />
+      <div className="tn-grid tn-custom-split">
+        <div className="tn-col-8 tn-stack">
+          <Column titleAs="h2" title={`With ${c.name}`}>
+            {history.error ? (
+              <Alert tone="error">{history.error.message}</Alert>
+            ) : !history.data ? (
+              <Loading />
+            ) : history.data.length === 0 ? (
+              <p className="tenon-body tn-custom-faint">Nothing logged with {c.name} yet.</p>
+            ) : (
+              <ol className="tn-custom-timeline">
+                {history.data.map((i) => (
+                  <li key={i.id}>
+                    <InteractionEntry
+                      type={i.type} at={i.happened_at} by={i.author_email} summary={i.summary}
+                      next_step={i.next_step} next_step_due={i.next_step_due}
+                      people={i.contact_ids.filter((p) => p !== c.id).map((p) => names.get(p)).filter((n): n is string => !!n)}
+                    />
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Column>
+          <ResearchSection subject={{ kind: 'contact', id: c.id }} orgId={c.org_id} people={people} />
+        </div>
+        <div className="tn-col-4 tn-stack">
+          <Column titleAs="h2" title="Details">
+            <dl className="tn-custom-facts">
+              {details.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
+            </dl>
+            {c.notes && <p className="tenon-body tn-custom-body">{c.notes}</p>}
+          </Column>
+        </div>
+      </div>
 
       <ContactForm
         open={editing}

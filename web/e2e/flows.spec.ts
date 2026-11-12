@@ -60,3 +60,15 @@ test('the pipeline moves a lead to the next stage', async ({ page, request }, in
   const saved = await (await request.get(`/api/orgs/${org.id}`)).json()
   expect(saved.status).toBe('contacted')
 })
+
+test('a card status menu on the pipeline is not cut off by the board', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop', 'the phone shows one stage at a time')
+  const name = unique('Menu Room')
+  await newOrg(request, name)
+  await page.goto('/pipeline')
+  await page.getByRole('button', { name: `Status of ${name}` }).click()
+  await expect(page.getByRole('menuitemradio', { name: 'Parked' })).toBeVisible()
+  // The board scrolls sideways; it must not need an inner vertical scroll to show the menu.
+  const clipped = await page.locator('.tn-custom-board').evaluate((el) => el.scrollHeight > el.clientHeight + 1)
+  expect(clipped).toBe(false)
+})

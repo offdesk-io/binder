@@ -60,7 +60,7 @@ export function SearchBox() {
   return (
     <input
       ref={input}
-      className="lg-search"
+      className="tenon-field__control tn-custom-search"
       type="search"
       aria-label="Search"
       placeholder="Search   /"

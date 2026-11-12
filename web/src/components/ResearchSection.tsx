@@ -1,4 +1,4 @@
-import { Alert, Button, Spinner } from '@tiagopedras/tenon'
+import { Alert, Button, Column, Spinner } from '@tiagopedras/tenon'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
@@ -82,24 +82,25 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
   }
 
   return (
-    <section className="lg-section" id="research">
-      <div className="lg-section-head">
-        <h2 className="tenon-heading-3">Research</h2>
-        {meta.ai && (
-          <Button size="sm" variant="secondary" disabled={starting || running} onClick={() => void start()}>
-            {list.some((r) => r.status === 'done') ? 'Research again' : 'Research'}
-          </Button>
-        )}
-      </div>
+    <Column
+      id="research"
+      titleAs="h2"
+      title="Research"
+      action={meta.ai && (
+        <Button size="sm" variant="secondary" disabled={starting || running} onClick={() => void start()}>
+          {list.some((r) => r.status === 'done') ? 'Research again' : 'Research'}
+        </Button>
+      )}
+    >
       {error && <Alert tone="error">{error}</Alert>}
       {runs.error && !runs.data ? (
         <Alert tone="error">{runs.error.message}</Alert>
       ) : !runs.data ? (
         <Loading />
       ) : (
-        <>
+        <div className="tn-stack">
           {running && (
-            <p className="lg-running">
+            <p className="tn-custom-running">
               <Spinner variant="ring" size="sm" label="Researching" />
               Researching. It takes a few minutes, and you can leave this page.
             </p>
@@ -117,15 +118,15 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
             <BriefView run={shown} orgId={orgId} people={people} />
           ) : (
             !running && latest?.status !== 'failed' && (
-              <p className="lg-faint">
+              <p className="tn-custom-faint">
                 {meta.ai ? 'No research yet. It searches the web and writes a brief.' : 'No research yet. AI is not set up on this server.'}
               </p>
             )
           )}
           {list.length > 1 && (
-            <div className="lg-field">
+            <div className="tn-custom-field">
               <span className="tenon-label">Runs</span>
-              <ul className="lg-runs">
+              <ul className="tn-custom-runs">
                 {list.map((r) => (
                   <li key={r.id}>
                     <Button size="sm" variant="ghost" aria-pressed={shown?.id === r.id} disabled={!r.brief} onClick={() => setPicked(r.id)}>
@@ -136,8 +137,8 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
               </ul>
             </div>
           )}
-        </>
+        </div>
       )}
-    </section>
+    </Column>
   )
 }

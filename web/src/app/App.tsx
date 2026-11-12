@@ -9,7 +9,7 @@ import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
 function NotFound() {
-  return <p className="lg-faint">There is nothing at this address.</p>
+  return <p className="tn-custom-faint">There is nothing at this address.</p>
 }
 
 export function App() {

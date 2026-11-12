@@ -1,4 +1,4 @@
-import { Alert, Button } from '@tiagopedras/tenon'
+import { Alert, Button, Column } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
@@ -23,20 +23,19 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
   }, [hash, items.data])
 
   return (
-    <section className="lg-section">
-      <h2 className="tenon-heading-3">Timeline</h2>
+    <Column titleAs="h2" title="Timeline">
       {items.error ? (
         <Alert tone="error">{items.error.message}</Alert>
       ) : !items.data ? (
         <Loading />
       ) : items.data.length === 0 ? (
-        <p className="lg-faint">Nothing logged yet.</p>
+        <p className="tenon-body tn-custom-faint">Nothing logged yet.</p>
       ) : (
-        <ol className="lg-timeline">
+        <ol className="tn-custom-timeline">
           {items.data.map((i) =>
             i.kind === 'status' ? (
-              <li key={`s${i.id}`} className="lg-tl-status">
-                {statusLine(i.from_status, i.to_status)} <span className="lg-faint">· {person(i.by_email)} · {day(i.at)}</span>
+              <li key={`s${i.id}`} className="tn-custom-tl-status">
+                {statusLine(i.from_status, i.to_status)} <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
               </li>
             ) : (
               <li key={`i${i.id}`} id={`i-${i.id}`}>
@@ -55,6 +54,6 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
           )}
         </ol>
       )}
-    </section>
+    </Column>
   )
 }

@@ -115,7 +115,10 @@ def test_bench_url_must_be_https_unless_loopback(tmp_path):
         load_settings(dict(base, BINDER_BENCH_URL="http://bench.example.com"))
     with pytest.raises(ConfigError, match="https"):
         load_settings(dict(base, BINDER_BENCH_URL="http://localhost.example.com"))
+    with pytest.raises(ConfigError, match="https"):
+        load_settings(dict(base, BINDER_BENCH_URL="http://localhost:8765"))  # a name, not a literal loopback address
     assert load_settings(dict(base, BINDER_BENCH_URL="http://127.0.0.1:8765")).bench_url == "http://127.0.0.1:8765"
+    assert load_settings(dict(base, BINDER_BENCH_URL="http://[::1]:8765")).bench_url == "http://[::1]:8765"
 
 
 def test_bench_file_is_for_local_development_only(tmp_path):

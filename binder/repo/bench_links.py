@@ -9,6 +9,7 @@ from ..db import now
 def _out(r: sqlite3.Row) -> Dict[str, Any]:
     d = dict(r)
     d["done"] = bool(d["done"])
+    d["cancelled"] = bool(d["cancelled"])
     return d
 
 
@@ -30,10 +31,10 @@ def replace(conn: sqlite3.Connection, board: str, links: List[Dict[str, Any]]) -
                 continue
             seen.add(l["task_key"])
             conn.execute(
-                "INSERT INTO bench_links(org_id, board, task_key, title, state, done, done_on, due, assignee, "
-                "fetched_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (org_id, board, l["task_key"], l["title"], l["state"], int(l["done"]), l["done_on"], l["due"],
-                 l["assignee"], at))
+                "INSERT INTO bench_links(org_id, board, task_key, title, state, done, cancelled, done_on, due, "
+                "assignee, fetched_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (org_id, board, l["task_key"], l["title"], l["state"], int(l["done"]), int(l["cancelled"]),
+                 l["done_on"], l["due"], l["assignee"], at))
             linked += 1
         conn.execute("INSERT INTO bench_sync(board, fetched_at, error) VALUES (?,?,NULL) "
                      "ON CONFLICT(board) DO UPDATE SET fetched_at = excluded.fetched_at, error = NULL", (board, at))
@@ -62,8 +63,9 @@ def sync_state(conn: sqlite3.Connection, board: str) -> Dict[str, Any]:
 
 
 def list_for_org(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:
-    """Open tasks first (in board order), then done ones, newest first."""
+    """Open tasks first (in board order), then finished and cancelled ones, newest day first."""
     rows = conn.execute(
-        "SELECT task_key, board, title, state, done, done_on, due, assignee, fetched_at FROM bench_links "
-        "WHERE org_id = ? ORDER BY done, CASE WHEN done THEN done_on END DESC, id", (org_id,))
+        "SELECT task_key, board, title, state, done, cancelled, done_on, due, assignee, fetched_at FROM bench_links "
+        "WHERE org_id = ? ORDER BY (done OR cancelled), CASE WHEN done OR cancelled THEN done_on END DESC, id",
+        (org_id,))
     return [_out(r) for r in rows]

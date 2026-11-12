@@ -3,7 +3,7 @@ finished Bench tasks. Items have the same keys as feeds.activity's: `kind`,
 `id`, `at` and `by_email`. A Bench item's id is its task key."""
 
 import sqlite3
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import bench_links, interactions, orgs
 
@@ -17,11 +17,18 @@ def for_org(conn: sqlite3.Connection, org_id: int,
         items.append(item)
     for h in orgs.status_history(conn, org_id):
         items.append(dict(h, kind="status"))
-    if task_url is not None:  # open Bench tasks show only in the Work section
+    if task_url is not None:  # open and cancelled Bench tasks show only in the Work section
         for t in bench_links.list_for_org(conn, org_id):
-            if t["done"] and t["done_on"]:
+            if t["done"] and t["done_on"]:  # `done` is finished work only, never a cancelled task
                 items.append({"kind": "bench", "id": t["task_key"], "title": t["title"],
-                              "at": t["done_on"] + "T00:00:00.000000+00:00", "by_email": t["assignee"],
+                              "at": t["done_on"] + "T00:00:00.000000+00:00", "by_email": None,
                               "url": task_url(t["board"], t["task_key"])})
-    items.sort(key=lambda x: (x["at"], str(x["id"])), reverse=True)
+    items.sort(key=lambda x: (x["at"], _tie_key(x["id"])), reverse=True)
     return items
+
+
+def _tie_key(item_id: Any) -> Tuple[int, int, str]:
+    """Integer ids sort as numbers (9 before 10); Bench task keys, which are text, sort after them as text."""
+    if isinstance(item_id, int):
+        return (0, item_id, "")
+    return (1, 0, str(item_id))

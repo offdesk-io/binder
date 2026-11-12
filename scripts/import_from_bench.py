@@ -15,9 +15,10 @@ import argparse
 import csv
 import json
 import os
+import re
 import sqlite3
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from binder import bench, statuses
 from binder.config import load_settings
@@ -28,6 +29,7 @@ from binder.repo import interactions, orgs
 BUCKET = "Leads"
 COLUMNS = ["task_key", "title", "name", "slug", "status", "owner", "note"]
 STATUS_BY_STATE = {"Backlog": "lead", "To do": "lead", "Doing": "in_conversation", "Reviewing": "proposal_sent"}
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class PlanError(Exception):
@@ -67,12 +69,32 @@ def _marker(row: Dict[str, str]) -> str:
     return 'From the Bench task "%s" (%s)' % (row["title"], row["task_key"])
 
 
+def _email(value: str, what: str) -> str:
+    v = (value or "").strip().lower()
+    if not EMAIL_RE.match(v):
+        raise PlanError("%s must be an email address, not %r." % (what, value))
+    return v
+
+
+def _owner_of(value: str, task_key: str) -> Optional[str]:
+    """The owner email for a row, or None when it is blank."""
+    return _email(value, "Owner of %s" % task_key) if (value or "").strip() else None
+
+
 def apply_rows(conn: sqlite3.Connection, rows: List[Dict[str, str]], by: str) -> Dict[str, str]:
-    """Creates the organisations and their notes. Returns task key -> slug for the rows applied."""
+    """Creates the organisations and their notes. Returns task key -> slug for the rows applied.
+
+    Each row is checked before anything is written. A note is skipped when one from the same task
+    (its key in brackets) already exists, so a second apply adds nothing twice. An organisation that
+    already exists is never changed here: on a second apply, a status that differs from the plan is
+    left as it is, and only the notes are added. That is deliberate, so a correction made in Binder
+    survives a re-apply."""
+    owners: Dict[str, Optional[str]] = {}
     for r in rows:
         if r["slug"] and r["status"] not in statuses.LEAD_STATUSES:
             raise PlanError("Row %s: %r is not a lead status (%s)." % (r["task_key"], r["status"],
                                                                      ", ".join(statuses.LEAD_STATUSES)))
+        owners[r["task_key"]] = _owner_of(r["owner"], r["task_key"])
     links: Dict[str, str] = {}
     for r in rows:
         slug = orgs.slugify(r["slug"]) if r["slug"] else ""
@@ -82,12 +104,12 @@ def apply_rows(conn: sqlite3.Connection, rows: List[Dict[str, str]], by: str) ->
             org = orgs.get_by_slug(conn, slug)
         except NotFound:  # the first row with this slug creates it
             org = orgs.create(conn, {"name": r["name"] or r["title"], "slug": slug,
-                                     "owner_email": r["owner"] or None}, by)
+                                     "owner_email": owners[r["task_key"]]}, by)
             if r["status"] != org["status"]:
                 org = orgs.update(conn, org["id"], {"status": r["status"], "updated_at": org["updated_at"]}, by)
-        marker = _marker(r)
-        if not any(marker in i["summary"] for i in interactions.list_for_org(conn, org["id"])):
-            body = marker + (":\n\n" + r["note"] if r["note"] else ".")
+        key = "(%s)" % r["task_key"]
+        if not any(key in i["summary"] for i in interactions.list_for_org(conn, org["id"])):
+            body = _marker(r) + (":\n\n" + r["note"] if r["note"] else ".")
             interactions.create(conn, org["id"], {"type": "note", "summary": body}, by)
         links[r["task_key"]] = org["slug"]
     return links
@@ -126,10 +148,12 @@ def main(argv: List[str]) -> int:
         _print_table(rows)
         print("\n%d tasks. Edit %s, then run: apply %s --by <your email>" % (len(rows), args.out, args.out))
         return 0
-    conn = connect(settings.db_path)
-    migrate(conn, settings.db_path)
     try:
-        links = apply_rows(conn, read_plan(args.plan_file), args.by.strip().lower())
+        by = _email(args.by, "--by")
+        rows = read_plan(args.plan_file)
+        conn = connect(settings.db_path)
+        migrate(conn, settings.db_path)
+        links = apply_rows(conn, rows, by)
     except PlanError as e:
         print(e)
         return 2

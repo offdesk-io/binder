@@ -8,6 +8,9 @@ CREATE TABLE bench_links (
   title TEXT NOT NULL,
   state TEXT NOT NULL,
   done INTEGER NOT NULL DEFAULT 0,
+  -- Finished work only. A cancelled task is `cancelled` and not `done`.
+  cancelled INTEGER NOT NULL DEFAULT 0,
+  -- The day it was finished, or for a cancelled task the day it was decided against.
   done_on TEXT,
   due TEXT,
   assignee TEXT,

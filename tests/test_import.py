@@ -46,7 +46,8 @@ def test_apply_creates_orgs_merges_same_slug_and_skips_blank(tmp_path, bench_cor
         if r["task_key"] == "aa0001":
             r["slug"] = ""  # and skips the old one
     conn, links = apply(tmp_path, rows)
-    assert links == {"aa0002": "acme-studio", "aa0004": "northwind-trading", "acme-site": "acme-studio"}
+    assert links == {"aa0002": "acme-studio", "aa0004": "northwind-trading", "acme-site": "acme-studio",
+                     "aa0005": "birch-co"}
     acme = orgs.get_by_slug(conn, "acme-studio")
     assert (acme["name"], acme["status"], acme["owner_email"]) == ("Acme Studio follow-up", "in_conversation",
                                                                   "ana@example.com")
@@ -62,7 +63,7 @@ def test_apply_twice_adds_nothing_twice(tmp_path, bench_core):
     imp.apply_rows(conn, rows, by="ana@example.com")
     acme = orgs.get_by_slug(conn, "acme-studio")
     assert len(interactions.list_for_org(conn, acme["id"])) == 2
-    assert conn.execute("SELECT count(*) FROM organisations").fetchone()[0] == 3
+    assert conn.execute("SELECT count(*) FROM organisations").fetchone()[0] == 4
 
 
 def test_apply_refuses_an_unknown_status(tmp_path, bench_core):
@@ -76,3 +77,32 @@ def test_links_file(tmp_path):
     path = tmp_path / "import-links.json"
     imp.write_links(str(path), "work", {"aa0002": "acme-studio"})
     assert json.loads(path.read_text()) == {"board": "work", "links": {"aa0002": "acme-studio"}}
+
+
+def test_a_non_email_owner_is_refused_before_anything_is_written(tmp_path, bench_core):
+    rows = imp.plan_rows(tasks(bench_core))
+    rows[0]["owner"] = "Ben"
+    conn = connect(str(tmp_path / "t.db"))
+    migrate(conn)
+    with pytest.raises(imp.PlanError, match="Ben"):
+        imp.apply_rows(conn, rows, by="ana@example.com")
+    assert conn.execute("SELECT count(*) FROM organisations").fetchone()[0] == 0
+
+
+def test_a_blank_owner_is_none_and_the_by_flag_must_be_an_email():
+    assert imp._owner_of("", "aa0002") is None
+    assert imp._owner_of("  ", "aa0002") is None
+    assert imp._owner_of("Ana@Example.com ", "aa0002") == "ana@example.com"
+    with pytest.raises(imp.PlanError, match="--by"):
+        imp._email("nope", "--by")
+
+
+def test_a_note_from_the_same_task_is_not_added_again_under_a_new_title(tmp_path, bench_core):
+    rows = imp.plan_rows(tasks(bench_core))
+    conn, _ = apply(tmp_path, rows)
+    acme = orgs.get_by_slug(conn, "acme-studio")
+    for n in interactions.list_for_org(conn, acme["id"]):
+        interactions.update(conn, n["id"], {"summary": n["summary"].replace('"Acme Studio follow-up"', '"Renamed"'),
+                                            "updated_at": n["updated_at"]}, "ana@example.com")
+    imp.apply_rows(conn, [dict(r, title="Renamed") for r in rows], by="ana@example.com")
+    assert len(interactions.list_for_org(conn, acme["id"])) == 2

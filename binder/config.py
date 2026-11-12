@@ -94,7 +94,7 @@ def load_settings(env: Mapping[str, str]) -> Settings:
             raise ConfigError("BINDER_BENCH_CORE=%r has no todo.py." % bench_core)
     if bench_token:
         parts = urlsplit(bench_url)
-        loopback = parts.scheme == "http" and parts.hostname in ("127.0.0.1", "::1", "localhost")
+        loopback = parts.scheme == "http" and parts.hostname in LOOPBACK  # literal addresses only
         if not (parts.scheme == "https" or loopback):
             raise ConfigError("BINDER_BENCH_URL must be https (or loopback), so the token is never sent in clear.")
     return Settings(

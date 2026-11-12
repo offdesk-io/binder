@@ -157,7 +157,7 @@ parses the board. With neither, Bench is off.
         if not os.path.isfile(os.path.join(bench_core, "todo.py")):
             raise ConfigError("BINDER_BENCH_CORE=%r has no todo.py." % bench_core)
     if bench_token:
-        loopback = bench_url.startswith(("http://127.0.0.1", "http://[::1]", "http://localhost"))
+        loopback = bench_url.startswith(("http://127.0.0.1", "http://[::1]"))
         if not (bench_url.startswith("https://") or loopback):
             raise ConfigError("BINDER_BENCH_URL must be https (or loopback), so the token is never sent in clear.")
 ```

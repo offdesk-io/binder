@@ -7,6 +7,9 @@
 - [x] **Old lead that went quiet** `done:2026-10-02` `id:aa0001`
   - Spoke once at a fair.
 
+- [x] **Birch and Co pitch** [lead:: birch-co] `done:2026-10-20` `cancelled:2026-10-25` `id:aa0005`
+  - Not a fit for the archive tool, so we stopped.
+
 ### Doing
 
 - [ ] **Acme Studio follow-up** [to:: ana@example.com] [lead:: acme-studio] `id:aa0002`

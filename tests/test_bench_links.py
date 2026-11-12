@@ -1,8 +1,9 @@
 from binder.db import connect, migrate
-from binder.repo import bench_links, orgs
+from binder.repo import bench_links, interactions, orgs, timeline
 
 LINK = {"slug": "acme-studio", "task_key": "aa0002", "title": "Acme Studio follow-up", "bucket": "Leads",
-        "state": "Doing", "done": False, "done_on": None, "due": None, "assignee": "ana@example.com"}
+        "state": "Doing", "done": False, "cancelled": False, "done_on": None, "due": None,
+        "assignee": "ana@example.com"}
 
 
 def db(tmp_path):
@@ -59,3 +60,27 @@ def test_deleting_the_org_drops_its_links(tmp_path):
 
 def test_never_synced_has_no_state(tmp_path):
     assert bench_links.sync_state(db(tmp_path), "work") == {"fetched_at": None, "error": None}
+
+
+def test_a_cancelled_task_is_cached_as_cancelled_and_listed_with_the_done_ones(tmp_path):
+    conn = db(tmp_path)
+    acme = orgs.create(conn, {"name": "Acme Studio"}, "ana@example.com")
+    cancelled = dict(LINK, task_key="bb0005", title="Dropped pitch", state="Cancelled", done=False,
+                     cancelled=True, done_on="2026-10-25")
+    done = dict(LINK, task_key="bb0001", title="Kickoff deck", state="Done", done=True, done_on="2026-11-01")
+    bench_links.replace(conn, "work", [cancelled, done, LINK])
+    rows = bench_links.list_for_org(conn, acme["id"])
+    assert [(r["task_key"], r["cancelled"], r["done"]) for r in rows] == [
+        ("aa0002", False, False), ("bb0001", False, True), ("bb0005", True, False)]
+
+
+def test_the_timeline_breaks_ties_on_the_number_not_its_text(tmp_path):
+    conn = db(tmp_path)
+    acme = orgs.create(conn, {"name": "Acme Studio"}, "ana@example.com")
+    at = "2026-11-01T10:00:00.000000+00:00"
+    for n in range(1, 11):
+        interactions.create(conn, acme["id"], {"type": "note", "summary": "note %d" % n, "happened_at": at},
+                            "ana@example.com")
+    ids = [i["id"] for i in timeline.for_org(conn, acme["id"]) if i["kind"] == "interaction"]
+    assert ids == sorted(ids, reverse=True)
+    assert ids[:2] == [10, 9]

@@ -40,3 +40,15 @@ test('no hits says so', async () => {
   renderApp(<SearchPage />, '/search?q=zzz')
   expect(await screen.findByText('No matches for “zzz”.')).toBeInTheDocument()
 })
+
+test('a research hit links to the brief on its page', () => {
+  expect(hitLink(hit({ kind: 'research', id: 3 }))).toBe('/o/acme#research')
+  expect(hitLink(hit({ kind: 'research', id: 4, contact_id: 5 }))).toBe('/c/5#research')
+})
+
+test('research hits have their own group', async () => {
+  stubFetch({ 'GET /api/search?q=kilns': () => [hit({ kind: 'research', id: 3, title: 'Research brief', snippet: 'makes \u0002kilns\u0003' })] })
+  renderApp(<SearchPage />, '/search?q=kilns')
+  expect(await screen.findByRole('heading', { name: 'Research' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Research brief' })).toHaveAttribute('href', '/o/acme#research')
+})

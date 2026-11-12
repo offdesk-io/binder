@@ -63,7 +63,10 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS }: Props) {
               {readAt && <> Showing what was read at {clock(readAt)}.</>}
             </Alert>
           )}
-          {tasks.length === 0 && !error && (
+          {tasks.length === 0 && !error && !readAt && (
+            <p className="tenon-body tn-custom-faint">Reading Bench…</p>
+          )}
+          {tasks.length === 0 && !error && readAt && (
             <p className="tenon-body tn-custom-faint">
               No Bench tasks are tagged with this organisation yet. Add <code className="tenon-code">[lead:: {slug}]</code> to a task in Bench to link it.
             </p>

@@ -40,7 +40,8 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
             ) : i.kind === 'bench' ? (
               <li key={`b${i.id}`} className="tn-custom-tl-status">
                 Finished in Bench: <a href={safeHref(i.url) ?? undefined} target="_blank" rel="noopener noreferrer">{i.title}</a>{' '}
-                <span className="tn-custom-entry-meta">· {day(i.at)}</span>
+                {/* at is the done day at midnight UTC: show that day, whatever the browser's zone */}
+                <span className="tn-custom-entry-meta">· {day(i.at.slice(0, 10))}</span>
               </li>
             ) : (
               <li key={`i${i.id}`} id={`i-${i.id}`}>

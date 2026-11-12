@@ -65,3 +65,10 @@ test('when the first read has not finished it loads again once', async () => {
   expect(await screen.findByRole('link', { name: 'Fresh task' })).toBeInTheDocument()
   expect(calls.filter((c) => c.key === 'GET /api/orgs/1/work')).toHaveLength(2)
 })
+
+test('before Bench has ever been read it says so, not that nothing is tagged', async () => {
+  stubFetch({ 'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: null, error: null }) })
+  section(60_000)
+  expect(await screen.findByText('Reading Bench…')).toBeInTheDocument()
+  expect(screen.queryByText(/No Bench tasks are tagged/)).not.toBeInTheDocument()
+})

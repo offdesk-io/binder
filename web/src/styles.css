@@ -66,6 +66,10 @@ a:hover { text-decoration: underline; }
 
 /* Pipeline */
 .tn-custom-board { min-width: 0; }
+/* tn-board scrolls sideways, which also clips vertically, and Tenon's Dropdown
+ * panel (up to 240px, 6px below its button) is absolutely positioned inside it.
+ * While a card's status menu is open, give the board room below for the panel. */
+.tn-custom-board:has(.tenon-dropdown--open) { padding-bottom: 256px; }
 .tn-custom-split { align-items: start; }
 .tn-custom-filter { width: auto; min-width: 9rem; }
 .tn-custom-drop { outline: var(--tenon-dimension-025) solid var(--tenon-stroke-accent); outline-offset: calc(-1 * var(--tenon-dimension-025)); }

@@ -22,6 +22,14 @@ throwaway database (`npx playwright install chromium` once first).
 
 `LEDGER_AUTH=header` is the server behind nginx, and needs `LEDGER_DB` set to an absolute path; unset is local development. Ledger listens on loopback only in both modes. `LEDGER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
 
+Research and "Paste and summarise" call the Anthropic API from the server.
+`ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides
+their buttons. `LEDGER_AI=fake` gives canned answers instead, for local
+development and the Playwright flows (it refuses to start in header mode), and
+`LEDGER_AI=off` turns them off with a key set. `pytest -m online` makes one
+real research call and one real summarise call about a made-up company: it
+costs money and never runs in CI.
+
 ## API
 
 Every route sits under `/api` and needs sign-in, except `GET /api/health`.

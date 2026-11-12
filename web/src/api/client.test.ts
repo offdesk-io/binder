@@ -23,19 +23,19 @@ const failure = (p: Promise<unknown>) =>
   )
 
 describe('request', () => {
-  test('a GET sends no X-Ledger and returns the JSON', async () => {
+  test('a GET sends no X-Binder and returns the JSON', async () => {
     const f = stub(json({ ok: 1 }))
     expect(await request('GET', '/api/x')).toEqual({ ok: 1 })
     const headers = f.mock.calls[0][1]!.headers as Record<string, string>
-    expect(headers['X-Ledger']).toBeUndefined()
+    expect(headers['X-Binder']).toBeUndefined()
   })
 
-  test('a write sends X-Ledger and the body as JSON', async () => {
+  test('a write sends X-Binder and the body as JSON', async () => {
     const f = stub(json({ id: 1 }, 201))
     await request('POST', '/api/orgs', { name: 'Acme' })
     const init = f.mock.calls[0][1]!
     expect(init.method).toBe('POST')
-    expect((init.headers as Record<string, string>)['X-Ledger']).toBe('1')
+    expect((init.headers as Record<string, string>)['X-Binder']).toBe('1')
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json')
     expect(init.body).toBe('{"name":"Acme"}')
   })

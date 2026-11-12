@@ -85,7 +85,7 @@ export function BriefView({ run, orgId, people }: Props) {
                   <div className="tn-custom-person-line">
                     {c ? <Link to={`/c/${c.id}`}>{p.name}</Link> : <span>{p.name}</span>}
                     {p.role && <span className="tn-custom-faint"> · {p.role}</span>}
-                    {c && <Tag>In Ledger</Tag>}
+                    {c && <Tag>In Binder</Tag>}
                     {!c && people.data && (
                       <Button size="sm" variant="secondary" disabled={adding} onClick={() => void add(p)} aria-label={`Add ${p.name}`}>
                         Add?

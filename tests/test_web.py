@@ -3,8 +3,8 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from ledger.app import create_app
-from ledger.config import load_settings
+from binder.app import create_app
+from binder.config import load_settings
 
 from tests.conftest import TEAM
 
@@ -15,9 +15,9 @@ def web(tmp_path):
     (dist / "assets").mkdir(parents=True)
     (dist / "index.html").write_text("<!doctype html><div id=root></div>")
     (dist / "assets" / "app-abc.js").write_text("console.log(1)")
-    (dist / "manifest.webmanifest").write_text('{"name": "Ledger"}')
+    (dist / "manifest.webmanifest").write_text('{"name": "Binder"}')
     (tmp_path / "secret.txt").write_text("not for you")
-    env = {"LEDGER_DB": str(tmp_path / "t.db"), "LEDGER_WEB": str(dist), "LEDGER_AUTH": "header"}
+    env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(dist), "BINDER_AUTH": "header"}
     c = TestClient(create_app(load_settings(env)))
     c.headers.update(TEAM)
     return c
@@ -87,7 +87,7 @@ def test_a_missing_asset_is_a_json_404(web):
 
 
 def test_unbuilt_frontend_says_so(tmp_path):
-    env = {"LEDGER_DB": str(tmp_path / "t.db"), "LEDGER_WEB": str(tmp_path / "missing")}
+    env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(tmp_path / "missing")}
     r = TestClient(create_app(load_settings(env))).get("/")
     assert r.status_code == 404
     assert "npm run build" in r.json()["detail"]

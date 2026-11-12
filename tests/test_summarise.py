@@ -1,4 +1,4 @@
-from ledger.ai import FakeAI, Usage
+from binder.ai import FakeAI, Usage
 from tests.conftest import WRITE, run_now
 
 
@@ -44,7 +44,7 @@ def test_the_answer_is_checked_before_it_reaches_the_form(make_client, org):
                         "next_step_due": None, "contact_ids": [bo["id"]]}
 
 
-def test_good_values_are_kept_in_ledger_form(make_client, org):
+def test_good_values_are_kept_in_binder_form(make_client, org):
     ai = Says()
     ai.answer = {"summary": "Call", "type": "call", "happened_at": "2026-11-10T09:30:00Z", "next_step": "Send deck",
                  "next_step_due": "2026-11-20", "contact_ids": []}

@@ -169,7 +169,7 @@ export type InteractionPatch = Partial<InteractionFields> & { updated_at: string
 export interface BriefPerson {
   name: string
   role: string
-  /** Null for someone not yet in Ledger. */
+  /** Null for someone not yet in Binder. */
   contact_id: number | null
   why: string
 }

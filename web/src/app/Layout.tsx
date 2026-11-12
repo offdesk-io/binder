@@ -39,7 +39,7 @@ export function Layout() {
       <a className="tn-skip-link" href="#main">Skip to content</a>
       <header className="tn-header tn-custom-header">
         <div className="tn-custom-brand">
-          <Link to="/" className="tn-identity">Ledger</Link>
+          <Link to="/" className="tn-identity">Binder</Link>
           {!phone && <Nav />}
         </div>
         <SearchBox />

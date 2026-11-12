@@ -24,7 +24,7 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     research_repo.fail_interrupted(conn)  # a run does not survive a restart
     conn.close()
 
-    app = FastAPI(title="Ledger", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Binder", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.ai = ai_module.from_settings(settings) if ai is _FROM_SETTINGS else ai
     app.state.run_job = run_job or jobs.in_thread

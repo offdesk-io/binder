@@ -1,7 +1,7 @@
 from tests.conftest import TEAM
 
 
-def test_post_without_x_ledger_is_403(make_client):
+def test_post_without_x_binder_is_403(make_client):
     r = make_client().post("/api/orgs", json={"name": "X"}, headers=TEAM)
     assert r.status_code == 403
 
@@ -87,7 +87,7 @@ def test_integrity_error_backstop_hides_internals_and_logs_them(make_client, cap
     def boom_dup():
         raise sqlite3.IntegrityError("UNIQUE constraint failed: organisations.slug")
 
-    with caplog.at_level(logging.WARNING, logger="ledger"):
+    with caplog.at_level(logging.WARNING, logger="binder"):
         r = c.get("/boom-secret")
         d = c.get("/boom-dup")
     assert (r.status_code, r.json()) == (422, {"detail": "That breaks a rule on this record"})
@@ -113,8 +113,8 @@ def test_integrity_error_backstop_is_422_and_unique_is_409(make_client):
 
 def test_create_failure_leaves_no_open_transaction(tmp_path):
     import pytest
-    from ledger.db import connect, migrate
-    from ledger.repo import orgs as repo
+    from binder.db import connect, migrate
+    from binder.repo import orgs as repo
     path = str(tmp_path / "x.db")
     conn = connect(path)
     migrate(conn, path)

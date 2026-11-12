@@ -1,6 +1,6 @@
 import pytest
-from ledger.errors import Invalid
-from ledger.statuses import check_transition, initial_status
+from binder.errors import Invalid
+from binder.statuses import check_transition, initial_status
 
 
 def test_initial_status():

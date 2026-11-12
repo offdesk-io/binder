@@ -1,4 +1,4 @@
-from ledger.pricing import cost_usd
+from binder.pricing import cost_usd
 
 
 def test_cost_counts_tokens_and_searches():

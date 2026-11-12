@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from ledger.db import MIGRATIONS as REAL_MIGRATIONS, connect, migrate
+from binder.db import MIGRATIONS as REAL_MIGRATIONS, connect, migrate
 
 LATEST = max(int(f.name[:3]) for f in REAL_MIGRATIONS.glob("*.sql"))
 NEXT = "%03d" % (LATEST + 1)
@@ -44,7 +44,7 @@ def test_failed_migration_rolls_back(tmp_path, monkeypatch):
     mig = tmp_path / "migs"
     mig.mkdir()
     (mig / "001_bad.sql").write_text("CREATE TABLE ok(x); CREATE TABLE ok(x);")
-    monkeypatch.setattr("ledger.db.MIGRATIONS", mig)
+    monkeypatch.setattr("binder.db.MIGRATIONS", mig)
     path = str(tmp_path / "l.db")
     conn = connect(path)
     with pytest.raises(sqlite3.OperationalError):
@@ -65,7 +65,7 @@ def _fake_migrations(tmp_path, monkeypatch, extra):
         (mig / f.name).write_text(f.read_text())
     for name, sql in extra.items():
         (mig / name).write_text(sql)
-    monkeypatch.setattr("ledger.db.MIGRATIONS", mig)
+    monkeypatch.setattr("binder.db.MIGRATIONS", mig)
     return mig
 
 
@@ -231,7 +231,7 @@ def _upto(tmp_path, monkeypatch, number):
     for f in REAL_MIGRATIONS.glob("*.sql"):
         if int(f.name[:3]) <= number:
             (mig / f.name).write_text(f.read_text())
-    monkeypatch.setattr("ledger.db.MIGRATIONS", mig)
+    monkeypatch.setattr("binder.db.MIGRATIONS", mig)
 
 
 def test_migration_002_demotes_extra_primaries_keeping_the_oldest(tmp_path, monkeypatch):
@@ -244,7 +244,7 @@ def test_migration_002_demotes_extra_primaries_keeping_the_oldest(tmp_path, monk
     for org_id, name in ((1, "old"), (1, "new"), (2, "solo")):
         conn.execute("INSERT INTO contacts(org_id,name,is_primary,created_at,updated_at,updated_by)"
                      " VALUES (?,?,1,'t','t','u')", (org_id, name))
-    monkeypatch.setattr("ledger.db.MIGRATIONS", REAL_MIGRATIONS)
+    monkeypatch.setattr("binder.db.MIGRATIONS", REAL_MIGRATIONS)
     migrate(conn, path)
     got = {r["name"]: r["is_primary"] for r in conn.execute("SELECT name, is_primary FROM contacts")}
     assert got == {"old": 1, "new": 0, "solo": 1}
@@ -261,7 +261,7 @@ def test_migration_003_rebuilds_interaction_search_titles(tmp_path, monkeypatch)
                  " VALUES (1,'call','2026-11-01T10:00:00.000000+00:00','Hello','u','t','t','u')")
     before = conn.execute("SELECT title FROM search WHERE kind = 'interaction'").fetchone()[0]
     assert "000000" in before
-    monkeypatch.setattr("ledger.db.MIGRATIONS", REAL_MIGRATIONS)
+    monkeypatch.setattr("binder.db.MIGRATIONS", REAL_MIGRATIONS)
     migrate(conn, path)
     rows = conn.execute("SELECT title FROM search WHERE kind = 'interaction'").fetchall()
     assert [r[0] for r in rows] == ["call 2026-11-01"]

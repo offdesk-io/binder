@@ -1,9 +1,9 @@
 import pytest
 from fastapi import HTTPException
-from ledger.auth import identity_from_headers, DEV_IDENTITY
-from ledger.config import load_settings
+from binder.auth import identity_from_headers, DEV_IDENTITY
+from binder.config import load_settings
 
-HEADER = load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "/tmp/ledger-test.db"})
+HEADER = load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/tmp/binder-test.db"})
 LOCAL = load_settings({})
 
 
@@ -56,7 +56,7 @@ def test_whoami_without_headers_is_401(make_client):
 
 
 def test_local_mode_whoami_is_dev(make_client):
-    assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@ledger.local"
+    assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@binder.local"
 
 
 def test_openapi_is_closed(make_client):

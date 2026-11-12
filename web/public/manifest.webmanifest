@@ -1,6 +1,6 @@
 {
-  "name": "Ledger",
-  "short_name": "Ledger",
+  "name": "Binder",
+  "short_name": "Binder",
   "description": "Offdesk leads and clients",
   "start_url": "/",
   "scope": "/",

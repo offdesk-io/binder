@@ -15,7 +15,7 @@ export const SessionContext = createContext<Session | null>(null)
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const s = useApi(() => Promise.all([api.meta(), api.whoami()]).then(([meta, me]) => ({ meta, me })), [])
-  if (s.error) return <Alert tone="error" title="Ledger did not load">{s.error.message}</Alert>
+  if (s.error) return <Alert tone="error" title="Binder did not load">{s.error.message}</Alert>
   if (!s.data) return <Loading />
   return <SessionContext.Provider value={s.data}>{children}</SessionContext.Provider>
 }

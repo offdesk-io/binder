@@ -1,8 +1,8 @@
-# Ledger 2: Frontend Implementation Plan
+# Binder 2: Frontend Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Ledger web app (Home, Pipeline, List, Search, Organisation, Contact and Quick log) for desktop and phone, served by the existing FastAPI backend.
+**Goal:** Build the Binder web app (Home, Pipeline, List, Search, Organisation, Contact and Quick log) for desktop and phone, served by the existing FastAPI backend.
 
 **Architecture:** A React + TypeScript single-page app in `web/`, built by Vite to `web/dist/`. FastAPI serves that folder and sends `index.html` for every non-API path, so links like `/o/<slug>` (which Bench will use) load the app. The app talks only to the `/api` routes from plan 1, whose shapes are in the README's API section. Tenon v0.17.0 supplies every component and token. One breakpoint at 768px switches between the desktop and phone layouts.
 
@@ -25,16 +25,16 @@
 ## File map
 
 Backend:
-- Create `ledger/web.py`: serves `web/dist`, falls back to `index.html`.
-- Modify `ledger/config.py`: `LEDGER_WEB` setting (`web_dir`).
-- Modify `ledger/app.py`: install the web routes last.
+- Create `binder/web.py`: serves `web/dist`, falls back to `index.html`.
+- Modify `binder/config.py`: `BINDER_WEB` setting (`web_dir`).
+- Modify `binder/app.py`: install the web routes last.
 - Create `tests/test_web.py`.
 
 Frontend (`web/`):
 - `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `playwright.config.ts`, `index.html`
 - `public/icon.svg`, `public/icon-192.png`, `public/icon-512.png`, `public/manifest.webmanifest`, `scripts/icons.mjs`
 - `src/main.tsx`: mounts the app.
-- `src/styles.css`: Ledger's layout, using Tenon tokens only.
+- `src/styles.css`: Binder's layout, using Tenon tokens only.
 - `src/api/types.ts`: response and request shapes.
 - `src/api/client.ts`: `request()` and `ApiError`.
 - `src/api/endpoints.ts`: one typed function per route (`api.*`).
@@ -68,9 +68,9 @@ Docs: `README.md`, `CLAUDE.md`, `.gitignore`.
 ### Task 1: The backend serves the built frontend
 
 **Files:**
-- Create: `ledger/web.py`
-- Modify: `ledger/config.py` (the `Settings` dataclass and `load_settings`)
-- Modify: `ledger/app.py` (end of `create_app`)
+- Create: `binder/web.py`
+- Modify: `binder/config.py` (the `Settings` dataclass and `load_settings`)
+- Modify: `binder/app.py` (end of `create_app`)
 - Test: `tests/test_web.py`
 
 - [ ] **Step 1: Write the failing tests**
@@ -83,8 +83,8 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from ledger.app import create_app
-from ledger.config import load_settings
+from binder.app import create_app
+from binder.config import load_settings
 
 from tests.conftest import TEAM
 
@@ -95,9 +95,9 @@ def web(tmp_path):
     (dist / "assets").mkdir(parents=True)
     (dist / "index.html").write_text("<!doctype html><div id=root></div>")
     (dist / "assets" / "app-abc.js").write_text("console.log(1)")
-    (dist / "manifest.webmanifest").write_text('{"name": "Ledger"}')
+    (dist / "manifest.webmanifest").write_text('{"name": "Binder"}')
     (tmp_path / "secret.txt").write_text("not for you")
-    env = {"LEDGER_DB": str(tmp_path / "t.db"), "LEDGER_WEB": str(dist), "LEDGER_AUTH": "header"}
+    env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(dist), "BINDER_AUTH": "header"}
     c = TestClient(create_app(load_settings(env)))
     c.headers.update(TEAM)
     return c
@@ -150,7 +150,7 @@ def test_no_file_outside_the_build_is_served(web):
 
 
 def test_unbuilt_frontend_says_so(tmp_path):
-    env = {"LEDGER_DB": str(tmp_path / "t.db"), "LEDGER_WEB": str(tmp_path / "missing")}
+    env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(tmp_path / "missing")}
     r = TestClient(create_app(load_settings(env))).get("/")
     assert r.status_code == 404
     assert "npm run build" in r.json()["detail"]
@@ -163,7 +163,7 @@ Expected: FAIL, first with `AttributeError: 'Settings' object has no attribute '
 
 - [ ] **Step 3: Add the setting**
 
-In `ledger/config.py`, add `from pathlib import Path` to the imports and, under `LOOPBACK`:
+In `binder/config.py`, add `from pathlib import Path` to the imports and, under `LOOPBACK`:
 
 ```python
 DEFAULT_WEB = str(Path(__file__).resolve().parent.parent / "web" / "dist")
@@ -172,24 +172,24 @@ DEFAULT_WEB = str(Path(__file__).resolve().parent.parent / "web" / "dist")
 Add a field at the end of `Settings`:
 
 ```python
-    web_dir: str = DEFAULT_WEB  # the built frontend, see ledger/web.py
+    web_dir: str = DEFAULT_WEB  # the built frontend, see binder/web.py
 ```
 
 Add one line to the module docstring, after the paragraph about header mode:
 
 ```
-LEDGER_WEB is the built frontend folder (default: web/dist in the repo).
+BINDER_WEB is the built frontend folder (default: web/dist in the repo).
 ```
 
 In `load_settings`, pass it in the `Settings(...)` call:
 
 ```python
         tz=tz,
-        web_dir=env.get("LEDGER_WEB", DEFAULT_WEB),
+        web_dir=env.get("BINDER_WEB", DEFAULT_WEB),
     )
 ```
 
-- [ ] **Step 4: Write `ledger/web.py`**
+- [ ] **Step 4: Write `binder/web.py`**
 
 It is the 404 handler, not a catch-all route. A `/{path:path}` route would
 match before any route added after it, and `tests/test_orgs.py` adds routes to
@@ -240,7 +240,7 @@ def install(app: FastAPI, web_dir: str) -> None:
         return FileResponse(index, headers=NO_CACHE)
 ```
 
-- [ ] **Step 5: Install it in `ledger/app.py`**
+- [ ] **Step 5: Install it in `binder/app.py`**
 
 Change the import line to `from . import errors, web` and add, after `errors.install(app)`:
 
@@ -256,7 +256,7 @@ Expected: all pass (125 tests), `tests/test_orgs.py` among them.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add ledger/web.py ledger/config.py ledger/app.py tests/test_web.py
+git add binder/web.py binder/config.py binder/app.py tests/test_web.py
 git commit -m "Serve the built frontend, with index.html for app paths"
 ```
 
@@ -272,7 +272,7 @@ git commit -m "Serve the built frontend, with index.html for app paths"
 
 ```json
 {
-  "name": "ledger-web",
+  "name": "binder-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -339,8 +339,8 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 /* `npm run dev` serves the app on :5173 and sends /api to the backend on
- * :8770 (`LEDGER_DB=ledger.db .venv/bin/python -m ledger` from the repo root).
- * `npm run build` writes web/dist, which the backend serves (ledger/web.py). */
+ * :8770 (`BINDER_DB=binder.db .venv/bin/python -m binder` from the repo root).
+ * `npm run build` writes web/dist, which the backend serves (binder/web.py). */
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173, proxy: { '/api': 'http://127.0.0.1:8770' } },
@@ -362,7 +362,7 @@ export default defineConfig({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Ledger</title>
+    <title>Binder</title>
   </head>
   <body>
     <div id="root"></div>
@@ -397,7 +397,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 ```tsx
 export function App() {
-  return <p>Ledger</p>
+  return <p>Binder</p>
 }
 ```
 
@@ -406,7 +406,7 @@ export function App() {
 The whole stylesheet now, so later tasks only add markup:
 
 ```css
-/* Ledger's own layout. Colours, type and sizes come from Tenon tokens only. */
+/* Binder's own layout. Colours, type and sizes come from Tenon tokens only. */
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
@@ -573,7 +573,7 @@ web/playwright-report/
 
 ```bash
 cd web && npm install && npm run check && npm run build && cd ..
-LEDGER_DB=ledger.db .venv/bin/python -m ledger &
+BINDER_DB=binder.db .venv/bin/python -m binder &
 sleep 2; curl -s http://127.0.0.1:8770/o/anything | head -c 200; kill %1
 ```
 
@@ -785,19 +785,19 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 describe('request', () => {
-  test('a GET sends no X-Ledger and returns the JSON', async () => {
+  test('a GET sends no X-Binder and returns the JSON', async () => {
     const f = stub(json({ ok: 1 }))
     expect(await request('GET', '/api/x')).toEqual({ ok: 1 })
     const headers = f.mock.calls[0][1]!.headers as Record<string, string>
-    expect(headers['X-Ledger']).toBeUndefined()
+    expect(headers['X-Binder']).toBeUndefined()
   })
 
-  test('a write sends X-Ledger and the body as JSON', async () => {
+  test('a write sends X-Binder and the body as JSON', async () => {
     const f = stub(json({ id: 1 }, 201))
     await request('POST', '/api/orgs', { name: 'Acme' })
     const init = f.mock.calls[0][1]!
     expect(init.method).toBe('POST')
-    expect((init.headers as Record<string, string>)['X-Ledger']).toBe('1')
+    expect((init.headers as Record<string, string>)['X-Binder']).toBe('1')
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json')
     expect(init.body).toBe('{"name":"Acme"}')
   })
@@ -872,7 +872,7 @@ export type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
 
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (method !== 'GET') headers['X-Ledger'] = '1' // the API refuses a write without it
+  if (method !== 'GET') headers['X-Binder'] = '1' // the API refuses a write without it
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
@@ -883,7 +883,7 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
       credentials: 'same-origin',
     })
   } catch {
-    throw new ApiError(0, 'Ledger cannot be reached. Check your connection and try again.')
+    throw new ApiError(0, 'Binder cannot be reached. Check your connection and try again.')
   }
   if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => null)
@@ -1554,7 +1554,7 @@ export const SessionContext = createContext<Session | null>(null)
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const s = useApi(() => Promise.all([api.meta(), api.whoami()]).then(([meta, me]) => ({ meta, me })), [])
-  if (s.error) return <Alert tone="error" title="Ledger did not load">{s.error.message}</Alert>
+  if (s.error) return <Alert tone="error" title="Binder did not load">{s.error.message}</Alert>
   if (!s.data) return <Loading />
   return <SessionContext.Provider value={s.data}>{children}</SessionContext.Provider>
 }
@@ -1847,7 +1847,7 @@ export function Layout() {
   return (
     <div className="lg-app">
       <header className="lg-top">
-        <Link to="/" className="lg-brand">Ledger</Link>
+        <Link to="/" className="lg-brand">Binder</Link>
         {!phone && <Nav className="lg-nav" />}
         <SearchBox />
         {!phone && <span className="lg-me">{me.name}</span>}
@@ -4093,7 +4093,7 @@ In `web/src/app/App.tsx`, add `import { ContactPage } from '../pages/ContactPage
 Run: `npm test && npm run check && npm run build`
 Expected: all pass (61 tests), no type errors, and the build succeeds.
 
-Then try it by hand. From the repo root, run `LEDGER_DB=ledger.db .venv/bin/python -m ledger` and open `http://127.0.0.1:8770`. Create an organisation with New, add a person, log a call, change the status, drag it on Pipeline, and search for it with `/`. Do it again with the browser's device toolbar at 390px. Fix anything that looks wrong before you commit, and add a test for anything that was a bug.
+Then try it by hand. From the repo root, run `BINDER_DB=binder.db .venv/bin/python -m binder` and open `http://127.0.0.1:8770`. Create an organisation with New, add a person, log a call, change the status, drag it on Pipeline, and search for it with `/`. Do it again with the browser's device toolbar at 390px. Fix anything that looks wrong before you commit, and add a test for anything that was a bug.
 
 - [ ] **Step 6: Commit**
 
@@ -4121,14 +4121,14 @@ import { defineConfig, devices } from '@playwright/test'
 
 /* Runs against the real backend on :8771, on a throwaway database that is
  * deleted before each run, serving the build in web/dist. `npm run e2e`
- * builds first. Local mode (no LEDGER_AUTH) signs everyone in as the dev
+ * builds first. Local mode (no BINDER_AUTH) signs everyone in as the dev
  * identity. */
 export default defineConfig({
   testDir: 'e2e',
   workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:8771',
-    extraHTTPHeaders: { 'X-Ledger': '1' },
+    extraHTTPHeaders: { 'X-Binder': '1' },
     trace: 'retain-on-failure',
   },
   projects: [
@@ -4137,7 +4137,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'cd .. && rm -f e2e.db e2e.db-wal e2e.db-shm && LEDGER_DB=e2e.db LEDGER_PORT=8771 LEDGER_WEB=web/dist .venv/bin/python -m ledger',
+      'cd .. && rm -f e2e.db e2e.db-wal e2e.db-shm && BINDER_DB=e2e.db BINDER_PORT=8771 BINDER_WEB=web/dist .venv/bin/python -m binder',
     url: 'http://127.0.0.1:8771/api/health',
     reuseExistingServer: false,
   },
@@ -4261,7 +4261,7 @@ test('the page links a manifest whose icons exist', async ({ page, request }) =>
   const href = await page.locator('link[rel="manifest"]').getAttribute('href')
   expect(href).toBe('/manifest.webmanifest')
   const manifest = await (await request.get(href!)).json()
-  expect(manifest).toMatchObject({ name: 'Ledger', start_url: '/', display: 'standalone' })
+  expect(manifest).toMatchObject({ name: 'Binder', start_url: '/', display: 'standalone' })
   for (const icon of manifest.icons) {
     const r = await request.get(icon.src)
     expect(r.ok(), icon.src).toBeTruthy()
@@ -4318,8 +4318,8 @@ Expected: `web/public/icon-192.png` and `web/public/icon-512.png` exist (`file w
 
 ```json
 {
-  "name": "Ledger",
-  "short_name": "Ledger",
+  "name": "Binder",
+  "short_name": "Binder",
   "description": "Offdesk leads and clients",
   "start_url": "/",
   "scope": "/",
@@ -4372,10 +4372,10 @@ Replace the run block at the top of `README.md` with:
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 (cd web && npm install && npm run build)
-LEDGER_DB=ledger.db .venv/bin/python -m ledger     # http://127.0.0.1:8770
+BINDER_DB=binder.db .venv/bin/python -m binder     # http://127.0.0.1:8770
 ```
 
-The backend serves the built app from `web/dist` (`LEDGER_WEB` points elsewhere).
+The backend serves the built app from `web/dist` (`BINDER_WEB` points elsewhere).
 For frontend work, run the backend as above and `cd web && npm run dev`, then
 open `http://127.0.0.1:5173`, which sends `/api` to the backend.
 
@@ -4390,7 +4390,7 @@ throwaway database (`npx playwright install chromium` once first).
 
 ```
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): built on
-   `feature/frontend`, plan `docs/superpowers/plans/2026-11-11-ledger-2-frontend.md`.
+   `feature/frontend`, plan `docs/superpowers/plans/2026-11-11-binder-2-frontend.md`.
    Review, then merge.
 ```
 
@@ -4408,13 +4408,13 @@ and change "Run the whole suite before every commit." to "Run both suites before
 ```markdown
 ## Rules for the frontend
 
-- The app lives in `web/`. FastAPI serves its build (`ledger/web.py`), with
+- The app lives in `web/`. FastAPI serves its build (`binder/web.py`), with
   `index.html` for any path not under `/api`, so `/o/<slug>` links work.
 - Use a Tenon component before writing one. CSS in `web/src/styles.css` reads
   `var(--tenon-…)` tokens only: no hex colours, no font names.
 - `web/src/api/types.ts` and the README's API section describe the same
   shapes. Change them together.
-- Every fetch goes through `web/src/api/client.ts`, which adds `X-Ledger: 1`
+- Every fetch goes through `web/src/api/client.ts`, which adds `X-Binder: 1`
   to writes. Every edit form PATCHes only what changed, plus `updated_at`, and
   on a 409 loads `current` into the form.
 - Lists, filters and vocabularies come from `GET /api/meta`, never a copy in
@@ -4457,7 +4457,7 @@ Use superpowers:requesting-code-review on the branch against this plan and the s
 | Light and dark from Tenon's themes | 2 (tokens only, Tenon's `:root` and dark blocks) |
 | PWA manifest, no offline mode | 19 |
 | Header shows name and Sign out posting to `/auth/logout` | 8 |
-| Every non-GET carries `X-Ledger: 1` | 3 |
+| Every non-GET carries `X-Binder: 1` | 3 |
 | Stale save → 409, reload and show what changed | 5 (`saveErrorText`), 11, 13, 14, 15, 16 |
 | Home: needs attention and recent activity | 10 |
 | Pipeline: columns, drag on desktop, tabs and picker on a phone | 13 |

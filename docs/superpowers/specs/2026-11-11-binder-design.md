@@ -1,4 +1,4 @@
-# Ledger — design
+# Binder — design
 
 Date: 2026-11-11
 Status: approved in brainstorm, awaiting spec review
@@ -7,29 +7,29 @@ Status: approved in brainstorm, awaiting spec review
 
 Leads are managed as tasks on the offdesk Bench board today, in the **Leads**
 bucket. When a task goes to Done the lead effectively disappears: its notes,
-contacts and history are buried in a finished card. Ledger is the permanent
+contacts and history are buried in a finished card. Binder is the permanent
 home for every lead and client: status, information, contacts, who to talk to,
 research, and every interaction, quick to find from desktop or phone.
 
-Ledger is the second app in the Offdesk ecosystem beside Bench. Both share the
+Binder is the second app in the Offdesk ecosystem beside Bench. Both share the
 Offdesk sign-in and the Tenon design system.
 
 ## Decisions
 
 | Question | Decision |
 |---|---|
-| Ledger vs Bench | Ledger owns the client record; Bench owns the work. Bench tasks link to a Ledger record with `[lead:: <slug>]`. |
+| Binder vs Bench | Binder owns the client record; Bench owns the work. Bench tasks link to a Binder record with `[lead:: <slug>]`. |
 | Import existing leads | Yes, one-off import from the offdesk board's **Leads** bucket. |
 | Visibility | The whole Offdesk team sees and edits every record. Each record has an owner (who drives it). |
 | Research in v1 | AI research brief on demand, per organisation or contact. |
 | Interactions in v1 | Manual quick-log, plus "paste and summarise". No Gmail/Calendar sync. |
 | Pipeline | One record per organisation that flips from lead to client on Won. |
 | Stack | FastAPI + SQLite + React/Vite/TypeScript + Tenon. |
-| Hosting | Same Hetzner server as Bench, at `https://ledger.offdesk.io`. |
+| Hosting | Same Hetzner server as Bench, at `https://binder.offdesk.io`. |
 
 ## Architecture
 
-- **Repo:** `ledger`, its own GitHub repository, sibling to Bench.
+- **Repo:** `binder`, its own GitHub repository, sibling to Bench.
 - **Backend:** FastAPI served by uvicorn on `127.0.0.1:<port>` only. It also
   serves the built SPA as static files.
 - **Frontend:** React + TypeScript, built by Vite. Tenon is a git dependency
@@ -41,18 +41,18 @@ Offdesk sign-in and the Tenon design system.
 
 ### Sign-in
 
-nginx in front of `ledger.offdesk.io` uses the same `auth_request` to the
+nginx in front of `binder.offdesk.io` uses the same `auth_request` to the
 Offdesk sign-in service as Bench, and passes the same headers:
 `X-Offdesk-Email`, `X-Offdesk-Name` (percent-encoded UTF-8) and `X-Offdesk-Teams`.
 
-- `LEDGER_AUTH=header` turns sign-in mode on. Any other non-empty value
+- `BINDER_AUTH=header` turns sign-in mode on. Any other non-empty value
   refuses to start. Signed-in mode refuses to start on any address but
   127.0.0.1.
 - A request with no email gets 401. Someone not in the `offdesk` team gets 403.
-- Every non-GET request must carry `X-Ledger: 1` (CSRF guard, as Bench does).
+- Every non-GET request must carry `X-Binder: 1` (CSRF guard, as Bench does).
 - `GET /api/whoami` returns the signed-in person. The header shows their
   name and a Sign out button, which posts to nginx's `/auth/logout`.
-- Unset `LEDGER_AUTH` is local development: one fixed dev identity.
+- Unset `BINDER_AUTH` is local development: one fixed dev identity.
 
 ## Data model
 
@@ -177,23 +177,23 @@ organisation or its contacts.
   run.
 - The card shows an organisation chip (`cardModel()`, `cardHTML()` and
   `TaskCard` changed together, as Bench's parity tests require). The chip
-  links to `https://ledger.offdesk.io/o/<slug>`.
-- The drawer gets a "Lead" picker that searches Ledger's `GET /api/orgs?q=`
+  links to `https://binder.offdesk.io/o/<slug>`.
+- The drawer gets a "Lead" picker that searches Binder's `GET /api/orgs?q=`
   from the browser. This needs the sign-in cookie to cover both subdomains,
-  plus CORS on Ledger for `bench.offdesk.io` with credentials. Check the
+  plus CORS on Binder for `bench.offdesk.io` with credentials. Check the
   cookie scope first. If it is not shared, the picker calls a small proxy
   route on Bench's server instead.
 
-### On the Ledger side
+### On the Binder side
 
-- Ledger reads linked tasks from Bench server to server, on 127.0.0.1, as a
+- Binder reads linked tasks from Bench server to server, on 127.0.0.1, as a
   service identity with read access to the offdesk board only (the same
   pattern as the PA's `pa_save` identity). It parses the list with Bench's
   `core/todo.py`, imported by path from the Bench checkout on the server.
 - It refreshes every 10 minutes, and again when an organisation page opens
   and the cache is more than 1 minute old. It lists every task with that
   slug, open and done.
-- Ledger never writes `todo.md`.
+- Binder never writes `todo.md`.
 
 ### One-off import
 
@@ -210,19 +210,19 @@ organisation or its contacts.
    (task key → slug). Bench's tick queue only ticks sub-tasks, so the tags
    are applied by the PA: the `pa` skill reads that file and adds
    `[lead:: <slug>]` to each task through `pa_save`, against the server
-   board. Ledger itself never writes `todo.md`.
+   board. Binder itself never writes `todo.md`.
 
 Tasks that turn out to be the same organisation are merged in the dry-run
 table by giving them the same slug.
 
 ## Deploy
 
-- The Hetzner server runs Bench today. Ledger adds:
-  - an nginx server block for `ledger.offdesk.io` (TLS, `auth_request`
+- The Hetzner server runs Bench today. Binder adds:
+  - an nginx server block for `binder.offdesk.io` (TLS, `auth_request`
     copied from Bench's block). It must overwrite every `X-Offdesk-*` header
     with the sign-in service's answer, so a client-sent one never reaches the
     app. The deploy check sends a forged header and expects it to be ignored,
-  - a `ledger.service` systemd unit,
+  - a `binder.service` systemd unit,
   - a data folder for the SQLite file and nightly backups, outside the repo.
 - Deploys use the same pipeline shape as Bench. A merge to protected `main`
   runs the GitHub Action: tests, then the commit id goes to the server, where
@@ -235,7 +235,7 @@ table by giving them the same slug.
 ## Testing
 
 - **pytest (API):** sign-in middleware (no email → 401, wrong team → 403,
-  missing `X-Ledger` → 403), CRUD for every table, status flip from lead to
+  missing `X-Binder` → 403), CRUD for every table, status flip from lead to
   client and its history row, stale write → 409, FTS results, research job
   lifecycle with the fake AI (running → done, running → failed, second run →
   409), the summarise route.

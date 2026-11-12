@@ -1,6 +1,6 @@
 """Response shapes the frontend depends on. See the API section of the README."""
 
-from ledger import statuses
+from binder import statuses
 
 
 def test_contact_list_and_get_return_the_same_fields(client, org):

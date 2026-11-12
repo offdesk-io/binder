@@ -1,7 +1,7 @@
 import pytest
 
-from ledger.ai import FakeAI
-from ledger.repo.research import INTERRUPTED
+from binder.ai import FakeAI
+from binder.repo.research import INTERRUPTED
 from tests.conftest import TEAM, WRITE, run_now
 
 
@@ -112,7 +112,7 @@ def test_unknown_records_are_404(ai_client):
 def test_research_needs_sign_in_and_the_header(make_client, org):
     c = make_client(ai=FakeAI())
     assert c.get("/api/research/1").status_code == 401
-    c.headers.update(TEAM)  # signed in, but no X-Ledger
+    c.headers.update(TEAM)  # signed in, but no X-Binder
     assert c.post("/api/orgs/%d/research" % org["id"]).status_code == 403
 
 

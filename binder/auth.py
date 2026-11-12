@@ -2,7 +2,7 @@
 
 Header mode trusts X-Offdesk-Email / -Name / -Teams because the app listens
 on loopback only and nginx, which asks the Offdesk sign-in service, is the
-only caller. Every non-GET request must also carry `X-Ledger: 1`: a form on
+only caller. Every non-GET request must also carry `X-Binder: 1`: a form on
 another site can post with the visitor's cookie but cannot set that header.
 """
 
@@ -24,7 +24,7 @@ class Identity:
     teams: Tuple[str, ...]
 
 
-DEV_IDENTITY = Identity("dev@ledger.local", "Dev", ("offdesk",))
+DEV_IDENTITY = Identity("dev@binder.local", "Dev", ("offdesk",))
 
 
 def identity_from_headers(headers: Mapping[str, str], settings: Settings) -> Identity:
@@ -36,12 +36,12 @@ def identity_from_headers(headers: Mapping[str, str], settings: Settings) -> Ide
     name = unquote(headers.get("x-offdesk-name") or "").strip() or email
     teams = tuple(t.strip() for t in (headers.get("x-offdesk-teams") or "").split(",") if t.strip())
     if settings.team not in teams:
-        raise HTTPException(403, "Ledger is for the %s team" % settings.team)
+        raise HTTPException(403, "Binder is for the %s team" % settings.team)
     return Identity(email, name, teams)
 
 
 def guard(request: Request) -> Identity:
     who = identity_from_headers(request.headers, request.app.state.settings)
-    if request.method not in SAFE_METHODS and request.headers.get("x-ledger") != "1":
-        raise HTTPException(403, "Missing X-Ledger header")
+    if request.method not in SAFE_METHODS and request.headers.get("x-binder") != "1":
+        raise HTTPException(403, "Missing X-Binder header")
     return who

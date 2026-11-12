@@ -45,6 +45,7 @@ def test_meta_lists_the_vocabularies(client):
         "client_statuses": list(statuses.CLIENT_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
+        "ai": False,
     }
     assert None not in m["relationships"]
 

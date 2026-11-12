@@ -150,7 +150,7 @@ def test_database_newer_than_code_refused(tmp_path):
     path = str(tmp_path / "l.db")
     conn = connect(path)
     migrate(conn, path)
-    conn.execute("PRAGMA user_version = 5")
+    conn.execute("PRAGMA user_version = %d" % (conn.execute("PRAGMA user_version").fetchone()[0] + 1))
     with pytest.raises(RuntimeError, match="newer"):
         migrate(conn, path)
 

@@ -111,6 +111,18 @@ h1, h2, h3, p { margin: 0; }
 .lg-chips { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-075); }
 .lg-check { display: flex; align-items: center; gap: var(--tenon-dimension-100); }
 
+/* Research */
+.lg-running { display: flex; align-items: center; gap: var(--tenon-dimension-100); color: var(--tenon-text-subtle); }
+.lg-brief { display: flex; flex-direction: column; gap: var(--tenon-dimension-200); }
+.lg-brief-part { display: flex; flex-direction: column; gap: var(--tenon-dimension-075); }
+.lg-brief-part h3 { margin: 0; }
+.lg-brief-part ul, .lg-brief-part ol { margin: 0; padding-left: var(--tenon-dimension-300); }
+.lg-brief-part .lg-brief-people { list-style: none; padding: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-100); }
+.lg-brief-people li > div:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tenon-dimension-075); }
+.lg-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); }
+.lg-paste { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tenon-dimension-100); }
+.lg-paste > :first-child { align-self: stretch; }
+
 @media (max-width: 767px) {
   .lg-main { padding: var(--tenon-dimension-200) var(--tenon-dimension-200) calc(56px + var(--tenon-dimension-400)); }
   .lg-main:has(.lg-bar) { padding-bottom: calc(112px + var(--tenon-dimension-400)); }

@@ -1,19 +1,5 @@
-import { expect, test, type APIRequestContext } from '@playwright/test'
-
-interface Org { id: number; slug: string; name: string }
-
-let n = 0
-/** A name whose last word is unique, so a search for that word finds one organisation. */
-function unique(base: string): string {
-  n += 1
-  return `${base} ${Date.now().toString(36)}x${n}`
-}
-
-async function newOrg(request: APIRequestContext, name: string): Promise<Org> {
-  const r = await request.post('/api/orgs', { data: { name } })
-  expect(r.ok()).toBeTruthy()
-  return r.json()
-}
+import { expect, test } from '@playwright/test'
+import { newOrg, unique } from './helpers'
 
 test('search finds an organisation and opens it', async ({ page, request }) => {
   const name = unique('Searchable Studio')

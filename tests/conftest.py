@@ -14,11 +14,11 @@ WRITE = dict(TEAM, **{"x-binder": "1"})
 
 @pytest.fixture
 def make_client(tmp_path):
-    def _make(auth="header", ai=None, run_job=None):
+    def _make(auth="header", ai=None, run_job=None, bench=None):
         env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(tmp_path / "no-web")}  # never the real build
         if auth:
             env["BINDER_AUTH"] = auth
-        return TestClient(create_app(load_settings(env), ai=ai, run_job=run_job))
+        return TestClient(create_app(load_settings(env), ai=ai, run_job=run_job, bench=bench))
     return _make
 
 

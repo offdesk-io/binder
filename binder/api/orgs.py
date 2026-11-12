@@ -1,11 +1,13 @@
 import sqlite3
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
 from ..auth import Identity, guard
+from ..bench import task_url
 from ..db import get_db
-from ..repo import orgs
+from ..errors import NotFound
+from ..repo import bench_links, orgs
 from ..schemas import OrgCreate, OrgPatch
 
 router = APIRouter(prefix="/orgs")
@@ -47,3 +49,17 @@ def delete_org(org_id: int, db: sqlite3.Connection = Depends(get_db)):
 @router.get("/{org_id}/status-history")
 def history(org_id: int, db: sqlite3.Connection = Depends(get_db)):
     return orgs.status_history(db, org_id)
+
+
+@router.get("/{org_id}/work")
+def work(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db)):
+    refresher = request.app.state.bench_refresher
+    if refresher is None:
+        raise NotFound("Bench is not connected")
+    reader = request.app.state.bench
+    orgs.get(db, org_id)  # 404 for an unknown organisation
+    refresher.refresh_if_stale(bench_links.sync_state(db, reader["board"])["fetched_at"])
+    state = bench_links.sync_state(db, reader["board"])  # a refresh run in place (tests) shows at once
+    tasks = [dict(t, url=task_url(reader["url"], t["board"], t["task_key"]))
+             for t in bench_links.list_for_org(db, org_id)]
+    return {"tasks": tasks, "fetched_at": state["fetched_at"], "error": state["error"]}

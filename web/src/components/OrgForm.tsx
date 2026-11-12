@@ -143,22 +143,22 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
       onClose={onClose}
       title={base ? `Edit ${base.name}` : 'New organisation'}
       size="md"
-      className={phone ? 'lg-sheet' : undefined}
+      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
           {base && onDeleted && <ConfirmDelete what="organisation" onConfirm={() => void remove()} />}
-          <span className="lg-grow" />
+          <span className="tn-custom-grow" />
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="org-form" disabled={busy}>Save</Button>
+          <Button variant="primary" type="submit" form="org-form" disabled={busy}>Save</Button>
         </>
       }
     >
-      <form id="org-form" className="lg-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="org-form" className="tn-custom-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         {!base && (
-          <div className="lg-field">
+          <div className="tn-custom-field">
             <span className="tenon-label">Kind</span>
             <SegmentedControl
               aria-label="Kind"

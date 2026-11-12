@@ -194,26 +194,26 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       onClose={onClose}
       title={base ? 'Edit log' : 'Log'}
       size="md"
-      className={phone ? 'lg-sheet' : undefined}
+      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
           {base && <ConfirmDelete what="log" onConfirm={() => void remove()} />}
-          <span className="lg-grow" />
+          <span className="tn-custom-grow" />
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="log-form" disabled={busy}>Save</Button>
+          <Button variant="primary" type="submit" form="log-form" disabled={busy}>Save</Button>
         </>
       }
     >
-      <form id="log-form" className="lg-form" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="log-form" className="tn-custom-form" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         {!base && meta.ai && (
-          <div className="lg-field">
-            <div className="lg-chips">
+          <div className="tn-custom-field">
+            <div className="tn-custom-chips">
               <ToggleChip pressed={pasting} onClick={() => setPasting((p) => !p)}>Paste and summarise</ToggleChip>
             </div>
             {pasting && (
-              <div className="lg-paste">
+              <div className="tn-custom-paste">
                 <Field
                   label="Pasted text"
                   multiline
@@ -230,7 +230,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
           </div>
         )}
         {filled && <Alert tone="info">Filled in from the pasted text. Check it, then save.</Alert>}
-        <div className="lg-field">
+        <div className="tn-custom-field">
           <span className="tenon-label">Type</span>
           <SegmentedControl
             aria-label="Type"
@@ -241,9 +241,9 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
         </div>
         <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />
         {people.length > 0 && (
-          <div className="lg-field">
+          <div className="tn-custom-field">
             <span className="tenon-label">With</span>
-            <div className="lg-chips" role="group" aria-label="With">
+            <div className="tn-custom-chips" role="group" aria-label="With">
               {people.map((c) => (
                 <ToggleChip key={c.id} pressed={form.contact_ids.includes(c.id)} onClick={() => toggle(c.id)}>
                   {c.name}

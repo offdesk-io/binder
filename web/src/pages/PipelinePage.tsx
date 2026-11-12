@@ -58,24 +58,27 @@ export function PipelinePage() {
 
   if (phone) {
     return (
-      <div className="lg-page">
+      <div className="tn-stack">
+        <div className="tn-toolbar">
+          <h1 className="tenon-heading-3">Pipeline</h1>
+        </div>
         {note}
-        <div className="lg-stages">
+        <div className="tn-custom-scroll">
           <SegmentedControl
             aria-label="Stage"
             value={stage}
             onChange={setStage}
             options={meta.lead_statuses.map((s) => ({
               value: s,
-              label: <>{label(s)} <span className="lg-count">{groups[s].length}</span></>,
+              label: <>{label(s)} <span className="tn-custom-muted">{groups[s].length}</span></>,
             }))}
           />
         </div>
-        <div className="lg-cards">
+        <div className="tn-custom-cards">
           {groups[stage].length === 0 && <ColumnEmpty>{EMPTY_PHONE[stage] ?? 'None at this stage.'}</ColumnEmpty>}
           {groups[stage].map((o) => (
-            <OrgCard key={o.id} org={o}
-              action={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(s) => void move(o, s)} />} />
+            <OrgCard key={o.id} org={o} showStatus={false}
+              footer={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(s) => void move(o, s)} />} />
           ))}
         </div>
       </div>
@@ -83,16 +86,20 @@ export function PipelinePage() {
   }
 
   return (
-    <div className="lg-page">
+    <div className="tn-stack">
+      <div className="tn-toolbar">
+        <h1 className="tenon-heading-3">Pipeline</h1>
+      </div>
       {note}
-      <div className="lg-board">
+      <div className="tn-board tn-custom-board">
         {meta.lead_statuses.map((s) => (
           <Column
             key={s}
             data-testid={`stage-${s}`}
+            titleAs="h2"
             title={label(s)}
             count={groups[s].length}
-            className={over === s ? 'lg-drop' : undefined}
+            className={over === s ? 'tn-custom-drop' : undefined}
             onDragOver={(e) => {
               if (dragId === undefined) return
               e.preventDefault()
@@ -115,6 +122,7 @@ export function PipelinePage() {
               <OrgCard
                 key={o.id}
                 org={o}
+                showStatus={false}
                 draggable
                 dragging={dragId === o.id}
                 onDragStart={(e) => {
@@ -123,7 +131,7 @@ export function PipelinePage() {
                   setDragId(o.id)
                 }}
                 onDragEnd={() => setDragId(undefined)}
-                action={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(st) => void move(o, st)} />}
+                footer={<StatusPicker org={o} aria={`Status of ${o.name}`} onChange={(st) => void move(o, st)} />}
               />
             ))}
           </Column>

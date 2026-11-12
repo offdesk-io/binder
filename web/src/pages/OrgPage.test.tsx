@@ -116,12 +116,12 @@ test('on a phone the sticky bar holds Log and Call and the header has no Log', a
   const { container } = page()
   await screen.findByRole('heading', { level: 1, name: 'Acme' })
   const bar = await waitFor(() => {
-    const el = container.querySelector('.lg-bar') as HTMLElement
+    const el = container.querySelector('.tn-custom-bar') as HTMLElement
     expect(within(el).getByRole('link', { name: 'Call' })).toBeInTheDocument()
     return el
   })
   expect(within(bar).getByRole('button', { name: 'Log' })).toBeInTheDocument()
-  const header = container.querySelector('.lg-actions') as HTMLElement
+  const header = container.querySelector('.tn-custom-actions') as HTMLElement
   expect(within(header).queryByRole('button', { name: 'Log' })).toBeNull()
   expect(within(header).queryByRole('link', { name: /^Call/ })).toBeNull()
 })

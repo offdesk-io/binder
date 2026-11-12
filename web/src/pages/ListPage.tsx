@@ -71,50 +71,61 @@ export function ListPage() {
   const rows = filterOrgs(all, f)
 
   return (
-    <div className="lg-page">
-      <div className="lg-filters">
-        <SegmentedControl
-          aria-label="Kind"
-          value={f.kind}
-          onChange={(v) => put('kind', v)}
-          options={[{ value: '', label: 'All' }, { value: 'lead', label: 'Leads' }, { value: 'client', label: 'Clients' }]}
-        />
-        <Dropdown aria-label="Status" value={f.status} onChange={(v) => put('status', v)}
-          options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
-        <Dropdown aria-label="Owner" value={f.owner} onChange={(v) => put('owner', v)}
-          options={options(all.map((o) => o.owner_email), 'Anyone', person)} />
-        <Dropdown aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}
-          options={options(all.flatMap((o) => o.tags), 'Any tag')} />
-        <Dropdown aria-label="Sort" value={sort} onChange={(v) => put('sort', v === 'updated' ? '' : v)} options={SORTS} />
+    <div className="tn-stack">
+      <div className="tn-toolbar">
+        <h1 className="tenon-heading-3">Organisations</h1>
+        <div className="tn-custom-filters">
+          <SegmentedControl
+            aria-label="Kind"
+            value={f.kind}
+            onChange={(v) => put('kind', v)}
+            options={[{ value: '', label: 'All' }, { value: 'lead', label: 'Leads' }, { value: 'client', label: 'Clients' }]}
+          />
+          <Dropdown className="tn-custom-filter" aria-label="Status" value={f.status} onChange={(v) => put('status', v)}
+            options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
+          <Dropdown className="tn-custom-filter" aria-label="Owner" value={f.owner} onChange={(v) => put('owner', v)}
+            options={options(all.map((o) => o.owner_email), 'Anyone', person)} />
+          <Dropdown className="tn-custom-filter" aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}
+            options={options(all.flatMap((o) => o.tags), 'Any tag')} />
+          <Dropdown className="tn-custom-filter" aria-label="Sort" value={sort} onChange={(v) => put('sort', v === 'updated' ? '' : v)} options={SORTS} />
+        </div>
       </div>
       {orgs.error ? (
         <Alert tone="error">{orgs.error.message}</Alert>
       ) : !orgs.data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <p className="lg-faint">Nothing matches these filters.</p>
+        <p className="tn-custom-faint">Nothing matches these filters.</p>
       ) : phone ? (
-        <div className="lg-cards">{rows.map((o) => <OrgCard key={o.id} org={o} />)}</div>
+        <div className="tn-custom-cards">{rows.map((o) => <OrgCard key={o.id} org={o} />)}</div>
       ) : (
-        <table className="lg-table">
-          <thead>
-            <tr>
-              <th>Name</th><th>Status</th><th>Owner</th><th>Last contact</th><th>Next step</th><th className="lg-num">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((o) => (
-              <tr key={o.id}>
-                <td><Link to={`/o/${o.slug}`}>{o.name}</Link></td>
-                <td><StatusTag status={o.status} /></td>
-                <td>{person(o.owner_email)}</td>
-                <td>{ago(o.last_contact)}</td>
-                <td><NextStep org={o} /></td>
-                <td className="lg-num">{money(o.value_estimate)}</td>
+        <div className="tn-table-wrap tn-custom-table-wrap">
+          <table>
+            <caption>{rows.length === 1 ? '1 organisation' : `${rows.length} organisations`}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Status</th>
+                <th scope="col">Owner</th>
+                <th scope="col">Last contact</th>
+                <th scope="col">Next step</th>
+                <th scope="col" data-numeric>Value</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((o) => (
+                <tr key={o.id}>
+                  <td><Link to={`/o/${o.slug}`}>{o.name}</Link></td>
+                  <td><StatusTag status={o.status} /></td>
+                  <td>{person(o.owner_email)}</td>
+                  <td>{ago(o.last_contact)}</td>
+                  <td><NextStep org={o} /></td>
+                  <td data-numeric className="tn-numeric">{money(o.value_estimate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

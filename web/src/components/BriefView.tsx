@@ -14,8 +14,8 @@ export function knownAs(p: BriefPerson, people: Contact[]): Contact | undefined 
 
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="lg-brief-part">
-      <h3 className="tenon-heading-4">{title}</h3>
+    <div className="tn-custom-brief-part">
+      <h3 className="tenon-heading-5">{title}</h3>
       {children}
     </div>
   )
@@ -56,28 +56,28 @@ export function BriefView({ run, orgId, people }: Props) {
   }
 
   return (
-    <div className="lg-brief">
-      <p className="lg-entry-text">{b.overview}</p>
-      {b.what_they_do && <Part title="What they do"><p className="lg-entry-text">{b.what_they_do}</p></Part>}
-      {b.size_and_funding && <Part title="Size and funding"><p className="lg-entry-text">{b.size_and_funding}</p></Part>}
+    <div className="tn-custom-brief">
+      <p className="tn-custom-body">{b.overview}</p>
+      {b.what_they_do && <Part title="What they do"><p className="tn-custom-body">{b.what_they_do}</p></Part>}
+      {b.size_and_funding && <Part title="Size and funding"><p className="tn-custom-body">{b.size_and_funding}</p></Part>}
       {b.people.length > 0 && (
         <Part title="People">
           {error && <Alert tone="error">{error}</Alert>}
-          <ul className="lg-brief-people">
+          <ul className="tn-custom-brief-people">
             {b.people.map((p, i) => {
               const c = knownAs(p, known)
               return (
                 <li key={i}>
                   <div>
                     {c ? <Link to={`/c/${c.id}`}>{p.name}</Link> : <span>{p.name}</span>}
-                    {p.role && <span className="lg-faint"> · {p.role}</span>}
+                    {p.role && <span className="tn-custom-faint"> · {p.role}</span>}
                     {!c && people.data && (
                       <Button size="sm" variant="secondary" disabled={adding} onClick={() => void add(p)} aria-label={`Add ${p.name}`}>
                         Add?
                       </Button>
                     )}
                   </div>
-                  {p.why && <div className="lg-faint">{p.why}</div>}
+                  {p.why && <div className="tn-custom-faint">{p.why}</div>}
                 </li>
               )
             })}
@@ -88,7 +88,7 @@ export function BriefView({ run, orgId, people }: Props) {
         <Part title="Recent news">
           <ul>
             {b.recent_news.map((n, i) => (
-              <li key={i}><Out url={n.url}>{n.headline}</Out>{n.date && <span className="lg-faint"> · {n.date}</span>}</li>
+              <li key={i}><Out url={n.url}>{n.headline}</Out>{n.date && <span className="tn-custom-faint"> · {n.date}</span>}</li>
             ))}
           </ul>
         </Part>
@@ -96,7 +96,7 @@ export function BriefView({ run, orgId, people }: Props) {
       {b.likely_needs.length > 0 && (
         <Part title="Likely needs"><ul>{b.likely_needs.map((t, i) => <li key={i}>{t}</li>)}</ul></Part>
       )}
-      {b.offdesk_angle && <Part title="Offdesk angle"><p className="lg-entry-text">{b.offdesk_angle}</p></Part>}
+      {b.offdesk_angle && <Part title="Offdesk angle"><p className="tn-custom-body">{b.offdesk_angle}</p></Part>}
       {b.open_questions.length > 0 && (
         <Part title="Open questions"><ul>{b.open_questions.map((t, i) => <li key={i}>{t}</li>)}</ul></Part>
       )}
@@ -105,7 +105,7 @@ export function BriefView({ run, orgId, people }: Props) {
           <ol>{run.sources.map((s, i) => <li key={i}><Out url={s.url}>{s.title || s.url}</Out></li>)}</ol>
         </Part>
       )}
-      <p className="lg-faint">
+      <p className="tenon-caption tn-custom-foot">
         Researched {day(run.run_at)} by {person(run.author_email)}
         {run.model && ` · ${run.model}`}
         {run.cost_usd != null && ` · ${usd(run.cost_usd)}`}

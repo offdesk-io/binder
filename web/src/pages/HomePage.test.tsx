@@ -18,7 +18,7 @@ test('shows what needs attention, with its reasons, and recent activity', async 
   expect(await screen.findByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/o/acme')
   expect(screen.getByText('Next step overdue')).toBeInTheDocument()
   expect(screen.getByText('No contact in 14 days')).toBeInTheDocument()
-  expect(screen.getByText(/Send the deck/)).toHaveClass('lg-overdue')
+  expect(screen.getByText(/Send the deck/)).toHaveClass('tn-custom-overdue')
   expect(await screen.findByText('Moved from Lead to Contacted')).toBeInTheDocument()
   expect(screen.getByText('Call: Rang about rates')).toBeInTheDocument()
   const hrefs = screen.getAllByRole('link').map((l) => l.getAttribute('href'))

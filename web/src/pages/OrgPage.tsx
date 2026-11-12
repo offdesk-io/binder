@@ -1,4 +1,4 @@
-import { Alert, Button, LinkButton, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, Card, LinkButton, Tag } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
@@ -83,48 +83,49 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
   }
 
   return (
-    <div className="lg-page">
-      <header className="lg-org-head">
-        <div className="lg-org-title">
-          <h1 className="tenon-heading-1">{org.name}</h1>
-          <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
+    <div className="tn-stack">
+      <header className="tn-stack">
+        <div className="tn-toolbar">
+          <div className="tn-custom-title">
+            <h1 className="tenon-heading-3">{org.name}</h1>
+            <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
+          </div>
+          <div className="tn-cluster tn-custom-actions">
+            {!phone && <Button variant="primary" onClick={() => setLog('new')}>Log</Button>}
+            <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+            {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
+            {!phone && primary?.phone && <LinkButton variant="ghost" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
+            {primary?.email && <LinkButton variant="ghost" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
+          </div>
         </div>
-        <p className="lg-faint">
+        <p className="tenon-caption tn-custom-faint">
           {label(org.kind)} · owned by {person(org.owner_email)}
           {org.website && <> · {siteLink}</>}
         </p>
-        <div className="lg-actions">
-          {!phone && <Button onClick={() => setLog('new')}>Log</Button>}
-          <Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>
-          {meta.ai && <LinkButton variant="secondary" href="#research">Research</LinkButton>}
-          {!phone && primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
-          {primary?.email && <LinkButton variant="secondary" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
-        </div>
         {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh this page: ${refreshError}`}</Alert>}
       </header>
 
-      <div className="lg-org-body">
-        <div className="lg-column">
-          <section className="lg-section">
-            <h2 className="tenon-heading-3">Overview</h2>
-            {org.summary ? <p className="lg-entry-text">{org.summary}</p> : <p className="lg-faint">No summary yet.</p>}
-            <dl className="lg-facts">
+      <div className="tn-grid tn-custom-split">
+        <div className="tn-col-8 tn-stack">
+          <Card titleAs="h2" title="Overview">
+            {org.summary ? <p className="tn-custom-body">{org.summary}</p> : <p className="tn-custom-faint">No summary yet.</p>}
+            <dl className="tn-custom-facts">
               {facts(org).map(([k, v]) => (
                 <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>
               ))}
             </dl>
-          </section>
+          </Card>
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
           <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
         </div>
-        <div className="lg-column">
+        <div className="tn-col-4 tn-stack">
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
         </div>
       </div>
 
       {phone && (
-        <div className="lg-bar">
-          <Button onClick={() => setLog('new')}>Log</Button>
+        <div className="tn-custom-bar">
+          <Button variant="primary" onClick={() => setLog('new')}>Log</Button>
           {primary?.phone && <LinkButton variant="secondary" href={`tel:${primary.phone}`}>Call</LinkButton>}
         </div>
       )}

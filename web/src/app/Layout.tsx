@@ -12,12 +12,19 @@ const NAV = [
   { to: '/list', label: 'List', end: false },
 ]
 
-function Nav({ className }: { className: string }) {
+/** The desktop links sit in the header; on a phone they are a tab bar at the foot of the screen. */
+function Nav({ tabs }: { tabs?: boolean }) {
+  const links = NAV.map((n) => (
+    <NavLink key={n.to} to={n.to} end={n.end}>{n.label}</NavLink>
+  ))
+  if (tabs) return <nav className="tn-custom-tabs" aria-label="Main">{links}</nav>
   return (
-    <nav className={className}>
-      {NAV.map((n) => (
-        <NavLink key={n.to} to={n.to} end={n.end}>{n.label}</NavLink>
-      ))}
+    <nav aria-label="Main">
+      <ul className="tn-nav">
+        {NAV.map((n) => (
+          <li key={n.to}><NavLink to={n.to} end={n.end}>{n.label}</NavLink></li>
+        ))}
+      </ul>
     </nav>
   )
 }
@@ -28,22 +35,27 @@ export function Layout() {
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
   return (
-    <div className="lg-app">
-      <header className="lg-top">
-        <Link to="/" className="lg-brand">Ledger</Link>
-        {!phone && <Nav className="lg-nav" />}
-        <SearchBox />
-        <Button size="sm" onClick={() => setCreating(true)}>New</Button>
-        {!phone && <span className="lg-me">{me.name}</span>}
-        {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
-        <form method="post" action="/auth/logout">
-          <Button size="sm" variant="ghost" type="submit">Sign out</Button>
-        </form>
+    <div className="tn-page">
+      <a className="tn-skip-link" href="#main">Skip to content</a>
+      <header className="tn-header tn-custom-header">
+        <div className="tn-custom-brand">
+          <Link to="/" className="tn-identity">Ledger</Link>
+          {!phone && <Nav />}
+        </div>
+        <div className="tn-custom-tools">
+          <SearchBox />
+          <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
+          {!phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
+          {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
+          <form method="post" action="/auth/logout">
+            <Button size="sm" variant="ghost" type="submit">Sign out</Button>
+          </form>
+        </div>
       </header>
-      <main className="lg-main">
+      <main id="main" className="tn-custom-main">
         <Outlet />
       </main>
-      {phone && <Nav className="lg-tabs" />}
+      {phone && <Nav tabs />}
       <OrgForm
         open={creating}
         onClose={() => setCreating(false)}

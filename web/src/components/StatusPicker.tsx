@@ -10,6 +10,7 @@ export function StatusPicker({ org, aria, onChange, disabled }: { org: Org; aria
   const list = org.kind === 'lead' ? meta.lead_statuses : meta.client_statuses
   return (
     <Dropdown
+      className="tn-custom-status"
       aria-label={aria}
       value={org.status}
       onChange={onChange}

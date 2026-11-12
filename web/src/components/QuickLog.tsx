@@ -2,7 +2,7 @@ import { Alert, Button, Field, Modal, SegmentedControl, ToggleChip } from '@tiag
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
-import type { Contact, Interaction, InteractionFields } from '../api/types'
+import type { Contact, Interaction, InteractionFields, Summary } from '../api/types'
 import { useSession } from '../app/session'
 import { fromLocalInput, label, toLocalInput } from '../lib/format'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
@@ -50,6 +50,19 @@ export function logBody(f: LogFormState, base?: Loggable): InteractionFields {
 
 const sorted = (ids: number[]) => [...ids].sort((a, b) => a - b)
 
+/** The form after a summary: the summary's values where it has them, the form's where it does not.
+ * People not in `known` (when it is known) and types the API does not have are dropped. */
+export function fromSummary(f: LogFormState, s: Summary, types: string[], known: Set<number> | undefined): LogFormState {
+  return {
+    type: types.includes(s.type) ? s.type : f.type,
+    when: (s.happened_at && toLocalInput(s.happened_at)) || f.when,
+    contact_ids: known ? s.contact_ids.filter((id) => known.has(id)) : s.contact_ids,
+    summary: s.summary || f.summary,
+    next_step: s.next_step ?? f.next_step,
+    next_step_due: s.next_step_due ?? f.next_step_due,
+  }
+}
+
 interface Props {
   open: boolean
   orgId: number
@@ -73,6 +86,10 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
   const [error, setError] = useState<string>()
   const [fieldErrors, setFieldErrors] = useState<{ when?: string; summary?: string }>({})
   const [busy, setBusy] = useState(false)
+  const [pasting, setPasting] = useState(false)
+  const [paste, setPaste] = useState('')
+  const [summarising, setSummarising] = useState(false)
+  const [filled, setFilled] = useState(false)
 
   // Reset on open. `preselect` is left out on purpose: callers pass a new array each render.
   useEffect(() => {
@@ -81,6 +98,9 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
     setForm(logForm(initial, preselect, new Date(), first))
     setError(undefined)
     setFieldErrors({})
+    setPasting(false)
+    setPaste('')
+    setFilled(false)
   }, [open, initial, first])
 
   const set = (k: 'when' | 'summary' | 'next_step' | 'next_step_due') =>
@@ -91,6 +111,24 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       ...f,
       contact_ids: f.contact_ids.includes(id) ? f.contact_ids.filter((c) => c !== id) : [...f.contact_ids, id],
     }))
+
+  async function summarise() {
+    if (summarising || !paste.trim()) return
+    setSummarising(true)
+    setError(undefined)
+    try {
+      const s = await api.summarise(orgId, paste)
+      const known = contacts ? new Set(contacts.map((c) => c.id)) : undefined
+      setForm((f) => fromSummary(f, s, meta.interaction_types, known))
+      setPasting(false)
+      setPaste('')
+      setFilled(true)
+    } catch (e) {
+      setError(saveErrorText(e))
+    } finally {
+      setSummarising(false)
+    }
+  }
 
   async function save() {
     if (busy) return
@@ -160,6 +198,29 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
     >
       <form id="log-form" className="lg-form" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
+        {!base && meta.ai && (
+          <div className="lg-field">
+            <div className="lg-chips">
+              <ToggleChip pressed={pasting} onClick={() => setPasting((p) => !p)}>Paste and summarise</ToggleChip>
+            </div>
+            {pasting && (
+              <div className="lg-paste">
+                <Field
+                  label="Pasted text"
+                  multiline
+                  rows={6}
+                  hint="An email, notes or a transcript. It is summarised into the fields below and not kept."
+                  value={paste}
+                  onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPaste(e.target.value)}
+                />
+                <Button variant="secondary" disabled={summarising || !paste.trim()} onClick={() => void summarise()}>
+                  {summarising ? 'Summarising…' : 'Summarise'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+        {filled && <Alert tone="info">Filled in from the pasted text. Check it, then save.</Alert>}
         <div className="lg-field">
           <span className="tenon-label">Type</span>
           <SegmentedControl

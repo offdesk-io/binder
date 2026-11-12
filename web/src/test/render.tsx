@@ -14,14 +14,15 @@ export const SESSION: Session = {
     client_statuses: ['active', 'paused', 'past'],
     interaction_types: ['call', 'email', 'meeting', 'note'],
     relationships: ['cold', 'warm', 'strong'],
+    ai: true,
   },
   me: { email: 'ana@example.com', name: 'Ana', teams: ['offdesk'] },
 }
 
-/** Render inside the session and a router at `path`. */
-export function renderApp(ui: ReactElement, path = '/') {
+/** Render inside a session (the default one, or `session`) and a router at `path`. */
+export function renderApp(ui: ReactElement, path = '/', session: Session = SESSION) {
   return render(
-    <SessionContext.Provider value={SESSION}>
+    <SessionContext.Provider value={session}>
       <MemoryRouter initialEntries={[path]} future={ROUTER_FUTURE}>{ui}</MemoryRouter>
     </SessionContext.Provider>,
   )

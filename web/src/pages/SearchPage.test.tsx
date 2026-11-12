@@ -5,7 +5,7 @@ import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
 const hit = (o: Partial<SearchHit>): SearchHit => ({
-  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', title: 'Acme', snippet: '\u0002Acme\u0003 studio', ...o,
+  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
 })
 
 test('each kind of hit links to its page', () => {

@@ -87,13 +87,15 @@ export interface ActivityItem {
 }
 
 export interface SearchHit {
-  kind: 'org' | 'contact' | 'interaction'
+  kind: 'org' | 'contact' | 'interaction' | 'research'
   id: number
   org_id: number
   org_name: string
   org_slug: string
   title: string
   snippet: string
+  /** The person a research brief is about; null for every other hit. */
+  contact_id: number | null
 }
 
 export type Reason = 'overdue' | 'quiet' | 'stuck'
@@ -110,6 +112,8 @@ export interface Meta {
   client_statuses: string[]
   interaction_types: string[]
   relationships: string[]
+  /** False when the server has no AI: research and summarise are hidden. */
+  ai: boolean
 }
 
 export interface Who {
@@ -161,3 +165,61 @@ export interface InteractionFields {
 }
 export type InteractionInput = Pick<InteractionFields, 'type' | 'summary'> & Partial<InteractionFields>
 export type InteractionPatch = Partial<InteractionFields> & { updated_at: string }
+
+export interface BriefPerson {
+  name: string
+  role: string
+  /** Null for someone not yet in Ledger. */
+  contact_id: number | null
+  why: string
+}
+
+export interface BriefNews {
+  headline: string
+  date: string
+  url: string
+}
+
+export interface Brief {
+  overview: string
+  what_they_do: string
+  size_and_funding: string
+  people: BriefPerson[]
+  recent_news: BriefNews[]
+  likely_needs: string[]
+  offdesk_angle: string
+  open_questions: string[]
+}
+
+export interface Source {
+  url: string
+  title: string
+}
+
+export interface Research {
+  id: number
+  org_id: number
+  contact_id: number | null
+  status: 'running' | 'done' | 'failed'
+  brief: Brief | null
+  sources: Source[]
+  model: string | null
+  input_tokens: number | null
+  output_tokens: number | null
+  web_searches: number | null
+  cost_usd: number | null
+  error: string | null
+  run_at: string
+  finished_at: string | null
+  author_email: string
+}
+
+/** A log entry's fields, from pasted text. Nothing is saved. */
+export interface Summary {
+  summary: string
+  type: string
+  happened_at: string | null
+  next_step: string | null
+  next_step_due: string | null
+  contact_ids: number[]
+}

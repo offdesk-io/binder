@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   ago, day, fromLocalInput, isOverdue, label, money, person, REASON_TEXT, statusLine, statusTone,
-  toLocalInput, todayIso, safeHref,
+  toLocalInput, todayIso, safeHref, usd,
 } from './format'
 
 describe('format', () => {
@@ -74,4 +74,12 @@ describe('format', () => {
     expect(statusLine('lead', 'contacted')).toBe('Moved from Lead to Contacted')
     expect(REASON_TEXT.quiet).toBe('No contact in 14 days')
   })
+})
+
+test('usd shows cents, a floor for tiny costs, and nothing when unknown', () => {
+  expect(usd(0.034)).toBe('$0.03')
+  expect(usd(1.5)).toBe('$1.50')
+  expect(usd(0)).toBe('$0.00')
+  expect(usd(0.004)).toBe('<$0.01')
+  expect(usd(null)).toBe('')
 })

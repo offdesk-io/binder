@@ -36,8 +36,8 @@ export function activity(o: Partial<ActivityItem> = {}): ActivityItem {
 
 export function benchTask(o: Partial<BenchTask> = {}): BenchTask {
   return {
-    task_key: 'aa0002', board: 'work', title: 'Acme site rebuild', state: 'Doing', done: false, done_on: null,
-    due: null, assignee: null, fetched_at: AT, url: 'https://bench.example.com/#!board=work!task=aa0002', ...o,
+    task_key: 'aa0002', board: 'work', title: 'Acme site rebuild', state: 'Doing', done: false, cancelled: false,
+    done_on: null, due: null, assignee: null, fetched_at: AT, url: 'https://bench.example.com/#!board=work!task=aa0002', ...o,
   }
 }
 

@@ -18,7 +18,7 @@ function stubs(extra: Record<string, (b: unknown) => unknown> = {}) {
     'GET /api/orgs/1/contacts': () => [contact({ is_primary: true, phone: '+44 20 0000 0000', email: 'bo@example.com' })],
     'GET /api/orgs/1/timeline': () => [],
     'GET /api/orgs/1/research': () => [],
-    'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null }),
+    'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
     ...extra,
   })
 }
@@ -170,7 +170,7 @@ test('a finished Bench task joins the timeline, linked to Bench', async () => {
   page()
   expect(await screen.findByRole('link', { name: 'Kickoff deck' })).toHaveAttribute('href', 'https://bench.example.com/#!board=work!task=bb0001')
   expect(screen.getByText(/Finished in Bench:/)).toBeInTheDocument()
-  expect(screen.getByText(/Nov 2026/)).toBeInTheDocument()
+  expect(screen.getByText('· 1 Nov 2026')).toBeInTheDocument()
 })
 
 test('with Bench off the Work section is not shown and Work is not asked for', async () => {

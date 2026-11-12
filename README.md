@@ -68,13 +68,18 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `from_status`, `to_status`, `at`, `by_email`.
 - **Bench task** (`GET /api/orgs/{id}/work`, answering a **Work** record):
   a task tagged `[lead:: <slug>]` with that organisation's slug. `task_key`,
-  `board`, `title`, `state`, `done` (bool), `done_on` (a date, or null), `due`
-  (a date, or null), `assignee` (or null), `fetched_at`, `url` (the task on
-  Bench). **Work**: `tasks` (a list of Bench tasks), `fetched_at` (null until
-  the first read finishes, which the page shows as "Reading Bench...") and
-  `error` (why the last refresh failed, or null). The route answers from the
-  cache at once and, when the cache is stale, starts a refresh in the
-  background. It is 404 when Bench is off.
+  `board`, `title`, `state` (`Done` for finished work, `Cancelled` for a
+  cancelled one, otherwise the column it sits in), `done` (bool: finished work
+  only), `cancelled` (bool: ticked and cancelled or archived in Bench), `done_on`
+  (a date, or null: the day it was finished, or for a cancelled task the day it
+  was cancelled), `due` (a date, or null), `assignee` (or null), `fetched_at`,
+  `url` (the task on Bench). **Work**: `tasks` (a list of Bench tasks),
+  `fetched_at` (null until the first read finishes, which the page shows as
+  "Reading Bench..."), `error` (why the last refresh failed, or null) and
+  `refreshing` (bool: a refresh is running now, and the page asks again every
+  few seconds for up to 20 seconds). The route answers from the cache at once
+  and, when the cache is stale, starts a refresh in the background. It is 404
+  when Bench is off.
 - **Research** (`/api/orgs/{id}/research` and `/api/contacts/{id}/research`
   list a record's runs, newest first; `/api/research/{id}` is one run): `id`,
   `org_id`, `contact_id` (null for an organisation's own brief), `status`
@@ -106,9 +111,10 @@ a status change can share an `id`.
   (`/api/activity?limit=`): `kind` (`interaction` or `status`), `id`,
   `org_id`, `at`, `by_email`. Interaction items add `type` and `summary`;
   status items add `from_status` and `to_status`. A timeline also has `bench`
-  items, one per finished Bench task: `kind`, `id` (the task key), `title`,
-  `at` (the done date at midnight UTC), `by_email` (the assignee, or null) and
-  `url`. Timeline interaction items
+  items, one per finished Bench task (a cancelled task is not finished work and
+  is not listed): `kind`, `id` (the task key), `title`, `at` (the done date at
+  midnight UTC), `by_email` (always null, since a Bench `to:` is not always an
+  email) and `url`. Timeline interaction items
   also carry the interaction's other fields; activity items carry `org_name`
   and `org_slug`.
 - **Needs attention** (`/api/attention`): `{org, reasons}`, where `org` is an

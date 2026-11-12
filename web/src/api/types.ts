@@ -74,13 +74,15 @@ export type TimelineStatus = StatusChange & { kind: 'status' }
 export interface TimelineBench { kind: 'bench'; id: string; title: string; at: string; by_email: string | null; url: string }
 export type TimelineItem = TimelineInteraction | TimelineStatus | TimelineBench
 
-/** A Bench task linked to an organisation through `[lead:: <slug>]`. */
+/** A Bench task linked to an organisation through `[lead:: <slug>]`. `done` is finished work only; a cancelled
+ * task has `cancelled` set, state "Cancelled", and `done_on` holds the day it was cancelled. */
 export interface BenchTask {
   task_key: string
   board: string
   title: string
   state: string
   done: boolean
+  cancelled: boolean
   done_on: string | null
   due: string | null
   assignee: string | null
@@ -88,11 +90,13 @@ export interface BenchTask {
   url: string
 }
 
-/** The Work section's answer. `fetched_at` is null until the first read finishes. */
+/** The Work section's answer. `fetched_at` is null until the first read finishes. `refreshing` is true while a
+ * refresh is running, and the page asks again until it is false. */
 export interface Work {
   tasks: BenchTask[]
   fetched_at: string | null
   error: string | null
+  refreshing: boolean
 }
 
 export interface ActivityItem {

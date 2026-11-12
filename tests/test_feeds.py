@@ -1,10 +1,10 @@
-from ledger.repo import feeds
+from binder.repo import feeds
 
 OLD = "2026-01-01T00:00:00.000000+00:00"
 
 
 def db(client):
-    from ledger.db import connect
+    from binder.db import connect
     return connect(client.app.state.settings.db_path)
 
 

@@ -1,4 +1,4 @@
-"""Request bodies. Responses are plain dicts from ledger/repo."""
+"""Request bodies. Responses are plain dicts from binder/repo."""
 
 import datetime
 import re

@@ -1,14 +1,14 @@
-# Ledger Plan 1: Core API Implementation Plan
+# Binder Plan 1: Core API Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A working, tested FastAPI backend for Ledger. It covers Offdesk header sign-in, a SQLite store with migrations, organisations with a status pipeline and history, contacts, interactions, a timeline, full-text search, and the "needs attention" and activity feeds.
+**Goal:** A working, tested FastAPI backend for Binder. It covers Offdesk header sign-in, a SQLite store with migrations, organisations with a status pipeline and history, contacts, interactions, a timeline, full-text search, and the "needs attention" and activity feeds.
 
-**Architecture:** A FastAPI app built by `create_app(settings)`. Each request opens its own SQLite connection, from a dependency. The data access code is in plain functions in `ledger/repo/` that take a connection and return dicts. Routers in `ledger/api/` validate the request with pydantic and call those functions. Numbered `.sql` migrations are applied at startup and tracked in `PRAGMA user_version`. An FTS5 table is kept in step by triggers.
+**Architecture:** A FastAPI app built by `create_app(settings)`. Each request opens its own SQLite connection, from a dependency. The data access code is in plain functions in `binder/repo/` that take a connection and return dicts. Routers in `binder/api/` validate the request with pydantic and call those functions. Numbered `.sql` migrations are applied at startup and tracked in `PRAGMA user_version`. An FTS5 table is kept in step by triggers.
 
 **Tech Stack:** Python ≥ 3.9 (code stays 3.9-compatible: `Optional[...]`, no `X | Y`), FastAPI, uvicorn, pydantic v2, stdlib `sqlite3` with FTS5, pytest, httpx (for `TestClient`).
 
-Spec: `docs/superpowers/specs/2026-11-11-ledger-design.md`. Later plans: 2 Frontend, 3 AI, 4 Bench link + import, 5 Deploy.
+Spec: `docs/superpowers/specs/2026-11-11-binder-design.md`. Later plans: 2 Frontend, 3 AI, 4 Bench link + import, 5 Deploy.
 
 **Commits:** plain messages, and no attribution lines of any kind.
 
@@ -17,12 +17,12 @@ Spec: `docs/superpowers/specs/2026-11-11-ledger-design.md`. Later plans: 2 Front
 ## File structure
 
 ```
-ledger/
+binder/
   pyproject.toml              package + deps
   .gitignore
-  ledger/
+  binder/
     __init__.py
-    __main__.py               `python -m ledger` → uvicorn
+    __main__.py               `python -m binder` → uvicorn
     config.py                 Settings, load_settings(), ConfigError
     auth.py                   Identity, identity_from_headers(), guard()
     db.py                     connect(), migrate(), get_db(), now()
@@ -64,7 +64,7 @@ ledger/
 ### Task 1: Project skeleton
 
 **Files:**
-- Create: `pyproject.toml`, `.gitignore`, `ledger/__init__.py`, `tests/__init__.py` (empty)
+- Create: `pyproject.toml`, `.gitignore`, `binder/__init__.py`, `tests/__init__.py` (empty)
 
 - [ ] **Step 1: Check Python**
 
@@ -75,7 +75,7 @@ Expected: 3.9 or newer.
 
 ```toml
 [project]
-name = "ledger"
+name = "binder"
 version = "0.1.0"
 requires-python = ">=3.9"
 dependencies = [
@@ -92,10 +92,10 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["ledger*"]
+include = ["binder*"]
 
 [tool.setuptools.package-data]
-ledger = ["migrations/*.sql"]
+binder = ["migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -117,10 +117,10 @@ dist/
 .pytest_cache/
 ```
 
-- [ ] **Step 4: Write `ledger/__init__.py`**
+- [ ] **Step 4: Write `binder/__init__.py`**
 
 ```python
-"""Ledger: the Offdesk leads and clients manager."""
+"""Binder: the Offdesk leads and clients manager."""
 ```
 
 - [ ] **Step 5: Create venv and install**
@@ -131,7 +131,7 @@ Expected: `no tests ran` (exit code 5 is fine here).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add pyproject.toml .gitignore ledger/__init__.py tests/__init__.py
+git add pyproject.toml .gitignore binder/__init__.py tests/__init__.py
 git commit -m "Project skeleton"
 ```
 
@@ -140,14 +140,14 @@ git commit -m "Project skeleton"
 ### Task 2: Settings
 
 **Files:**
-- Create: `ledger/config.py`
+- Create: `binder/config.py`
 - Test: `tests/test_config.py`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 import pytest
-from ledger.config import load_settings, ConfigError
+from binder.config import load_settings, ConfigError
 
 
 def test_defaults_are_local_dev():
@@ -156,11 +156,11 @@ def test_defaults_are_local_dev():
     assert s.host == "127.0.0.1"
     assert s.port == 8770
     assert s.team == "offdesk"
-    assert s.db_path == "ledger.db"
+    assert s.db_path == "binder.db"
 
 
 def test_header_mode_accepted_on_loopback():
-    s = load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "/x/l.db", "LEDGER_PORT": "9000"})
+    s = load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/x/l.db", "BINDER_PORT": "9000"})
     assert s.auth == "header"
     assert s.db_path == "/x/l.db"
     assert s.port == 9000
@@ -168,26 +168,26 @@ def test_header_mode_accepted_on_loopback():
 
 def test_unknown_auth_mode_refuses():
     with pytest.raises(ConfigError):
-        load_settings({"LEDGER_AUTH": "heder"})
+        load_settings({"BINDER_AUTH": "heder"})
 
 
 def test_header_mode_refuses_public_host():
     with pytest.raises(ConfigError):
-        load_settings({"LEDGER_AUTH": "header", "LEDGER_HOST": "0.0.0.0"})
+        load_settings({"BINDER_AUTH": "header", "BINDER_HOST": "0.0.0.0"})
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_config.py -v`
-Expected: FAIL, `ModuleNotFoundError: No module named 'ledger.config'`
+Expected: FAIL, `ModuleNotFoundError: No module named 'binder.config'`
 
-- [ ] **Step 3: Implement `ledger/config.py`**
+- [ ] **Step 3: Implement `binder/config.py`**
 
 ```python
 """Runtime settings, read from the environment.
 
-LEDGER_AUTH unset or empty is local development: one fixed identity, no
-sign-in. LEDGER_AUTH=header is the server behind nginx and the Offdesk
+BINDER_AUTH unset or empty is local development: one fixed identity, no
+sign-in. BINDER_AUTH=header is the server behind nginx and the Offdesk
 sign-in, which passes X-Offdesk-* headers. Any other value refuses to start,
 so a typo cannot leave the app open. Header mode listens on loopback only,
 because the headers are only trustworthy when nginx is the only caller.
@@ -213,18 +213,18 @@ class Settings:
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
-    auth = env.get("LEDGER_AUTH", "")
+    auth = env.get("BINDER_AUTH", "")
     if auth not in ("", "header"):
-        raise ConfigError("LEDGER_AUTH=%r is not a known mode; use 'header' or leave it unset." % auth)
-    host = env.get("LEDGER_HOST", "127.0.0.1")
+        raise ConfigError("BINDER_AUTH=%r is not a known mode; use 'header' or leave it unset." % auth)
+    host = env.get("BINDER_HOST", "127.0.0.1")
     if auth == "header" and host not in LOOPBACK:
-        raise ConfigError("LEDGER_AUTH=header listens on 127.0.0.1 only, not %s." % host)
+        raise ConfigError("BINDER_AUTH=header listens on 127.0.0.1 only, not %s." % host)
     return Settings(
         auth=auth,
-        db_path=env.get("LEDGER_DB", "ledger.db"),
+        db_path=env.get("BINDER_DB", "binder.db"),
         host=host,
-        port=int(env.get("LEDGER_PORT", "8770")),
-        team=env.get("LEDGER_TEAM", "offdesk"),
+        port=int(env.get("BINDER_PORT", "8770")),
+        team=env.get("BINDER_TEAM", "offdesk"),
     )
 ```
 
@@ -236,7 +236,7 @@ Expected: 4 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add ledger/config.py tests/test_config.py
+git add binder/config.py tests/test_config.py
 git commit -m "Settings from environment with safe auth modes"
 ```
 
@@ -245,7 +245,7 @@ git commit -m "Settings from environment with safe auth modes"
 ### Task 3: Database and migrations
 
 **Files:**
-- Create: `ledger/db.py`, `ledger/migrations/001_init.sql`
+- Create: `binder/db.py`, `binder/migrations/001_init.sql`
 - Test: `tests/test_db.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -255,7 +255,7 @@ import sqlite3
 
 import pytest
 
-from ledger.db import MIGRATIONS as REAL_MIGRATIONS, connect, migrate
+from binder.db import MIGRATIONS as REAL_MIGRATIONS, connect, migrate
 
 
 def tables(conn):
@@ -288,7 +288,7 @@ def test_backup_taken_before_migrating_existing_db(tmp_path, monkeypatch):
     mig.mkdir()
     (mig / "001_init.sql").write_text((REAL_MIGRATIONS / "001_init.sql").read_text())
     (mig / "002_add.sql").write_text("CREATE TABLE added(x);")
-    monkeypatch.setattr("ledger.db.MIGRATIONS", mig)
+    monkeypatch.setattr("binder.db.MIGRATIONS", mig)
     migrate(conn, path)
     assert len(list((tmp_path / "backups").glob("l-v1-*.db"))) == 1
     assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
@@ -298,7 +298,7 @@ def test_failed_migration_rolls_back(tmp_path, monkeypatch):
     mig = tmp_path / "migs"
     mig.mkdir()
     (mig / "001_bad.sql").write_text("CREATE TABLE ok(x); CREATE TABLE ok(x);")
-    monkeypatch.setattr("ledger.db.MIGRATIONS", mig)
+    monkeypatch.setattr("binder.db.MIGRATIONS", mig)
     path = str(tmp_path / "l.db")
     conn = connect(path)
     with pytest.raises(sqlite3.OperationalError):
@@ -315,9 +315,9 @@ def test_foreign_keys_on(tmp_path):
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_db.py -v`
-Expected: FAIL, `No module named 'ledger.db'`
+Expected: FAIL, `No module named 'binder.db'`
 
-- [ ] **Step 3: Write `ledger/migrations/001_init.sql`**
+- [ ] **Step 3: Write `binder/migrations/001_init.sql`**
 
 ```sql
 CREATE TABLE organisations (
@@ -437,7 +437,7 @@ CREATE TRIGGER interaction_ad AFTER DELETE ON interactions BEGIN
 END;
 ```
 
-- [ ] **Step 4: Implement `ledger/db.py`**
+- [ ] **Step 4: Implement `binder/db.py`**
 
 ```python
 """SQLite access: one connection per request, numbered migrations at startup.
@@ -523,7 +523,7 @@ Expected: 5 passed
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ledger/db.py ledger/migrations/001_init.sql tests/test_db.py
+git add binder/db.py binder/migrations/001_init.sql tests/test_db.py
 git commit -m "SQLite schema, FTS triggers and transactional migrations"
 ```
 
@@ -532,7 +532,7 @@ git commit -m "SQLite schema, FTS triggers and transactional migrations"
 ### Task 4: Sign-in guard
 
 **Files:**
-- Create: `ledger/auth.py`
+- Create: `binder/auth.py`
 - Test: `tests/test_auth.py` (unit part; HTTP part comes in Task 6)
 
 - [ ] **Step 1: Write the failing test**
@@ -540,10 +540,10 @@ git commit -m "SQLite schema, FTS triggers and transactional migrations"
 ```python
 import pytest
 from fastapi import HTTPException
-from ledger.auth import identity_from_headers, DEV_IDENTITY
-from ledger.config import load_settings
+from binder.auth import identity_from_headers, DEV_IDENTITY
+from binder.config import load_settings
 
-HEADER = load_settings({"LEDGER_AUTH": "header", "LEDGER_DB": "/tmp/ledger-test.db"})
+HEADER = load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/tmp/binder-test.db"})
 LOCAL = load_settings({})
 
 
@@ -582,16 +582,16 @@ def test_name_falls_back_to_email():
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_auth.py -v`
-Expected: FAIL, `No module named 'ledger.auth'`
+Expected: FAIL, `No module named 'binder.auth'`
 
-- [ ] **Step 3: Implement `ledger/auth.py`**
+- [ ] **Step 3: Implement `binder/auth.py`**
 
 ```python
 """Who is calling.
 
 Header mode trusts X-Offdesk-Email / -Name / -Teams because the app listens
 on loopback only and nginx, which asks the Offdesk sign-in service, is the
-only caller. Every non-GET request must also carry `X-Ledger: 1`: a form on
+only caller. Every non-GET request must also carry `X-Binder: 1`: a form on
 another site can post with the visitor's cookie but cannot set that header.
 """
 
@@ -613,7 +613,7 @@ class Identity:
     teams: Tuple[str, ...]
 
 
-DEV_IDENTITY = Identity("dev@ledger.local", "Dev", ("offdesk",))
+DEV_IDENTITY = Identity("dev@binder.local", "Dev", ("offdesk",))
 
 
 def identity_from_headers(headers: Mapping[str, str], settings: Settings) -> Identity:
@@ -625,14 +625,14 @@ def identity_from_headers(headers: Mapping[str, str], settings: Settings) -> Ide
     name = unquote(headers.get("x-offdesk-name") or "").strip() or email
     teams = tuple(t.strip() for t in (headers.get("x-offdesk-teams") or "").split(",") if t.strip())
     if settings.team not in teams:
-        raise HTTPException(403, "Ledger is for the %s team" % settings.team)
+        raise HTTPException(403, "Binder is for the %s team" % settings.team)
     return Identity(email, name, teams)
 
 
 def guard(request: Request) -> Identity:
     who = identity_from_headers(request.headers, request.app.state.settings)
-    if request.method not in SAFE_METHODS and request.headers.get("x-ledger") != "1":
-        raise HTTPException(403, "Missing X-Ledger header")
+    if request.method not in SAFE_METHODS and request.headers.get("x-binder") != "1":
+        raise HTTPException(403, "Missing X-Binder header")
     return who
 ```
 
@@ -644,7 +644,7 @@ Expected: 5 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add ledger/auth.py tests/test_auth.py
+git add binder/auth.py tests/test_auth.py
 git commit -m "Offdesk header identity and CSRF guard"
 ```
 
@@ -653,15 +653,15 @@ git commit -m "Offdesk header identity and CSRF guard"
 ### Task 5: Errors and statuses
 
 **Files:**
-- Create: `ledger/errors.py`, `ledger/statuses.py`
+- Create: `binder/errors.py`, `binder/statuses.py`
 - Test: `tests/test_status.py` (rules part)
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 import pytest
-from ledger.errors import Invalid
-from ledger.statuses import check_transition, initial_status
+from binder.errors import Invalid
+from binder.statuses import check_transition, initial_status
 
 
 def test_initial_status():
@@ -694,9 +694,9 @@ def test_lost_lead_can_reopen():
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `.venv/bin/pytest tests/test_status.py -v`
-Expected: FAIL, `No module named 'ledger.errors'`
+Expected: FAIL, `No module named 'binder.errors'`
 
-- [ ] **Step 3: Implement `ledger/errors.py`**
+- [ ] **Step 3: Implement `binder/errors.py`**
 
 ```python
 from typing import Any, Optional
@@ -735,7 +735,7 @@ def install(app: FastAPI) -> None:
         return JSONResponse({"detail": str(exc), "current": exc.current}, status_code=409)
 ```
 
-- [ ] **Step 4: Implement `ledger/statuses.py`**
+- [ ] **Step 4: Implement `binder/statuses.py`**
 
 ```python
 """The pipeline. One record per organisation; Won flips a lead into a client."""
@@ -778,7 +778,7 @@ Expected: 6 passed
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ledger/errors.py ledger/statuses.py tests/test_status.py
+git add binder/errors.py binder/statuses.py tests/test_status.py
 git commit -m "Pipeline statuses and error types"
 ```
 
@@ -787,7 +787,7 @@ git commit -m "Pipeline statuses and error types"
 ### Task 6: App factory, whoami, health
 
 **Files:**
-- Create: `ledger/app.py`, `ledger/api/__init__.py`, `ledger/api/misc.py`, `ledger/__main__.py`, `tests/conftest.py`
+- Create: `binder/app.py`, `binder/api/__init__.py`, `binder/api/misc.py`, `binder/__main__.py`, `tests/conftest.py`
 - Modify: `tests/test_auth.py` (append HTTP tests)
 
 - [ ] **Step 1: Write `tests/conftest.py`**
@@ -796,26 +796,26 @@ git commit -m "Pipeline statuses and error types"
 import pytest
 from fastapi.testclient import TestClient
 
-from ledger.app import create_app
-from ledger.config import load_settings
+from binder.app import create_app
+from binder.config import load_settings
 
 TEAM = {"x-offdesk-email": "ana@example.com", "x-offdesk-name": "Ana", "x-offdesk-teams": "offdesk"}
-WRITE = dict(TEAM, **{"x-ledger": "1"})
+WRITE = dict(TEAM, **{"x-binder": "1"})
 
 
 @pytest.fixture
 def make_client(tmp_path):
     def _make(auth="header"):
-        env = {"LEDGER_DB": str(tmp_path / "t.db")}
+        env = {"BINDER_DB": str(tmp_path / "t.db")}
         if auth:
-            env["LEDGER_AUTH"] = auth
+            env["BINDER_AUTH"] = auth
         return TestClient(create_app(load_settings(env)))
     return _make
 
 
 @pytest.fixture
 def client(make_client):
-    """Header mode, signed in as Ana, X-Ledger set on every request."""
+    """Header mode, signed in as Ana, X-Binder set on every request."""
     c = make_client()
     c.headers.update(WRITE)
     return c
@@ -848,21 +848,21 @@ def test_whoami_without_headers_is_401(make_client):
 
 
 def test_local_mode_whoami_is_dev(make_client):
-    assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@ledger.local"
+    assert make_client(auth="").get("/api/whoami").json()["email"] == "dev@binder.local"
 ```
 
 - [ ] **Step 3: Run to verify failure**
 
 Run: `.venv/bin/pytest tests/test_auth.py -v`
-Expected: FAIL, `No module named 'ledger.app'`
+Expected: FAIL, `No module named 'binder.app'`
 
-- [ ] **Step 4: Implement `ledger/api/__init__.py`**
+- [ ] **Step 4: Implement `binder/api/__init__.py`**
 
 ```python
 """HTTP routers. Every router here is mounted under /api behind guard()."""
 ```
 
-- [ ] **Step 5: Implement `ledger/api/misc.py`**
+- [ ] **Step 5: Implement `binder/api/misc.py`**
 
 ```python
 from fastapi import APIRouter, Depends
@@ -877,7 +877,7 @@ def whoami(who: Identity = Depends(guard)):
     return {"email": who.email, "name": who.name, "teams": list(who.teams)}
 ```
 
-- [ ] **Step 6: Implement `ledger/app.py`**
+- [ ] **Step 6: Implement `binder/app.py`**
 
 ```python
 from fastapi import APIRouter, Depends, FastAPI
@@ -894,7 +894,7 @@ def create_app(settings: Settings) -> FastAPI:
     migrate(conn, settings.db_path)
     conn.close()
 
-    app = FastAPI(title="Ledger", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Binder", docs_url=None, redoc_url=None)
     app.state.settings = settings
     errors.install(app)
 
@@ -908,7 +908,7 @@ def create_app(settings: Settings) -> FastAPI:
     return app
 ```
 
-- [ ] **Step 7: Implement `ledger/__main__.py`**
+- [ ] **Step 7: Implement `binder/__main__.py`**
 
 ```python
 import os
@@ -941,7 +941,7 @@ Expected: 9 passed
 - [ ] **Step 9: Commit**
 
 ```bash
-git add ledger/app.py ledger/api ledger/__main__.py tests/conftest.py tests/test_auth.py
+git add binder/app.py binder/api binder/__main__.py tests/conftest.py tests/test_auth.py
 git commit -m "App factory with health and whoami behind the sign-in guard"
 ```
 
@@ -950,8 +950,8 @@ git commit -m "App factory with health and whoami behind the sign-in guard"
 ### Task 7: Organisations
 
 **Files:**
-- Create: `ledger/schemas.py`, `ledger/repo/__init__.py`, `ledger/repo/orgs.py`, `ledger/api/orgs.py`
-- Modify: `ledger/app.py` (include router)
+- Create: `binder/schemas.py`, `binder/repo/__init__.py`, `binder/repo/orgs.py`, `binder/api/orgs.py`
+- Modify: `binder/app.py` (include router)
 - Test: `tests/test_orgs.py`, and append to `tests/test_status.py`
 
 - [ ] **Step 1: Write the failing tests `tests/test_orgs.py`**
@@ -960,7 +960,7 @@ git commit -m "App factory with health and whoami behind the sign-in guard"
 from tests.conftest import TEAM
 
 
-def test_post_without_x_ledger_is_403(make_client):
+def test_post_without_x_binder_is_403(make_client):
     r = make_client().post("/api/orgs", json={"name": "X"}, headers=TEAM)
     assert r.status_code == 403
 
@@ -1049,10 +1049,10 @@ def test_bad_status_is_422(client, org):
 Run: `.venv/bin/pytest tests/test_orgs.py tests/test_status.py -v`
 Expected: FAIL with 404/405 responses, because the routes don't exist yet.
 
-- [ ] **Step 4: Implement `ledger/schemas.py`**
+- [ ] **Step 4: Implement `binder/schemas.py`**
 
 ```python
-"""Request bodies. Responses are plain dicts from ledger/repo."""
+"""Request bodies. Responses are plain dicts from binder/repo."""
 
 from typing import List, Optional
 
@@ -1139,7 +1139,7 @@ class InteractionPatch(_Body):
     contact_ids: Optional[List[int]] = None
 ```
 
-- [ ] **Step 5: Implement `ledger/repo/__init__.py`**
+- [ ] **Step 5: Implement `binder/repo/__init__.py`**
 
 ```python
 """Data access. Plain functions: (conn, ...) -> dict. No HTTP here."""
@@ -1152,7 +1152,7 @@ def row(r: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
     return dict(r) if r is not None else None
 ```
 
-- [ ] **Step 6: Implement `ledger/repo/orgs.py`**
+- [ ] **Step 6: Implement `binder/repo/orgs.py`**
 
 ```python
 import json
@@ -1292,7 +1292,7 @@ def status_history(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]
         "SELECT * FROM status_history WHERE org_id = ? ORDER BY at DESC, id DESC", (org_id,))]
 ```
 
-- [ ] **Step 7: Implement `ledger/api/orgs.py`**
+- [ ] **Step 7: Implement `binder/api/orgs.py`**
 
 ```python
 import sqlite3
@@ -1345,7 +1345,7 @@ def history(org_id: int, db: sqlite3.Connection = Depends(get_db)):
     return orgs.status_history(db, org_id)
 ```
 
-- [ ] **Step 8: Register the router in `ledger/app.py`**
+- [ ] **Step 8: Register the router in `binder/app.py`**
 
 Change the import line `from .api import misc` to `from .api import misc, orgs`, and after `api.include_router(misc.router)` add:
 
@@ -1361,7 +1361,7 @@ Expected: all pass. If `test_status_change_writes_history` shows ties in orderin
 - [ ] **Step 10: Commit**
 
 ```bash
-git add ledger tests
+git add binder tests
 git commit -m "Organisations: CRUD, slugs, filters, status pipeline with history"
 ```
 
@@ -1370,8 +1370,8 @@ git commit -m "Organisations: CRUD, slugs, filters, status pipeline with history
 ### Task 8: Contacts
 
 **Files:**
-- Create: `ledger/repo/contacts.py`, `ledger/api/contacts.py`
-- Modify: `ledger/app.py`
+- Create: `binder/repo/contacts.py`, `binder/api/contacts.py`
+- Modify: `binder/app.py`
 - Test: `tests/test_contacts.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -1430,7 +1430,7 @@ def test_contact_on_missing_org_is_404(client):
 Run: `.venv/bin/pytest tests/test_contacts.py -v`
 Expected: FAIL (404/405 responses)
 
-- [ ] **Step 3: Implement `ledger/repo/contacts.py`**
+- [ ] **Step 3: Implement `binder/repo/contacts.py`**
 
 ```python
 import sqlite3
@@ -1515,7 +1515,7 @@ def delete(conn: sqlite3.Connection, contact_id: int) -> None:
         raise NotFound("No contact %d" % contact_id)
 ```
 
-- [ ] **Step 4: Implement `ledger/api/contacts.py`**
+- [ ] **Step 4: Implement `binder/api/contacts.py`**
 
 ```python
 import sqlite3
@@ -1558,7 +1558,7 @@ def delete_contact(contact_id: int, db: sqlite3.Connection = Depends(get_db)):
     return Response(status_code=204)
 ```
 
-- [ ] **Step 5: Register in `ledger/app.py`**
+- [ ] **Step 5: Register in `binder/app.py`**
 
 Import `contacts` alongside the others (`from .api import misc, orgs, contacts`) and add `api.include_router(contacts.router)`.
 
@@ -1570,7 +1570,7 @@ Expected: all pass
 - [ ] **Step 7: Commit**
 
 ```bash
-git add ledger tests
+git add binder tests
 git commit -m "Contacts with a single primary per organisation"
 ```
 
@@ -1579,8 +1579,8 @@ git commit -m "Contacts with a single primary per organisation"
 ### Task 9: Interactions and timeline
 
 **Files:**
-- Create: `ledger/repo/interactions.py`, `ledger/repo/timeline.py`, `ledger/api/interactions.py`
-- Modify: `ledger/app.py`
+- Create: `binder/repo/interactions.py`, `binder/repo/timeline.py`, `binder/api/interactions.py`
+- Modify: `binder/app.py`
 - Test: `tests/test_interactions.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -1660,7 +1660,7 @@ def test_delete_interaction(client, org):
 Run: `.venv/bin/pytest tests/test_interactions.py -v`
 Expected: FAIL (404/405)
 
-- [ ] **Step 3: Implement `ledger/repo/interactions.py`**
+- [ ] **Step 3: Implement `binder/repo/interactions.py`**
 
 ```python
 import sqlite3
@@ -1761,7 +1761,7 @@ def delete(conn: sqlite3.Connection, interaction_id: int) -> None:
         raise NotFound("No interaction %d" % interaction_id)
 ```
 
-- [ ] **Step 4: Implement `ledger/repo/timeline.py`**
+- [ ] **Step 4: Implement `binder/repo/timeline.py`**
 
 ```python
 """One organisation's history, newest first: interactions and status changes.
@@ -1783,7 +1783,7 @@ def for_org(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:
     return items
 ```
 
-- [ ] **Step 5: Implement `ledger/api/interactions.py`**
+- [ ] **Step 5: Implement `binder/api/interactions.py`**
 
 ```python
 import sqlite3
@@ -1831,7 +1831,7 @@ def delete_interaction(interaction_id: int, db: sqlite3.Connection = Depends(get
     return Response(status_code=204)
 ```
 
-- [ ] **Step 6: Register in `ledger/app.py`**
+- [ ] **Step 6: Register in `binder/app.py`**
 
 Import `interactions` with the others and add `api.include_router(interactions.router)`.
 
@@ -1843,7 +1843,7 @@ Expected: all pass. In `test_timeline_mixes_interactions_and_status` the order i
 - [ ] **Step 8: Commit**
 
 ```bash
-git add ledger tests
+git add binder tests
 git commit -m "Interactions with contacts, and the organisation timeline"
 ```
 
@@ -1852,8 +1852,8 @@ git commit -m "Interactions with contacts, and the organisation timeline"
 ### Task 10: Search
 
 **Files:**
-- Create: `ledger/repo/search.py`
-- Modify: `ledger/api/misc.py`
+- Create: `binder/repo/search.py`
+- Modify: `binder/api/misc.py`
 - Test: `tests/test_search.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -1895,7 +1895,7 @@ def test_empty_query(client):
 Run: `.venv/bin/pytest tests/test_search.py -v`
 Expected: FAIL (404)
 
-- [ ] **Step 3: Implement `ledger/repo/search.py`**
+- [ ] **Step 3: Implement `binder/repo/search.py`**
 
 ```python
 """Full-text search over organisations, contacts and interactions (and
@@ -1925,7 +1925,7 @@ def query(conn: sqlite3.Connection, q: str, limit: int = 50) -> List[Dict[str, A
 
 Note: if the term only matches the `title` column, `snippet` on column 4 still returns body text without brackets. That's fine, because the UI shows `title` as well.
 
-- [ ] **Step 4: Add the route to `ledger/api/misc.py`**
+- [ ] **Step 4: Add the route to `binder/api/misc.py`**
 
 ```python
 import sqlite3
@@ -1949,7 +1949,7 @@ Expected: all pass. If `[Porto]` fails because the match landed in `title`, chec
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ledger tests
+git add binder tests
 git commit -m "Full-text search with safe prefix terms"
 ```
 
@@ -1958,8 +1958,8 @@ git commit -m "Full-text search with safe prefix terms"
 ### Task 11: Needs-attention and activity feeds
 
 **Files:**
-- Create: `ledger/repo/feeds.py`
-- Modify: `ledger/api/misc.py`
+- Create: `binder/repo/feeds.py`
+- Modify: `binder/api/misc.py`
 - Test: `tests/test_feeds.py`
 
 Rules (spec, Screens §1), for open leads only (`kind = lead`, status in `OPEN_LEAD_STATUSES`), except `overdue`, which applies to every record:
@@ -1970,11 +1970,11 @@ Rules (spec, Screens §1), for open leads only (`kind = lead`, status in `OPEN_L
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from ledger.repo import feeds
+from binder.repo import feeds
 
 
 def db(client):
-    from ledger.db import connect
+    from binder.db import connect
     return connect(client.app.state.settings.db_path)
 
 
@@ -2020,7 +2020,7 @@ def test_activity_feed(client, org):
 Run: `.venv/bin/pytest tests/test_feeds.py -v`
 Expected: FAIL, `cannot import name 'feeds'`
 
-- [ ] **Step 3: Implement `ledger/repo/feeds.py`**
+- [ ] **Step 3: Implement `binder/repo/feeds.py`**
 
 ```python
 """Home screen feeds: what needs attention, and what happened lately."""
@@ -2076,7 +2076,7 @@ def activity(conn: sqlite3.Connection, limit: int = 30) -> List[Dict[str, Any]]:
     return [row(r) for r in rows]
 ```
 
-- [ ] **Step 4: Add the routes to `ledger/api/misc.py`**
+- [ ] **Step 4: Add the routes to `binder/api/misc.py`**
 
 ```python
 from ..repo import feeds
@@ -2100,7 +2100,7 @@ Expected: all pass. `test_activity_feed`: the interaction and the creation statu
 - [ ] **Step 6: Commit**
 
 ```bash
-git add ledger tests
+git add binder tests
 git commit -m "Needs-attention and activity feeds"
 ```
 
@@ -2110,13 +2110,13 @@ git commit -m "Needs-attention and activity feeds"
 
 - [ ] **Step 1: Start locally**
 
-Run: `LEDGER_DB=/tmp/ledger-dev.db .venv/bin/python -m ledger &` then `curl -s localhost:8770/api/health` and `curl -s localhost:8770/api/whoami`
-Expected: `{"ok":true}` and `{"email":"dev@ledger.local",...}`
+Run: `BINDER_DB=/tmp/binder-dev.db .venv/bin/python -m binder &` then `curl -s localhost:8770/api/health` and `curl -s localhost:8770/api/whoami`
+Expected: `{"ok":true}` and `{"email":"dev@binder.local",...}`
 
 - [ ] **Step 2: Check the refusal paths**
 
-Run: `LEDGER_AUTH=heder .venv/bin/python -m ledger; echo $?` → prints the error, exits 2.
-Run: `LEDGER_AUTH=header LEDGER_HOST=0.0.0.0 .venv/bin/python -m ledger; echo $?` → prints the error, exits 2.
+Run: `BINDER_AUTH=heder .venv/bin/python -m binder; echo $?` → prints the error, exits 2.
+Run: `BINDER_AUTH=header BINDER_HOST=0.0.0.0 .venv/bin/python -m binder; echo $?` → prints the error, exits 2.
 
 - [ ] **Step 3: Stop the server and run the whole suite**
 
@@ -2128,18 +2128,18 @@ Expected: all pass, 0 skipped.
 `README.md`:
 
 ````markdown
-# Ledger
+# Binder
 
 Leads and clients for Offdesk. Sibling to Bench: same sign-in, same Tenon design system.
-Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`.
+Design: `docs/superpowers/specs/2026-11-11-binder-design.md`.
 
 ```
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
-LEDGER_DB=ledger.db .venv/bin/python -m ledger     # http://127.0.0.1:8770
+BINDER_DB=binder.db .venv/bin/python -m binder     # http://127.0.0.1:8770
 ```
 
-`LEDGER_AUTH=header` is the server behind nginx; unset is local development.
+`BINDER_AUTH=header` is the server behind nginx; unset is local development.
 ````
 
 ```bash

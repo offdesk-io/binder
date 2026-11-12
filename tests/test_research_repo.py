@@ -2,9 +2,9 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from ledger.db import connect
-from ledger.errors import Conflict, NotFound
-from ledger.repo import research, search
+from binder.db import connect
+from binder.errors import Conflict, NotFound
+from binder.repo import research, search
 
 ANA = "ana@example.com"
 BRIEF = {
@@ -80,7 +80,7 @@ def test_lists_keep_organisation_and_person_runs_apart(conn, client, org):
         research.list_for_org(conn, 999)
 
 
-def test_the_subject_holds_what_ledger_knows(conn, client, org):
+def test_the_subject_holds_what_binder_knows(conn, client, org):
     rui = person(client, org, "Rui", role="CTO", is_primary=True)
     for n in range(25):
         r = client.post("/api/orgs/%d/interactions" % org["id"], json={

@@ -1,4 +1,4 @@
-/* Ledger's own layout. The shell, type and components come from Tenon (tenon.css, tenon-react.css, tn-page.css).
+/* Binder's own layout. The shell, type and components come from Tenon (tenon.css, tenon-react.css, tn-page.css).
  * Every value here reads a semantic --tenon-* token. Page classes are tn-custom-*. */
 
 .tn-custom-header {

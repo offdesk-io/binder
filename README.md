@@ -1,16 +1,16 @@
-# Ledger
+# Binder
 
 Leads and clients for Offdesk. Sibling to Bench: same sign-in, same Tenon design system.
-Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`.
+Design: `docs/superpowers/specs/2026-11-11-binder-design.md`.
 
 ```
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 (cd web && npm install && npm run build)
-LEDGER_DB=ledger.db .venv/bin/python -m ledger     # http://127.0.0.1:8770
+BINDER_DB=binder.db .venv/bin/python -m binder     # http://127.0.0.1:8770
 ```
 
-The backend serves the built app from `web/dist` (`LEDGER_WEB` points elsewhere).
+The backend serves the built app from `web/dist` (`BINDER_WEB` points elsewhere).
 For frontend work, run the backend as above and `cd web && npm run dev`, then
 open `http://127.0.0.1:5173`, which sends `/api` to the backend.
 
@@ -20,20 +20,20 @@ From `web/`: `npm run check` type-checks, `npm test` runs the Vitest suite, and
 `npm run e2e` builds and runs the Playwright flows at 390px and 1280px against a
 throwaway database (`npx playwright install chromium` once first).
 
-`LEDGER_AUTH=header` is the server behind nginx, and needs `LEDGER_DB` set to an absolute path; unset is local development. Ledger listens on loopback only in both modes. `LEDGER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
+`BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
 
 Research and "Paste and summarise" call the Anthropic API from the server.
 `ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides
-their buttons. `LEDGER_AI=fake` gives canned answers instead, for local
+their buttons. `BINDER_AI=fake` gives canned answers instead, for local
 development and the Playwright flows (it refuses to start in header mode), and
-`LEDGER_AI=off` turns them off with a key set. `pytest -m online` makes one
+`BINDER_AI=off` turns them off with a key set. `pytest -m online` makes one
 real research call and one real summarise call about a made-up company: it
 costs money and never runs in CI.
 
 ## API
 
 Every route sits under `/api` and needs sign-in, except `GET /api/health`.
-Every non-GET request needs the header `X-Ledger: 1`. Times are UTC ISO strings
+Every non-GET request needs the header `X-Binder: 1`. Times are UTC ISO strings
 with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
 
 ### Records
@@ -63,7 +63,7 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   price), `error` (why it failed), `run_at`, `finished_at`, `author_email`.
   A `brief` has `overview`, `what_they_do`, `size_and_funding`, `people` (each
   `{name, role, contact_id, why}`, where `contact_id` is null for someone not
-  yet in Ledger), `recent_news` (each `{headline, date, url}`),
+  yet in Binder), `recent_news` (each `{headline, date, url}`),
   `likely_needs`, `offdesk_angle` and `open_questions`.
   `POST` to either list starts a run and answers 202 with the running row. A
   record can have one run going at a time: a second `POST` gets 409 with
@@ -102,7 +102,7 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
 `client_statuses`, `interaction_types` and `relationships`, from
-`ledger/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. Status moves are unordered within a kind: a lead can go
+`binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
 it an active client, and a client never goes back to a lead.
 
@@ -112,7 +112,7 @@ Every PATCH carries the `updated_at` it loaded. A stale one gets 409.
 
 Every error body has `detail`, a sentence to show people:
 
-- 401 not signed in, 403 wrong team or missing `X-Ledger`, 404 not found.
+- 401 not signed in, 403 wrong team or missing `X-Binder`, 404 not found.
 - 409: a stale save adds `current`, the record as it is now.
 - 422: a broken rule. Request validation adds `errors`, a list of
   `{loc, msg, type}`, and `detail` joins them as `field: message`.

@@ -28,7 +28,7 @@ export type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
 
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (method !== 'GET') headers['X-Ledger'] = '1' // the API refuses a write without it
+  if (method !== 'GET') headers['X-Binder'] = '1' // the API refuses a write without it
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
@@ -39,7 +39,7 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
       credentials: 'same-origin',
     })
   } catch {
-    throw new ApiError(0, 'Ledger cannot be reached. Check your connection and try again.')
+    throw new ApiError(0, 'Binder cannot be reached. Check your connection and try again.')
   }
   if (res.status === 204) return undefined as T
   const data = await res.json().catch(() => null)

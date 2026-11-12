@@ -63,9 +63,9 @@ def test_failed_create_leaves_no_open_transaction(tmp_path):
     import sqlite3
 
     import pytest
-    from ledger.db import connect, migrate
-    from ledger.errors import NotFound
-    from ledger.repo import contacts, orgs
+    from binder.db import connect, migrate
+    from binder.errors import NotFound
+    from binder.repo import contacts, orgs
     path = str(tmp_path / "x.db")
     conn = connect(path)
     migrate(conn, path)

@@ -1,4 +1,4 @@
-"""The one place Ledger calls the Anthropic API: on the server only, with
+"""The one place Binder calls the Anthropic API: on the server only, with
 ANTHROPIC_API_KEY, so the browser never sees the key. The rest of the app
 calls `research()` and `summarise()` on whatever `from_settings()` returns,
 which is FakeAI in tests and local development.
@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from .config import Settings
 from .statuses import INTERACTION_TYPES
 
-log = logging.getLogger("ledger.ai")
+log = logging.getLogger("binder.ai")
 
 MODEL = "claude-opus-5-5"
 BETAS = ["server-side-fallback-2026-07-01"]
@@ -25,7 +25,7 @@ MAX_STEPS = 6  # a turn with web tools can pause; resume it this many times at m
 # What the research prompt says Offdesk is. Replace it with what Offdesk sells:
 # `offdesk_angle` in each brief is written against it.
 ABOUT_OFFDESK = (
-    "Offdesk is a small studio that takes on client projects. Its team uses Ledger "
+    "Offdesk is a small studio that takes on client projects. Its team uses Binder "
     "to keep track of the organisations it talks to about work."
 )
 
@@ -204,7 +204,7 @@ class AnthropicAI:
 
 
 class FakeAI:
-    """Stands in for the API in tests and local development (LEDGER_AI=fake).
+    """Stands in for the API in tests and local development (BINDER_AI=fake).
     It answers at once from what it is given, costs nothing, and records each
     call in `calls`. With `fail`, every call raises AIError(fail)."""
 
@@ -217,7 +217,7 @@ class FakeAI:
         if self.fail:
             raise AIError(self.fail, Usage("fake"))
         name = (subject.get("person") or subject["organisation"])["name"]
-        people = [{"name": c["name"], "role": c.get("role") or "", "contact_id": c["id"], "why": "Already in Ledger."}
+        people = [{"name": c["name"], "role": c.get("role") or "", "contact_id": c["id"], "why": "Already in Binder."}
                   for c in subject.get("contacts", [])]
         people.append({"name": "Sam Example", "role": "Head of Product", "contact_id": None,
                        "why": "Runs the product team."})

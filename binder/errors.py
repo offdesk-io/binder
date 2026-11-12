@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-log = logging.getLogger("ledger")
+log = logging.getLogger("binder")
 
 
 # Every error body has `detail`, a sentence for people. A 409 from a stale save

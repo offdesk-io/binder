@@ -5,7 +5,7 @@ import anthropic
 import httpx
 import pytest
 
-from ledger.ai import BETAS, MODEL, WEB_TOOLS, AIError, AnthropicAI, FakeAI, Usage
+from binder.ai import BETAS, MODEL, WEB_TOOLS, AIError, AnthropicAI, FakeAI, Usage
 
 BRIEF = {
     "overview": "A pottery.", "what_they_do": "Kilns.", "size_and_funding": "Unknown.",

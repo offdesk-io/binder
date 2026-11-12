@@ -98,9 +98,9 @@ def test_next_step_due_must_be_an_iso_date(client, org):
 
 def test_contact_ownership_is_checked_inside_the_write_transaction(tmp_path, monkeypatch):
     import pytest
-    from ledger.db import connect, migrate
-    from ledger.errors import Invalid
-    from ledger.repo import interactions, orgs
+    from binder.db import connect, migrate
+    from binder.errors import Invalid
+    from binder.repo import interactions, orgs
     path = str(tmp_path / "x.db")
     conn = connect(path)
     migrate(conn, path)

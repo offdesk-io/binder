@@ -19,7 +19,7 @@ from ..statuses import INTERACTION_TYPES
 from .research import need_ai
 
 router = APIRouter()
-log = logging.getLogger("ledger.ai")
+log = logging.getLogger("binder.ai")
 
 
 def _parsed(check: Callable[[str], Optional[str]], v: Any) -> Optional[str]:

@@ -1,16 +1,16 @@
-# Ledger
+# Binder
 
-The Offdesk leads and clients manager, at `https://ledger.offdesk.io`. It is a
+The Offdesk leads and clients manager, at `https://binder.offdesk.io`. It is a
 sibling to Bench, the team's to-do board: the two share the Offdesk sign-in and
-the Tenon design system, and run on the same Hetzner server. Ledger owns the
+the Tenon design system, and run on the same Hetzner server. Binder owns the
 record for each lead and client. Bench owns the work.
 
 Read before changing anything:
 
-- Design: `docs/superpowers/specs/2026-11-11-ledger-design.md`
-- Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-ledger-1-core-api.md`
-- Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-ledger-2-frontend.md`
-- Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-ledger-3-ai.md`
+- Design: `docs/superpowers/specs/2026-11-11-binder-design.md`
+- Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-binder-1-core-api.md`
+- Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-binder-2-frontend.md`
+- Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-binder-3-ai.md`
 
 ## Where the work stands
 
@@ -29,8 +29,8 @@ There are five plans, each one spec → plan → build → review:
 ```
 python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest -q
-LEDGER_DB=ledger.db .venv/bin/python -m ledger      # http://127.0.0.1:8770
-LEDGER_AI=fake LEDGER_DB=ledger.db .venv/bin/python -m ledger   # canned AI answers, no key
+BINDER_DB=binder.db .venv/bin/python -m binder      # http://127.0.0.1:8770
+BINDER_AI=fake BINDER_DB=binder.db .venv/bin/python -m binder   # canned AI answers, no key
 (cd web && npm install && npm run check && npm test)   # frontend
 (cd web && npm run e2e)                                # Playwright, builds first
 ```
@@ -40,7 +40,7 @@ services and never run in CI.
 
 ## Rules for the code
 
-- **AI.** Only `ledger/ai.py` imports `anthropic`, and only on the server:
+- **AI.** Only `binder/ai.py` imports `anthropic`, and only on the server:
   the browser never sees the key. Everything else goes through
   `from_settings()`, which is `FakeAI` in tests. Tests never call the real
   API, except `tests/test_ai_online.py` (`pytest -m online`), which is run
@@ -48,9 +48,9 @@ services and never run in CI.
   writes to an organisation or its contacts; "Add?" on a suggested person is
   the only way a brief becomes a contact, and it is a click.
 - **Python 3.9.** Use `Optional`/`List`/`Dict` from `typing`, never `X | Y`.
-- **Layers.** `ledger/repo/` holds plain functions `(conn, ...) -> dict` with no
-  HTTP in them. `ledger/api/` holds routers that validate with pydantic
-  (`ledger/schemas.py`) and call the repo. Every `/api` route sits behind
+- **Layers.** `binder/repo/` holds plain functions `(conn, ...) -> dict` with no
+  HTTP in them. `binder/api/` holds routers that validate with pydantic
+  (`binder/schemas.py`) and call the repo. Every `/api` route sits behind
   `guard()`, except `/api/health`.
 - **Every write** runs `BEGIN IMMEDIATE`, then `try: … COMMIT`, then
   `except: ROLLBACK; raise`. Existence and ownership checks go inside that
@@ -61,10 +61,10 @@ services and never run in CI.
   `Conflict(current)`, which returns 409.
 - **Times.** Store times as UTC ISO with microseconds, as `db.now()` and
   `schemas.iso_datetime` produce, because feeds and sorting compare them as
-  strings. Dates are `YYYY-MM-DD`. "Today" uses `LEDGER_TZ`
+  strings. Dates are `YYYY-MM-DD`. "Today" uses `BINDER_TZ`
   (default `Europe/London`).
 - **Migrations.**
-  - Files are named `ledger/migrations/NNN_name.sql` and applied in order at
+  - Files are named `binder/migrations/NNN_name.sql` and applied in order at
     startup. Each runs in one transaction with foreign keys off and a
     `foreign_key_check` before commit, so a file must not contain its own
     `BEGIN`/`COMMIT`.
@@ -74,22 +74,22 @@ services and never run in CI.
 - **Search.** The FTS5 table is `search(kind, ref_id, org_id, title, body)`.
   Triggers keep it up to date. Bind `ref_id` and `org_id` as ints.
 - **Sign-in.**
-  - `LEDGER_AUTH=header` trusts the `X-Offdesk-Email`, `X-Offdesk-Name` and
+  - `BINDER_AUTH=header` trusts the `X-Offdesk-Email`, `X-Offdesk-Name` and
     `X-Offdesk-Teams` headers from nginx. Unset means local development with a
     fixed identity.
   - Both modes listen on loopback only.
-  - Every non-GET request needs `X-Ledger: 1`.
-  - Only the team named by `LEDGER_TEAM` gets in.
+  - Every non-GET request needs `X-Binder: 1`.
+  - Only the team named by `BINDER_TEAM` gets in.
 
 ## Rules for the frontend
 
-- The app lives in `web/`. FastAPI serves its build (`ledger/web.py`), with
+- The app lives in `web/`. FastAPI serves its build (`binder/web.py`), with
   `index.html` for any path not under `/api`, so `/o/<slug>` links work.
 - Use a Tenon component before writing one. CSS in `web/src/styles.css` reads
   `var(--tenon-…)` tokens only: no hex colours, no font names.
 - `web/src/api/types.ts` and the README's API section describe the same
   shapes. Change them together.
-- Every fetch goes through `web/src/api/client.ts`, which adds `X-Ledger: 1`
+- Every fetch goes through `web/src/api/client.ts`, which adds `X-Binder: 1`
   to writes. Every edit form PATCHes only what changed, plus `updated_at`, and
   on a 409 loads `current` into the form. A save with nothing changed sends
   nothing.
@@ -97,15 +97,15 @@ services and never run in CI.
   the frontend.
 - One breakpoint: below 768px is the phone layout (`useIsPhone`).
 
-## Ledger and Bench
+## Binder and Bench
 
-- **Ledger never writes Bench's `todo.md`.** Changes to a Bench task go through
+- **Binder never writes Bench's `todo.md`.** Changes to a Bench task go through
   Bench's own PA (`pa_save`), against the server's offdesk board.
 - **Changes on the Bench side** (plan 4) are made in the Bench repo, on a branch
   and through a PR, following Bench's own `CLAUDE.md`. In particular, the task
   format lives in both `core/todo.js` and `core/todo.py`, which must change
   together.
-- **Ledger reads Bench's tasks** server to server, through Bench's
+- **Binder reads Bench's tasks** server to server, through Bench's
   `core/todo.py`.
 
 ## Commits and privacy

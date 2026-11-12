@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from ledger.ai import AnthropicAI
+from binder.ai import AnthropicAI
 
 pytestmark = [
     pytest.mark.online,
@@ -16,7 +16,7 @@ pytestmark = [
 SUBJECT = {
     "organisation": {"name": "Quillmere Kilnworks", "website": None, "sector": "Ceramics", "size": None,
                      "location": "a made-up town", "kind": "lead", "status": "lead", "source": None, "tags": [],
-                     "summary": "A fictional company, used to test Ledger.", "next_step": None},
+                     "summary": "A fictional company, used to test Binder.", "next_step": None},
     "contacts": [{"id": 1, "name": "Rowan Example", "role": "Founder", "relationship": "warm",
                   "is_primary": True, "notes": None}],
     "interactions": [],

@@ -12,7 +12,7 @@ from .ai import AIError
 from .db import connect
 from .repo import research
 
-log = logging.getLogger("ledger.jobs")
+log = logging.getLogger("binder.jobs")
 
 
 def _fail(conn: sqlite3.Connection, research_id: int, error: str, usage: Any = None) -> None:

@@ -30,6 +30,18 @@ development and the Playwright flows (it refuses to start in header mode), and
 real research call and one real summarise call about a made-up company: it
 costs money and never runs in CI.
 
+Binder reads Bench's `work` board to show each organisation's tasks: those
+tagged `[lead:: <slug>]`. On the server it uses its own sign-in token,
+`BINDER_BENCH_TOKEN`, against `BINDER_BENCH_URL` (default
+`https://bench.offdesk.io`) and `BINDER_BENCH_BOARD` (default `work`), and
+parses the board with Bench's `core/todo.py` from `BINDER_BENCH_CORE`. For
+local development, `BINDER_BENCH_FILE=tests/bench_todo.md
+BINDER_BENCH_CORE=../bench/core` reads a file instead. Without a token or a
+file, Bench is off and the Work section is hidden. Binder only ever reads the
+board; it never writes `todo.md`. A refresh runs every 10 minutes, and when the
+cache is more than a minute old as an organisation opens. While Bench is down,
+it retries at most once a minute.
+
 ## API
 
 Every route sits under `/api` and needs sign-in, except `GET /api/health`.
@@ -54,6 +66,15 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `updated_by`.
 - **Status change** (`/api/orgs/{id}/status-history`): `id`, `org_id`,
   `from_status`, `to_status`, `at`, `by_email`.
+- **Bench task** (`GET /api/orgs/{id}/work`, answering a **Work** record):
+  a task tagged `[lead:: <slug>]` with that organisation's slug. `task_key`,
+  `board`, `title`, `state`, `done` (bool), `done_on` (a date, or null), `due`
+  (a date, or null), `assignee` (or null), `fetched_at`, `url` (the task on
+  Bench). **Work**: `tasks` (a list of Bench tasks), `fetched_at` (null until
+  the first read finishes, which the page shows as "Reading Bench...") and
+  `error` (why the last refresh failed, or null). The route answers from the
+  cache at once and, when the cache is stale, starts a refresh in the
+  background. It is 404 when Bench is off.
 - **Research** (`/api/orgs/{id}/research` and `/api/contacts/{id}/research`
   list a record's runs, newest first; `/api/research/{id}` is one run): `id`,
   `org_id`, `contact_id` (null for an organisation's own brief), `status`
@@ -84,7 +105,10 @@ a status change can share an `id`.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**
   (`/api/activity?limit=`): `kind` (`interaction` or `status`), `id`,
   `org_id`, `at`, `by_email`. Interaction items add `type` and `summary`;
-  status items add `from_status` and `to_status`. Timeline interaction items
+  status items add `from_status` and `to_status`. A timeline also has `bench`
+  items, one per finished Bench task: `kind`, `id` (the task key), `title`,
+  `at` (the done date at midnight UTC), `by_email` (the assignee, or null) and
+  `url`. Timeline interaction items
   also carry the interaction's other fields; activity items carry `org_name`
   and `org_slug`.
 - **Needs attention** (`/api/attention`): `{org, reasons}`, where `org` is an
@@ -102,7 +126,7 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
 `client_statuses`, `interaction_types` and `relationships`, from
-`binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. Status moves are unordered within a kind: a lead can go
+`binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
 it an active client, and a client never goes back to a lead.
 
@@ -116,3 +140,24 @@ Every error body has `detail`, a sentence to show people:
 - 409: a stale save adds `current`, the record as it is now.
 - 422: a broken rule. Request validation adds `errors`, a list of
   `{loc, msg, type}`, and `detail` joins them as `field: message`.
+
+## Importing the Leads bucket
+
+A one-off move of the `work` board's **Leads** bucket into Binder, in two steps
+(the same Bench settings as above, plus `BINDER_DB`):
+
+```
+python -m scripts.import_from_bench plan [--out import-plan.csv]
+python -m scripts.import_from_bench apply import-plan.csv --by you@example.com [--links import-links.json]
+```
+
+`plan` writes `import-plan.csv`, one row per Leads task. Edit it before
+applying: give two rows the same slug to merge them into one organisation,
+clear a slug to skip a task, and correct the name, status and owner. `apply`
+creates the organisations, adds one note per task with its notes and
+sub-steps, and writes `import-links.json`. Running `apply` again adds nothing
+twice. Binder never writes `todo.md`, so the last step is: ask the PA to add
+`[lead:: <slug>]` to each task listed in `import-links.json`, on the work
+board.
+
+`import-plan.csv` and `import-links.json` hold real names and are git-ignored.

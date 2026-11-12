@@ -62,4 +62,6 @@ def work(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db)
     state = bench_links.sync_state(db, reader["board"])  # a refresh run in place (tests) shows at once
     tasks = [dict(t, url=task_url(reader["url"], t["board"], t["task_key"]))
              for t in bench_links.list_for_org(db, org_id)]
-    return {"tasks": tasks, "fetched_at": state["fetched_at"], "error": state["error"]}
+    # The page asks again while this is true: a refresh is running now.
+    return {"tasks": tasks, "fetched_at": state["fetched_at"], "error": state["error"],
+            "refreshing": refresher.running()}

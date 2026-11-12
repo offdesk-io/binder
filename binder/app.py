@@ -1,3 +1,4 @@
+import functools
 import sqlite3
 from typing import Any, Callable, Optional
 from urllib.parse import quote
@@ -34,7 +35,8 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     app.state.bench = bench_module.from_settings(settings) if bench is _FROM_SETTINGS else bench
     app.state.bench_refresher = None
     if app.state.bench is not None:
-        app.state.bench_refresher = jobs.Refresher(settings.db_path, app.state.bench, app.state.run_job)
+        refresh_job = run_job or functools.partial(jobs.in_thread, name="bench-refresh")
+        app.state.bench_refresher = jobs.Refresher(settings.db_path, app.state.bench, refresh_job)
         if bench is _FROM_SETTINGS:  # tests pass a reader and refresh on demand, with no timer
             app.state.bench_refresher.start_timer()
     errors.install(app)

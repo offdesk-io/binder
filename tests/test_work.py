@@ -70,3 +70,13 @@ def test_a_fresh_cache_does_not_refresh_again(make_client, bench_core):
     c.get("/api/orgs/%d/work" % org["id"])
     c.get("/api/orgs/%d/work" % org["id"])
     assert len(calls) == 1
+
+
+def test_while_bench_is_down_page_opens_retry_at_most_once_a_minute(make_client, bench_core):
+    calls = []
+    c = make(make_client, reader(bench_core, Broken()), run_job=lambda job: (calls.append(1), job()))
+    org = c.post("/api/orgs", json={"name": "Acme Studio"}).json()
+    for _ in range(3):
+        work = c.get("/api/orgs/%d/work" % org["id"]).json()
+    assert work["error"] == "Bench answered 401." and work["fetched_at"] is None
+    assert len(calls) == 1

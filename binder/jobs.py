@@ -63,10 +63,12 @@ class Refresher:
     def __init__(self, db_path: str, reader: Dict[str, Any], run_job: Callable[[Callable[[], None]], None]):
         self.db_path, self.reader, self.run_job = db_path, reader, run_job
         self._lock = threading.Lock()
+        self._last_try = float("-inf")  # time.monotonic() of the last attempt, good or bad
 
     def refresh(self) -> None:
         if not self._lock.acquire(blocking=False):
             return  # one is already running
+        self._last_try = time.monotonic()
         try:
             conn = connect(self.db_path)
             try:
@@ -92,7 +94,8 @@ class Refresher:
         """Starts a refresh in the background when the cache is older than a minute. True if it started one."""
         if fetched_at and _age_s(fetched_at) < STALE_AFTER_S:
             return False
-        if self._lock.locked():
+        # While Bench is down fetched_at stays old: try at most once a minute, not on every page open.
+        if self._lock.locked() or time.monotonic() - self._last_try < STALE_AFTER_S:
             return False
         self.run_job(self.refresh)
         return True
@@ -100,7 +103,10 @@ class Refresher:
     def start_timer(self) -> None:
         def loop() -> None:
             while True:
-                self.refresh()
+                try:
+                    self.refresh()
+                except Exception:  # the timer must outlive a bad refresh
+                    log.exception("bench refresh failed")
                 time.sleep(REFRESH_EVERY_S)
         threading.Thread(target=loop, name="bench-refresh", daemon=True).start()
 

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
 import { ContactForm } from '../../components/ContactForm'
 import { Loading } from '../../components/Loading'
+import { relationshipTone } from '../../lib/colour'
 import { label } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
 
@@ -34,7 +35,7 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
                 <div className="tn-cluster">
                   <Link to={`/c/${c.id}`}>{c.name}</Link>
                   {c.is_primary && <Tag tone="accent">Talk to</Tag>}
-                  {c.relationship && <Tag>{label(c.relationship)}</Tag>}
+                  {c.relationship && <Tag tone={relationshipTone(c.relationship)}>{label(c.relationship)}</Tag>}
                 </div>
                 <div className="tenon-caption tn-custom-faint">{[c.role, c.email, c.phone].filter(Boolean).join(' · ')}</div>
                 <Button className="tn-custom-person-edit" size="sm" variant="ghost" onClick={() => setEditing(c)} aria-label={`Edit ${c.name}`}>Edit</Button>

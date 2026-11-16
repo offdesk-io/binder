@@ -1,27 +1,9 @@
-import type { TagTone } from '@tiagopedras/tenon'
 import type { Reason } from '../api/types'
 
 /** `in_conversation` → `In conversation`. */
 export function label(code: string): string {
   const s = code.replace(/_/g, ' ')
   return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-const TONES: Record<string, TagTone> = {
-  lead: 'neutral',
-  contacted: 'info',
-  in_conversation: 'accent',
-  proposal_sent: 'running',
-  won: 'success',
-  lost: 'error',
-  parked: 'warning',
-  active: 'success',
-  paused: 'warning',
-  past: 'neutral',
-}
-
-export function statusTone(status: string): TagTone {
-  return TONES[status] ?? 'neutral'
 }
 
 export const REASON_TEXT: Record<Reason, string> = {
@@ -67,9 +49,15 @@ export function todayIso(now: Date = new Date()): string {
   return isoDay(now)
 }
 
+/** Whole days since a stored time, by the calendar day in the browser's zone. Null when there is no time. */
+export function daysSince(iso: string | null | undefined, now: Date = new Date()): number | null {
+  if (!iso) return null
+  return Math.round((startOfDay(now) - startOfDay(parse(iso))) / 86_400_000)
+}
+
 export function ago(iso: string | null | undefined, now: Date = new Date()): string {
-  if (!iso) return 'never'
-  const days = Math.round((startOfDay(now) - startOfDay(parse(iso))) / 86_400_000)
+  const days = daysSince(iso, now)
+  if (days === null) return 'never'
   if (days <= 0) return 'today'
   if (days === 1) return 'yesterday'
   if (days < 30) return `${days} days ago`

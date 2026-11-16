@@ -2,8 +2,10 @@ import { Alert, Button, Column, ColumnEmpty } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
+import { ColourDot } from '../../components/ColourTag'
 import { InteractionEntry } from '../../components/InteractionEntry'
 import { Loading } from '../../components/Loading'
+import { stageColour } from '../../lib/colour'
 import { day, label, person, safeHref, statusLine } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
 
@@ -35,7 +37,8 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
           {items.data.map((i) =>
             i.kind === 'status' ? (
               <li key={`s${i.id}`} className="tn-custom-muted">
-                {statusLine(i.from_status, i.to_status)} <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
+                <ColourDot colour={stageColour(i.to_status)} /> {statusLine(i.from_status, i.to_status)}{' '}
+                <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
               </li>
             ) : i.kind === 'bench' ? (
               <li key={`b${i.id}`} className="tn-custom-muted">

@@ -104,7 +104,7 @@ what the item is, and the pair (`kind`, `id`) identifies it: an interaction and
 a status change can share an `id`.
 
 - **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
-  `research`), `id`, `org_id`, `org_name`, `org_slug`, `title`, `snippet`
+  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `title`, `snippet`
   (each match wrapped in the control characters `\u0002` and `\u0003`), and
   `contact_id`: the person a research brief is about, null otherwise.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**

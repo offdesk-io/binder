@@ -1,5 +1,5 @@
 import { Alert, Button, Column, ColumnEmpty, LinkButton, Stat, Tag } from '@tiagopedras/tenon'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
@@ -11,6 +11,7 @@ import { QuickLog } from '../components/QuickLog'
 import { ResearchSection } from '../components/ResearchSection'
 import { StatusPicker } from '../components/StatusPicker'
 import { useSession } from '../app/session'
+import { lastContactTone, stageColour } from '../lib/colour'
 import { ago, label, money, person, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
@@ -85,7 +86,7 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
 
   return (
     <div className="tn-stack">
-      <header className="tn-stack">
+      <header className="tn-stack tn-custom-stage" style={{ '--tn-stage': stageColour(org.status).mark } as CSSProperties}>
         <div className="tn-toolbar">
           <div className="tn-cluster tn-custom-title">
             <h1 className="tenon-heading-3">{org.name}</h1>
@@ -107,8 +108,8 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
       </header>
 
       <div className="tn-cluster">
-        {org.value_estimate != null && <Stat eyebrow="Value" value={money(org.value_estimate)} />}
-        <Stat eyebrow="Last contact" value={ago(org.last_contact)} />
+        {org.value_estimate != null && <Stat eyebrow="Value" tone="accent" value={money(org.value_estimate)} />}
+        <Stat eyebrow="Last contact" tone={lastContactTone(org.last_contact)} value={ago(org.last_contact)} />
       </div>
 
       <div className="tn-grid tn-custom-split">

@@ -35,7 +35,7 @@ export function Layout() {
       <a className="tn-skip-link" href="#main">Skip to content</a>
       <header className="tn-header">
         <div className="tn-custom-brand">
-          <Link to="/" className="tn-identity">Binder</Link>
+          <Link to="/" className="tn-identity tn-custom-wordmark">Binder</Link>
           {!phone && <Nav />}
         </div>
         <SearchBox />

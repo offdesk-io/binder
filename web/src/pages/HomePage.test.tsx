@@ -6,6 +6,7 @@ import { HomePage } from './HomePage'
 
 test('shows what needs attention, with its reasons, and recent activity', async () => {
   stubFetch({
+    'GET /api/orgs': () => [org({ value_estimate: 1000 }), org({ id: 2, kind: 'client', status: 'active' })],
     'GET /api/attention': () => [
       { org: org({ next_step: 'Send the deck', next_step_due: '2000-01-01' }), reasons: ['overdue', 'quiet'] },
     ],
@@ -18,7 +19,11 @@ test('shows what needs attention, with its reasons, and recent activity', async 
   expect(await screen.findByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/o/acme')
   expect(screen.getByText('Next step overdue')).toBeInTheDocument()
   expect(screen.getByText('No contact in 14 days')).toBeInTheDocument()
-  expect(screen.getByText(/Send the deck/)).toHaveClass('tn-custom-overdue')
+  expect(screen.getByText('1 Jan 2000')).toHaveClass('tenon-tag--urgent')
+  expect(screen.getByText('Next step overdue')).toHaveClass('tenon-tag--urgent')
+  expect(screen.getByText('Open pipeline').closest('.tenon-stat')).toHaveClass('tenon-stat')
+  expect(await screen.findByText('£1,000')).toBeInTheDocument()
+  expect(screen.getByText('1 with a missed next step')).toBeInTheDocument()
   expect(await screen.findByText('Moved from Lead to Contacted')).toBeInTheDocument()
   expect(screen.getByText('Call: Rang about rates')).toBeInTheDocument()
   const hrefs = screen.getAllByRole('link').map((l) => l.getAttribute('href'))

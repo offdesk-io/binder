@@ -4,7 +4,9 @@ import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Contact, Interaction, InteractionFields, Summary } from '../api/types'
 import { useSession } from '../app/session'
+import { typeColour } from '../lib/colour'
 import { fromLocalInput, label, toLocalInput } from '../lib/format'
+import { ColourDot } from './ColourTag'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
 import { ConfirmDelete } from './ConfirmDelete'
 
@@ -233,7 +235,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
             aria-label="Type"
             value={form.type}
             onChange={(type) => setForm((f) => ({ ...f, type }))}
-            options={meta.interaction_types.map((t) => ({ value: t, label: label(t) }))}
+            options={meta.interaction_types.map((t) => ({ value: t, label: <><ColourDot colour={typeColour(t)} /> {label(t)}</> }))}
           />
         </div>
         <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />

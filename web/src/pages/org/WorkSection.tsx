@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { api } from '../../api/endpoints'
 import type { BenchTask } from '../../api/types'
 import { Loading } from '../../components/Loading'
+import { taskTone } from '../../lib/colour'
 import { clock, day, safeHref } from '../../lib/format'
 import { useApi } from '../../lib/useApi'
 
@@ -24,16 +25,22 @@ function caption(task: BenchTask, finished: boolean): string {
   return [task.due && `Due ${day(task.due)}`, task.assignee].filter(Boolean).join(' · ')
 }
 
+/** An open task shows its column as a tag. A finished one puts its caption (Done or Cancelled, and the day) in a tag
+ * of the column's colour: Done is success, and Cancelled is muted. */
 function TaskLine({ task, finished }: { task: BenchTask; finished: boolean }) {
   const href = safeHref(task.url) ?? undefined
   const text = caption(task, finished)
   return (
     <li>
       <div className="tn-cluster">
-        <a href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
-        {!finished && <Tag>{task.state}</Tag>}
+        <a className={task.cancelled ? 'tn-custom-muted' : undefined} href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
+        {!finished && <Tag tone={taskTone(task.state)}>{task.state}</Tag>}
       </div>
-      {text && <div className="tenon-caption tn-custom-faint">{text}</div>}
+      {finished ? (
+        <div><Tag tone={taskTone(task.state)}>{text}</Tag></div>
+      ) : (
+        text && <div className="tenon-caption tn-custom-faint">{text}</div>
+      )}
     </li>
   )
 }

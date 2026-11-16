@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
 import { Loading } from '../components/Loading'
+import { StatusTag } from '../components/StatusTag'
 import { useApi } from '../lib/useApi'
 
 const GROUPS: { kind: SearchHit['kind']; title: string }[] = [
@@ -53,8 +54,11 @@ export function SearchPage() {
             <ul className="tn-custom-rows">
               {list.map((h) => (
                 <li key={`${h.kind}${h.id}`}>
-                  <Link to={hitLink(h)}>{h.title}</Link>
-                  {h.kind !== 'org' && <span className="tn-custom-faint"> · {h.org_name}</span>}
+                  <div className="tn-cluster">
+                    <Link to={hitLink(h)}>{h.title}</Link>
+                    {h.kind !== 'org' && <span className="tn-custom-faint">· {h.org_name}</span>}
+                    <StatusTag status={h.org_status} />
+                  </div>
                   <div><Snippet text={h.snippet} /></div>
                 </li>
               ))}

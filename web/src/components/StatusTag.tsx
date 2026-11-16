@@ -1,6 +1,7 @@
-import { Tag } from '@tiagopedras/tenon'
-import { label, statusTone } from '../lib/format'
+import { label } from '../lib/format'
+import { stageColour } from '../lib/colour'
+import { ColourTag } from './ColourTag'
 
 export function StatusTag({ status }: { status: string }) {
-  return <Tag tone={statusTone(status)}>{label(status)}</Tag>
+  return <ColourTag colour={stageColour(status)}>{label(status)}</ColourTag>
 }

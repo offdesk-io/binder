@@ -1,6 +1,7 @@
-import { Tag } from '@tiagopedras/tenon'
 import type { ReactNode } from 'react'
-import { day, isOverdue, label, person } from '../lib/format'
+import { typeColour } from '../lib/colour'
+import { day, label, person } from '../lib/format'
+import { ColourTag, DueDate } from './ColourTag'
 
 interface Props {
   type: string
@@ -13,12 +14,12 @@ interface Props {
   action?: ReactNode
 }
 
-/** One logged interaction, as the timeline and the contact page show it. */
+/** One logged interaction, as the timeline and the contact page show it. The type has its own colour. */
 export function InteractionEntry({ type, at, by, summary, next_step, next_step_due, people, action }: Props) {
   return (
     <article className="tn-custom-entry">
       <div className="tn-cluster">
-        <Tag>{label(type)}</Tag>
+        <ColourTag colour={typeColour(type)}>{label(type)}</ColourTag>
         <span className="tenon-caption tn-custom-entry-meta">
           {day(at)} · {person(by)}
           {people.length > 0 && ` · with ${people.join(', ')}`}
@@ -27,9 +28,9 @@ export function InteractionEntry({ type, at, by, summary, next_step, next_step_d
       </div>
       <p className="tenon-body tn-custom-body">{summary}</p>
       {next_step && (
-        <p className={`tenon-body ${isOverdue(next_step_due) ? 'tn-custom-overdue' : 'tn-custom-muted'}`}>
+        <p className="tenon-body tn-custom-muted">
           Next: {next_step}
-          {next_step_due && ` · ${day(next_step_due)}`}
+          {next_step_due && <> · <DueDate due={next_step_due} /></>}
         </p>
       )}
     </article>

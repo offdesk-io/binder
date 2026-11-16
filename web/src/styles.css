@@ -20,6 +20,38 @@ a:hover { text-decoration: underline; }
 .tn-custom-status { display: inline-flex; width: auto; min-width: 11rem; max-width: 100%; }
 .tn-custom-filter { width: auto; min-width: 9rem; }
 
+/* Colour. A stage, type or due colour comes from a Tag or Card prop. These are the few places a prop cannot reach.
+ * The stage and type colour arrives in --tn-stage and --tn-dot, set from lib/colour.ts. */
+
+/* The page sits on Tenon's recessed surface, so the raised cards read as cards: a tint in light, black in dark.
+ * :root raises the rule's specificity above the body's own tn-shell background. */
+:root body { background: var(--tenon-background-sunken); }
+
+/* The wordmark in the accent colour, which is also the active nav item's colour. */
+.tn-custom-wordmark { color: var(--tenon-text-accent); }
+
+/* A categorical Tag. Tenon draws a chart colour as text on the neutral chip, and in light mode six of the ten
+ * fail AA there. On the raised surface each reaches AA in both themes, so the chip sits on the raised surface
+ * with a hairline edge and the colour stays in the text and the dot. */
+.tn-custom-chart.tn-custom-chart {
+  background: var(--tenon-background-raised);
+  box-shadow: inset 0 0 0 1px var(--tenon-stroke-default);
+}
+
+/* A dot in a stage or type colour, for a column head, a segment or an activity line. Decorative: the label beside it is the meaning. */
+.tn-custom-dot {
+  display: inline-block; flex: none; vertical-align: middle;
+  width: var(--tenon-dimension-075); height: var(--tenon-dimension-075);
+  border-radius: var(--tenon-radius-full);
+  background: var(--tn-dot);
+}
+
+/* The organisation header carries its stage as a rule down the left edge. */
+.tn-custom-stage {
+  border-left: var(--tenon-dimension-050) solid var(--tn-stage);
+  padding-left: var(--tenon-dimension-150);
+}
+
 /* Main column, with room for the fixed bars on a phone. */
 .tn-custom-main {
   min-width: 0;
@@ -29,7 +61,6 @@ a:hover { text-decoration: underline; }
 /* Text colour. Tenon's text styles set size and weight only. */
 .tn-custom-faint { color: var(--tenon-text-faint); }
 .tn-custom-muted { color: var(--tenon-text-subtle); }
-.tn-custom-overdue { color: var(--tenon-text-error); }
 .tn-custom-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .tn-custom-grow { flex: 1; }

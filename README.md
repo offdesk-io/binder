@@ -20,7 +20,7 @@ From `web/`: `npm run check` type-checks, `npm test` runs the Vitest suite, and
 `npm run e2e` builds and runs the Playwright flows at 390px and 1280px against a
 throwaway database (`npx playwright install chromium` once first).
 
-`BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
+`BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/Lisbon`) decides what "today" means for the needs-attention feed.
 
 Research and "Paste and summarise" call the Anthropic API from the server.
 `ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides

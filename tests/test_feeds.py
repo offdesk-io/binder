@@ -74,5 +74,5 @@ def test_today_follows_the_configured_zone(client, monkeypatch):
     monkeypatch.setattr(feeds, "_now_utc", lambda: datetime.datetime(2026, 11, 11, 23, 30, tzinfo=datetime.timezone.utc))
     client.post("/api/orgs", json={"name": "Due", "next_step_due": "2026-11-11"})
     conn = db(client)
-    assert feeds.attention(conn, tz="Europe/London") == []
+    assert feeds.attention(conn, tz="Europe/Lisbon") == []
     assert [i["reasons"] for i in feeds.attention(conn, tz="Pacific/Auckland")] == [["overdue"]]  # already the 12th there

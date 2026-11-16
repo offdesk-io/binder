@@ -42,7 +42,7 @@ class Settings:
     host: str
     port: int
     team: str
-    tz: str = "Europe/London"  # the zone that decides what "today" is
+    tz: str = "Europe/Lisbon"  # the zone that decides what "today" is
     web_dir: str = DEFAULT_WEB  # the built frontend, see binder/web.py
     ai: str = "off"  # anthropic, fake or off; see binder/ai.py
     bench_url: str = "https://bench.offdesk.io"
@@ -67,7 +67,7 @@ def load_settings(env: Mapping[str, str]) -> Settings:
     db_path = env.get("BINDER_DB", "binder.db")
     if auth == "header" and not ("BINDER_DB" in env and os.path.isabs(db_path)):
         raise ConfigError("BINDER_AUTH=header needs BINDER_DB set to an absolute path.")
-    tz = env.get("BINDER_TZ", "Europe/London")
+    tz = env.get("BINDER_TZ", "Europe/Lisbon")
     try:
         zoneinfo.ZoneInfo(tz)
     except (zoneinfo.ZoneInfoNotFoundError, ValueError):

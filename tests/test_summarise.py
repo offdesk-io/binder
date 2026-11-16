@@ -30,7 +30,7 @@ def test_summarise_fills_the_fields_and_saves_nothing(ai_client, org, fake_ai):
     assert ai_client.get("/api/orgs/%d/interactions" % org["id"]).json() == []
     call = fake_ai.calls[-1][1]
     assert call["org_name"] == "Acme Studio"
-    assert call["now_local"].endswith("(Europe/London)")
+    assert call["now_local"].endswith("(Europe/Lisbon)")
 
 
 def test_the_answer_is_checked_before_it_reaches_the_form(make_client, org):

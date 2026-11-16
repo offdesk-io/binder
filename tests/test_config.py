@@ -46,7 +46,7 @@ def test_header_mode_requires_explicit_absolute_db():
 
 
 def test_tz_defaults_to_london_and_can_be_set():
-    assert load_settings({}).tz == "Europe/London"
+    assert load_settings({}).tz == "Europe/Lisbon"
     assert load_settings({"BINDER_TZ": "Europe/Lisbon"}).tz == "Europe/Lisbon"
 
 

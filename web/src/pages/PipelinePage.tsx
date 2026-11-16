@@ -74,7 +74,7 @@ export function PipelinePage() {
             }))}
           />
         </div>
-        <div className="tn-custom-cards">
+        <div className="tn-stack">
           {groups[stage].length === 0 && <ColumnEmpty>{EMPTY_PHONE[stage] ?? 'None at this stage.'}</ColumnEmpty>}
           {groups[stage].map((o) => (
             <OrgCard key={o.id} org={o} showStatus={false}

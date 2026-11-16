@@ -1,107 +1,87 @@
-/* Binder's own layout. The shell, type and components come from Tenon (tenon.css, tenon-react.css, tn-page.css).
+/* Binder's own layout. The shell, type, components and page grid come from Tenon (tenon.css, tenon-react.css, tn-page.css).
+ * This file adds only what Tenon does not have: header and bar placement, colour on text, and divided lists.
  * Every value here reads a semantic --tenon-* token. Page classes are tn-custom-*. */
 
-.tn-custom-header {
-  padding-block: var(--tenon-dimension-100);
-}
 /* Links underline on hover only: dense lists would otherwise be all rule. */
 a { text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Header placement: the identity and nav on the left, search in the middle, actions on the right. */
 .tn-custom-brand {
   display: flex; align-items: center; gap: var(--tenon-dimension-300);
   min-width: 0;
 }
-.tn-custom-tools {
-  display: flex; align-items: center; gap: var(--tenon-dimension-100);
-  order: 3; min-width: 0;
-}
+.tn-custom-tools { order: 3; min-width: 0; }
 .tn-custom-search { order: 2; flex: 1 1 14rem; max-width: 24rem; min-width: 0; margin-left: auto; }
 .tn-custom-me { white-space: nowrap; }
-.tn-custom-signout { margin: 0; }
 
+/* A view's title and the controls that belong to it, wrapping together. */
+.tn-custom-title { min-width: 0; overflow-wrap: anywhere; }
+.tn-custom-status { display: inline-flex; width: auto; min-width: 11rem; max-width: 100%; }
+.tn-custom-filter { width: auto; min-width: 9rem; }
+
+/* Main column, with room for the fixed bars on a phone. */
 .tn-custom-main {
-  flex: 1; min-width: 0;
+  min-width: 0;
   padding-block: var(--tenon-dimension-300) var(--tenon-dimension-600);
 }
-.tn-custom-stack { display: flex; flex-direction: column; gap: var(--tenon-dimension-300); min-width: 0; }
-.tn-custom-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--tenon-dimension-100); }
-.tn-custom-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tenon-dimension-150); min-width: 0; }
-.tn-custom-title h1 { min-width: 0; overflow-wrap: anywhere; }
-.tn-custom-status { display: inline-flex; width: auto; min-width: 11rem; max-width: 100%; }
-.tn-custom-actions { flex-wrap: wrap; justify-content: flex-end; }
-.tn-custom-actions > * { flex: 0 0 auto; }
+
+/* Text colour. Tenon's text styles set size and weight only. */
 .tn-custom-faint { color: var(--tenon-text-faint); }
 .tn-custom-muted { color: var(--tenon-text-subtle); }
 .tn-custom-overdue { color: var(--tenon-text-error); }
+.tn-custom-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .tn-custom-grow { flex: 1; }
 .tn-custom-loading { display: flex; justify-content: center; padding: var(--tenon-dimension-400); }
 .tn-custom-scroll { max-width: 100%; overflow-x: auto; white-space: nowrap; }
-.tn-custom-cards { display: flex; flex-direction: column; gap: var(--tenon-dimension-100); min-width: 0; }
-.tn-custom-empty { color: var(--tenon-text-faint); }
-.tn-custom-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.tn-custom-lead { margin: 0; font-weight: var(--tenon-text-body-weight); overflow-wrap: anywhere; }
 
-/* Tenon Card: the summary and footer carry a line of metadata. */
-
-/* Home */
-.tn-custom-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.tn-custom-activity li {
-  display: flex; flex-direction: column; gap: var(--tenon-dimension-025);
-  padding-block: var(--tenon-dimension-100);
-  border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle);
-}
-.tn-custom-activity li:first-child { border-top: 0; padding-top: 0; }
-.tn-custom-activity-line { margin: 0; overflow-wrap: anywhere; }
-
-/* Search */
-.tn-custom-hits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-150); }
-.tn-custom-hits mark { background: var(--tenon-background-warning-subtle); color: inherit; border-radius: var(--tenon-radius-default); }
-
-/* Filters and the list table */
-.tn-custom-filters { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-100); align-items: center; }
-.tn-custom-table-wrap { overflow-x: auto; }
-.tn-custom-table-wrap td, .tn-custom-table-wrap th { white-space: nowrap; }
-.tn-custom-table-wrap td:first-child, .tn-custom-table-wrap th:first-child { white-space: normal; }
-
-/* Pipeline */
+/* Pipeline. tn-board scrolls sideways, which also clips vertically, and Tenon's Dropdown panel (up to 240px,
+ * 6px below its button) is absolutely positioned inside it. While a card's status menu is open, give the board
+ * room below for the panel. */
 .tn-custom-board { min-width: 0; }
-/* tn-board scrolls sideways, which also clips vertically, and Tenon's Dropdown
- * panel (up to 240px, 6px below its button) is absolutely positioned inside it.
- * While a card's status menu is open, give the board room below for the panel. */
-.tn-custom-board:has(.tenon-dropdown--open) { padding-bottom: 256px; }
-.tn-custom-split { align-items: start; }
-.tn-custom-filter { width: auto; min-width: 9rem; }
+.tn-custom-board:has(button[aria-expanded="true"]) { padding-bottom: 256px; }
 .tn-custom-drop { outline: var(--tenon-dimension-025) solid var(--tenon-stroke-accent); outline-offset: calc(-1 * var(--tenon-dimension-025)); }
 
-/* Organisation and contact pages */
-.tn-custom-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--tenon-dimension-075) var(--tenon-dimension-200); margin: 0; }
-.tn-custom-facts dt { color: var(--tenon-text-faint); }
-.tn-custom-fact { display: contents; }
-.tn-custom-facts dd { margin: 0; display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); min-width: 0; overflow-wrap: anywhere; }
-.tn-custom-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.tn-custom-people li {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--tenon-dimension-100);
-  padding-block: var(--tenon-dimension-100);
-  border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle);
+/* Two grid columns, the first wider, with their tops aligned. */
+.tn-custom-split { align-items: start; }
+
+/* Divided lists: activity, search hits and the timeline. Tenon has no list primitive for app screens. */
+.tn-custom-rows {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column;
 }
-.tn-custom-people li:first-child { border-top: 0; padding-top: 0; }
-.tn-custom-people li > .tn-custom-person-name { display: flex; gap: var(--tenon-dimension-075); align-items: center; flex-wrap: wrap; min-width: 0; }
-.tn-custom-people li > .tn-custom-person-edit { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
-.tn-custom-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.tn-custom-timeline > li {
+.tn-custom-rows > li {
   padding-block: var(--tenon-dimension-150);
   border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle);
+  min-width: 0; overflow-wrap: anywhere;
 }
-.tn-custom-timeline > li:first-child { border-top: 0; padding-top: 0; }
-.tn-custom-timeline > li:last-child { padding-bottom: 0; }
-.tn-custom-tl-status { color: var(--tenon-text-subtle); }
+.tn-custom-rows > li:first-child { border-top: 0; padding-top: 0; }
+.tn-custom-rows > li:last-child { padding-bottom: 0; }
+.tn-custom-mark { background: var(--tenon-background-warning-subtle); color: inherit; border-radius: var(--tenon-radius-default); }
+
+/* People on an organisation: name and detail on the left, Edit spanning both lines on the right. */
+.tn-custom-people > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--tenon-dimension-100); }
+.tn-custom-person-edit { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+
+/* Key-value facts, as a description list. */
+.tn-custom-facts {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--tenon-dimension-075) var(--tenon-dimension-200);
+  margin: 0;
+}
+.tn-custom-facts dt { color: var(--tenon-text-faint); }
+.tn-custom-fact { display: contents; }
+.tn-custom-facts dd {
+  margin: 0; min-width: 0; overflow-wrap: anywhere;
+  display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050);
+}
+
+/* One logged interaction. */
 .tn-custom-entry { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
-.tn-custom-entry-head { display: flex; align-items: center; gap: var(--tenon-dimension-100); min-width: 0; }
-.tn-custom-entry-head > button { margin-left: auto; flex: 0 0 auto; }
 .tn-custom-entry-meta { flex: 1 1 auto; min-width: 0; color: var(--tenon-text-faint); overflow-wrap: anywhere; }
 
-/* Sticky bar on the organisation page, phone only. */
+/* A fixed action bar at the foot of the organisation page on a phone. */
 .tn-custom-bar {
   position: fixed; left: 0; right: 0; bottom: 56px; z-index: 9;
   display: flex; gap: var(--tenon-dimension-100);
@@ -111,65 +91,57 @@ a:hover { text-decoration: underline; }
 }
 .tn-custom-bar > * { flex: 1; }
 
-/* Forms (the quick log, organisation and person dialogs) */
-.tn-custom-form { display: flex; flex-direction: column; gap: var(--tenon-dimension-150); min-width: 0; }
-.tn-custom-field { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
-.tn-custom-chips { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-075); }
+/* Forms: a checkbox that needs a Save, and the paste box with its button under it. */
 .tn-custom-check { display: flex; align-items: center; gap: var(--tenon-dimension-100); }
-/* Research brief: a lead, a short fact list, people, then lists side by side on a wide screen. */
-.tn-custom-running { display: flex; align-items: center; gap: var(--tenon-dimension-100); color: var(--tenon-text-subtle); }
-.tn-custom-brief { display: flex; flex-direction: column; gap: var(--tenon-dimension-150); min-width: 0; }
-.tn-custom-brief-part { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
-.tn-custom-brief-title { margin: 0; color: var(--tenon-text-subtle); }
-.tn-custom-brief-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--tenon-dimension-150) var(--tenon-dimension-300); }
-@media (min-width: 768px) {
-  .tn-custom-brief-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-.tn-custom-brief-part ul, .tn-custom-brief-part ol { margin: 0; padding-left: var(--tenon-dimension-200); }
-.tn-custom-tight { display: flex; flex-direction: column; gap: var(--tenon-dimension-025); }
-.tn-custom-tight li { overflow-wrap: anywhere; }
-.tn-custom-brief-people { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--tenon-dimension-100); }
-.tn-custom-brief-people li { display: flex; flex-direction: column; gap: var(--tenon-dimension-025); min-width: 0; }
-.tn-custom-person-line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tenon-dimension-075); min-width: 0; }
-.tn-custom-foot { color: var(--tenon-text-faint); }
-.tn-custom-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); }
 .tn-custom-paste { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tenon-dimension-100); }
 .tn-custom-paste > :first-child { align-self: stretch; }
 
-/* Bottom tab bar on a phone. */
+/* A list of research runs: no bullets, wrapping across the row. */
+.tn-custom-runs {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050);
+}
+
+/* Research brief: sub-sections, lists and the people with their actions. */
+/* A small heading over a group of lines, in the research brief and the Work section. */
+.tn-custom-part { display: flex; flex-direction: column; gap: var(--tenon-dimension-050); min-width: 0; }
+.tn-custom-tight { margin: 0; padding-left: var(--tenon-dimension-200); display: flex; flex-direction: column; gap: var(--tenon-dimension-025); }
+.tn-custom-tight li { overflow-wrap: anywhere; }
+.tn-custom-people-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--tenon-dimension-100);
+}
+
+/* Bottom tab bar on a phone. The links take Tenon's nav styles, and this only lays them out across the bar. */
 .tn-custom-tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch;
   height: 56px;
   background: var(--tenon-background-raised);
   border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
   padding-bottom: env(safe-area-inset-bottom);
 }
-.tn-custom-tabs a {
+.tn-custom-tab-list {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  height: 100%;
+}
+.tn-custom-tab-list a {
+  height: 100%;
   display: flex; align-items: center; justify-content: center;
-  color: var(--tenon-text-subtle);
-  font-size: var(--tenon-text-label-size);
-  font-weight: var(--tenon-text-label-weight);
-  text-decoration: none;
+  border-radius: 0;
 }
-.tn-custom-tabs a[aria-current="page"] {
-  color: var(--tenon-text-accent);
-  background: var(--tenon-background-selected);
-  box-shadow: inset 0 var(--tenon-dimension-025) 0 var(--tenon-stroke-accent);
-}
+
+/* Organisation tables: names and dates stay on one line, the first column may wrap. */
+.tn-custom-table th,
+.tn-custom-table td { white-space: nowrap; }
+.tn-custom-table th:first-child,
+.tn-custom-table td:first-child { white-space: normal; }
 
 @media (max-width: 767px) {
   /* One row for the identity and the buttons, the search on a row of its own. */
-  .tn-custom-header { gap: var(--tenon-dimension-100); }
   .tn-custom-brand { order: 1; flex: 1 1 auto; }
   .tn-custom-tools { order: 2; margin-left: auto; }
   .tn-custom-search { order: 3; flex: 1 1 100%; max-width: none; margin-left: 0; }
-  .tn-custom-me { display: none; }
   .tn-custom-main { padding-block: var(--tenon-dimension-200) calc(56px + var(--tenon-dimension-500)); }
   .tn-custom-main:has(.tn-custom-bar) { padding-bottom: calc(112px + var(--tenon-dimension-400)); }
-  .tn-custom-title h1 { font-size: var(--tenon-text-heading-4-size); }
   .tn-custom-status { min-width: 0; flex: 1 1 100%; }
-  /* A modal is a bottom sheet on a phone. Modal puts className on its box. */
-  .tenon-modal:has(.tn-custom-sheet) { align-items: flex-end; padding: 0; }
-  .tn-custom-sheet { width: 100%; max-height: 92vh; border-radius: var(--tenon-radius-xl) var(--tenon-radius-xl) 0 0; }
 }

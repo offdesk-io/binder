@@ -27,7 +27,7 @@ export function HomePage() {
           ) : !attention.data ? (
             <Loading />
           ) : attention.data.length === 0 ? (
-            <ColumnEmpty>Nothing needs you today.</ColumnEmpty>
+            <ColumnEmpty boxed>Nothing needs you today.</ColumnEmpty>
           ) : (
             attention.data.map((a) => (
               <OrgCard
@@ -46,17 +46,17 @@ export function HomePage() {
           ) : !activity.data ? (
             <Loading />
           ) : activity.data.length === 0 ? (
-            <p className="tenon-body tn-custom-faint">Nothing has happened yet.</p>
+            <ColumnEmpty>Nothing has happened yet.</ColumnEmpty>
           ) : (
-            <ul className="tn-custom-activity">
+            <ul className="tn-custom-rows">
               {activity.data.map((a) => (
                 <li key={`${a.kind}${a.id}`}>
-                  <p className="tenon-body tn-custom-activity-line">
+                  <p className="tenon-body">
                     <Link to={`/o/${a.org_slug}${a.kind === 'interaction' ? `#i-${a.id}` : ''}`}>{a.org_name}</Link>
                     <span className="tn-custom-faint" aria-hidden="true"> · </span>
-                    <span className="tn-custom-activity-what">{what(a)}</span>
+                    <span>{what(a)}</span>
                   </p>
-                  <span className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</span>
+                  <div className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</div>
                 </li>
               ))}
             </ul>

@@ -1,4 +1,4 @@
-import { Alert, Button, Column, LinkButton } from '@tiagopedras/tenon'
+import { Alert, Button, Column, ColumnEmpty, LinkButton } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
@@ -45,10 +45,10 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
     <div className="tn-stack">
       <header className="tn-stack">
         <div className="tn-toolbar">
-          <div className="tn-custom-title">
+          <div className="tn-cluster tn-custom-title">
             <h1 className="tenon-heading-3">{c.name}</h1>
           </div>
-          <div className="tn-cluster tn-custom-actions">
+          <div className="tn-cluster">
             <Button variant="primary" onClick={() => setLogging(true)}>Log</Button>
             <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
             {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
@@ -70,9 +70,9 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
             ) : !history.data ? (
               <Loading />
             ) : history.data.length === 0 ? (
-              <p className="tenon-body tn-custom-faint">Nothing logged with {c.name} yet.</p>
+              <ColumnEmpty boxed>Nothing logged with {c.name} yet.</ColumnEmpty>
             ) : (
-              <ol className="tn-custom-timeline">
+              <ol className="tn-custom-rows">
                 {history.data.map((i) => (
                   <li key={i.id}>
                     <InteractionEntry

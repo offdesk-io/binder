@@ -6,7 +6,6 @@ import type { Contact, ContactFields } from '../api/types'
 import { useSession } from '../app/session'
 import { label } from '../lib/format'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
-import { useIsPhone } from '../lib/useIsPhone'
 import { ConfirmDelete } from './ConfirmDelete'
 
 export interface ContactFormState {
@@ -58,7 +57,6 @@ interface Props {
 
 export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted }: Props) {
   const { meta } = useSession()
-  const phone = useIsPhone()
   const [base, setBase] = useState(contact)
   const [form, setForm] = useState(() => contactForm(contact))
   const [error, setError] = useState<string>()
@@ -128,7 +126,6 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
       onClose={onClose}
       title={base ? `Edit ${base.name}` : 'Add a person'}
       size="md"
-      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
@@ -139,15 +136,15 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
         </>
       }
     >
-      <form id="contact-form" className="tn-custom-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="contact-form" className="tn-stack" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         <Field label="Role" value={form.role} onChange={set('role')} />
         <Field label="Email" type="email" value={form.email} onChange={set('email')} />
         <Field label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
         <Field label="LinkedIn" type="url" value={form.linkedin_url} onChange={set('linkedin_url')} />
-        <div className="tn-custom-field">
-          <span className="tenon-label">Relationship</span>
+        <div className="tenon-field">
+          <span className="tenon-field__label">Relationship</span>
           <SegmentedControl
             aria-label="Relationship"
             value={form.relationship}
@@ -155,14 +152,16 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
             options={[{ value: '', label: 'Not sure' }, ...meta.relationships.map((r) => ({ value: r, label: label(r) }))]}
           />
         </div>
-        <label className="tn-custom-check">
-          <input
-            type="checkbox"
-            checked={form.is_primary}
-            onChange={(e) => setForm((f) => ({ ...f, is_primary: e.target.checked }))}
-          />
-          Who to talk to
-        </label>
+        <div className="tenon-field">
+          <label className="tenon-field__label tn-custom-check">
+            <input
+              type="checkbox"
+              checked={form.is_primary}
+              onChange={(e) => setForm((f) => ({ ...f, is_primary: e.target.checked }))}
+            />
+            Who to talk to
+          </label>
+        </div>
         <Field label="Notes" multiline rows={3} value={form.notes} onChange={set('notes')} />
       </form>
     </Modal>

@@ -1,4 +1,4 @@
-import { Alert, Column, Tag } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty, Spinner, Tag } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { api } from '../../api/endpoints'
 import type { BenchTask } from '../../api/types'
@@ -29,8 +29,10 @@ function TaskLine({ task, finished }: { task: BenchTask; finished: boolean }) {
   const text = caption(task, finished)
   return (
     <li>
-      <a href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
-      {!finished && <Tag>{task.state}</Tag>}
+      <div className="tn-cluster">
+        <a href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
+        {!finished && <Tag>{task.state}</Tag>}
+      </div>
       {text && <div className="tenon-caption tn-custom-faint">{text}</div>}
     </li>
   )
@@ -72,12 +74,15 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
             </Alert>
           )}
           {tasks.length === 0 && !error && !readAt && (
-            <p className="tenon-body tn-custom-faint">Reading Bench…</p>
+            <p className="tn-cluster tenon-body tn-custom-muted">
+              <Spinner variant="ring" size="sm" label="Reading Bench" />
+              Reading Bench…
+            </p>
           )}
           {tasks.length === 0 && !error && readAt && (
-            <p className="tenon-body tn-custom-faint">
+            <ColumnEmpty>
               No Bench tasks are tagged with this organisation yet. Add <code className="tenon-code">[lead:: {slug}]</code> to a task in Bench to link it.
-            </p>
+            </ColumnEmpty>
           )}
           {open.length > 0 && (
             <ul className="tn-custom-tight">
@@ -85,8 +90,8 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
             </ul>
           )}
           {done.length > 0 && (
-            <div className="tn-stack">
-              <h3 className="tenon-label">Done</h3>
+            <div className="tn-custom-part">
+              <h3 className="tenon-label tn-custom-muted">Done</h3>
               <ul className="tn-custom-tight">
                 {done.map((t) => <TaskLine key={t.task_key} task={t} finished />)}
               </ul>

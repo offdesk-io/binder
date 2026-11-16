@@ -1,4 +1,4 @@
-import { Alert, Button, Column, Spinner } from '@tiagopedras/tenon'
+import { Alert, Button, Column, ColumnEmpty, Spinner } from '@tiagopedras/tenon'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
@@ -100,7 +100,7 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
       ) : (
         <div className="tn-stack">
           {running && (
-            <p className="tn-custom-running">
+            <p className="tn-cluster tenon-body tn-custom-muted">
               <Spinner variant="ring" size="sm" label="Researching" />
               Researching. It takes a few minutes, and you can leave this page.
             </p>
@@ -118,14 +118,14 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
             <BriefView run={shown} orgId={orgId} people={people} />
           ) : (
             !running && latest?.status !== 'failed' && (
-              <p className="tn-custom-faint">
+              <ColumnEmpty boxed>
                 {meta.ai ? 'No research yet. It searches the web and writes a brief.' : 'No research yet. AI is not set up on this server.'}
-              </p>
+              </ColumnEmpty>
             )
           )}
           {list.length > 1 && (
-            <div className="tn-custom-field">
-              <span className="tenon-label">Runs</span>
+            <div className="tenon-field">
+              <span className="tenon-field__label">Runs</span>
               <ul className="tn-custom-runs">
                 {list.map((r) => (
                   <li key={r.id}>

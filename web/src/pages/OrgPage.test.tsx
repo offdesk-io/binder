@@ -122,7 +122,7 @@ test('on a phone the sticky bar holds Log and Call and the header has no Log', a
     return el
   })
   expect(within(bar).getByRole('button', { name: 'Log' })).toBeInTheDocument()
-  const header = container.querySelector('.tn-custom-actions') as HTMLElement
+  const header = container.querySelector('.tn-toolbar')?.lastElementChild as HTMLElement
   expect(within(header).queryByRole('button', { name: 'Log' })).toBeNull()
   expect(within(header).queryByRole('link', { name: /^Call/ })).toBeNull()
 })

@@ -12,11 +12,11 @@ export function knownAs(p: BriefPerson, people: Contact[]): Contact | undefined 
   return people.find((c) => c.id === p.contact_id) ?? people.find((c) => c.name.trim().toLowerCase() === name)
 }
 
-/** A small heading over a part of the brief. */
-function Part({ title, children }: { title: string; children: ReactNode }) {
+/** A small heading over a part of the brief. In a grid, `className` places it. */
+function Part({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
   return (
-    <div className="tn-custom-brief-part">
-      <h3 className="tenon-label tn-custom-brief-title">{title}</h3>
+    <div className={className ? `tn-custom-part ${className}` : 'tn-custom-part'}>
+      <h3 className="tenon-label tn-custom-muted">{title}</h3>
       {children}
     </div>
   )
@@ -62,8 +62,8 @@ export function BriefView({ run, orgId, people }: Props) {
   }
 
   return (
-    <div className="tn-custom-brief">
-      <p className="tenon-body tn-custom-lead">{b.overview}</p>
+    <div className="tn-stack">
+      <p className="tenon-body tn-custom-body">{b.overview}</p>
       {facts.length > 0 && (
         <dl className="tn-custom-facts">
           {facts.map(([k, v]) => (
@@ -77,14 +77,14 @@ export function BriefView({ run, orgId, people }: Props) {
       {b.people.length > 0 && (
         <Part title="People">
           {error && <Alert tone="error">{error}</Alert>}
-          <ul className="tn-custom-brief-people">
+          <ul className="tn-custom-people-list">
             {b.people.map((p, i) => {
               const c = knownAs(p, known)
               return (
                 <li key={i}>
-                  <div className="tn-custom-person-line">
+                  <div className="tn-cluster">
                     {c ? <Link to={`/c/${c.id}`}>{p.name}</Link> : <span>{p.name}</span>}
-                    {p.role && <span className="tn-custom-faint"> · {p.role}</span>}
+                    {p.role && <span className="tn-custom-faint">· {p.role}</span>}
                     {c && <Tag>In Binder</Tag>}
                     {!c && people.data && (
                       <Button size="sm" variant="secondary" disabled={adding} onClick={() => void add(p)} aria-label={`Add ${p.name}`}>
@@ -92,7 +92,7 @@ export function BriefView({ run, orgId, people }: Props) {
                       </Button>
                     )}
                   </div>
-                  {p.why && <span className="tenon-caption tn-custom-faint">{p.why}</span>}
+                  {p.why && <div className="tenon-caption tn-custom-faint">{p.why}</div>}
                 </li>
               )
             })}
@@ -100,9 +100,9 @@ export function BriefView({ run, orgId, people }: Props) {
         </Part>
       )}
       {(b.recent_news.length > 0 || b.likely_needs.length > 0 || b.open_questions.length > 0) && (
-        <div className="tn-custom-brief-cols">
+        <div className="tn-grid">
           {b.recent_news.length > 0 && (
-            <Part title="Recent news">
+            <Part className="tn-col-4" title="Recent news">
               <ul className="tn-custom-tight">
                 {b.recent_news.map((n, i) => (
                   <li key={i}><Out url={n.url}>{n.headline}</Out>{n.date && <span className="tn-custom-faint"> · {n.date}</span>}</li>
@@ -111,12 +111,12 @@ export function BriefView({ run, orgId, people }: Props) {
             </Part>
           )}
           {b.likely_needs.length > 0 && (
-            <Part title="Likely needs">
+            <Part className="tn-col-4" title="Likely needs">
               <ul className="tn-custom-tight">{b.likely_needs.map((t, i) => <li key={i}>{t}</li>)}</ul>
             </Part>
           )}
           {b.open_questions.length > 0 && (
-            <Part title="Open questions">
+            <Part className="tn-col-4" title="Open questions">
               <ul className="tn-custom-tight">{b.open_questions.map((t, i) => <li key={i}>{t}</li>)}</ul>
             </Part>
           )}
@@ -129,7 +129,7 @@ export function BriefView({ run, orgId, people }: Props) {
           </ol>
         </Part>
       )}
-      <p className="tenon-caption tn-custom-foot">
+      <p className="tenon-caption tn-custom-faint">
         Researched {day(run.run_at)} by {person(run.author_email)}
         {run.model && ` · ${run.model}`}
         {run.cost_usd != null && ` · ${usd(run.cost_usd)}`}

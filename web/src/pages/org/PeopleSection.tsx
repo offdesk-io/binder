@@ -1,4 +1,4 @@
-import { Alert, Button, Column, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, Column, ColumnEmpty, Tag } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
@@ -26,12 +26,12 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
         ) : !contacts.data ? (
           <Loading />
         ) : contacts.data.length === 0 ? (
-          <p className="tenon-body tn-custom-faint">No one yet. Add the people you talk to.</p>
+          <ColumnEmpty>No one yet. Add the people you talk to.</ColumnEmpty>
         ) : (
-          <ul className="tn-custom-people">
+          <ul className="tn-custom-rows tn-custom-people">
             {contacts.data.map((c) => (
               <li key={c.id}>
-                <div className="tn-custom-person-name">
+                <div className="tn-cluster">
                   <Link to={`/c/${c.id}`}>{c.name}</Link>
                   {c.is_primary && <Tag tone="accent">Talk to</Tag>}
                   {c.relationship && <Tag>{label(c.relationship)}</Tag>}

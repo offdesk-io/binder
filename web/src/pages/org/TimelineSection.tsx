@@ -1,4 +1,4 @@
-import { Alert, Button, Column } from '@tiagopedras/tenon'
+import { Alert, Button, Column, ColumnEmpty } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
@@ -29,16 +29,16 @@ export function TimelineSection({ items, contacts, onEdit }: Props) {
       ) : !items.data ? (
         <Loading />
       ) : items.data.length === 0 ? (
-        <p className="tenon-body tn-custom-faint">Nothing logged yet.</p>
+        <ColumnEmpty boxed>Nothing logged yet.</ColumnEmpty>
       ) : (
-        <ol className="tn-custom-timeline">
+        <ol className="tn-custom-rows">
           {items.data.map((i) =>
             i.kind === 'status' ? (
-              <li key={`s${i.id}`} className="tn-custom-tl-status">
+              <li key={`s${i.id}`} className="tn-custom-muted">
                 {statusLine(i.from_status, i.to_status)} <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
               </li>
             ) : i.kind === 'bench' ? (
-              <li key={`b${i.id}`} className="tn-custom-tl-status">
+              <li key={`b${i.id}`} className="tn-custom-muted">
                 Finished in Bench: <a href={safeHref(i.url) ?? undefined} target="_blank" rel="noopener noreferrer">{i.title}</a>{' '}
                 {/* at is the done day at midnight UTC: show that day, whatever the browser's zone */}
                 <span className="tn-custom-entry-meta">· {day(i.at.slice(0, 10))}</span>

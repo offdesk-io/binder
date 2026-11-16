@@ -17,7 +17,7 @@ interface Props {
 export function InteractionEntry({ type, at, by, summary, next_step, next_step_due, people, action }: Props) {
   return (
     <article className="tn-custom-entry">
-      <div className="tn-custom-entry-head">
+      <div className="tn-cluster">
         <Tag>{label(type)}</Tag>
         <span className="tenon-caption tn-custom-entry-meta">
           {day(at)} · {person(by)}
@@ -27,7 +27,7 @@ export function InteractionEntry({ type, at, by, summary, next_step, next_step_d
       </div>
       <p className="tenon-body tn-custom-body">{summary}</p>
       {next_step && (
-        <p className={isOverdue(next_step_due) ? 'tn-custom-overdue' : 'tn-custom-muted'}>
+        <p className={`tenon-body ${isOverdue(next_step_due) ? 'tn-custom-overdue' : 'tn-custom-muted'}`}>
           Next: {next_step}
           {next_step_due && ` · ${day(next_step_due)}`}
         </p>

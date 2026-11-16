@@ -6,7 +6,6 @@ import type { Contact, Interaction, InteractionFields, Summary } from '../api/ty
 import { useSession } from '../app/session'
 import { fromLocalInput, label, toLocalInput } from '../lib/format'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
-import { useIsPhone } from '../lib/useIsPhone'
 import { ConfirmDelete } from './ConfirmDelete'
 
 /** What the form needs from an interaction. A timeline item has all of it. */
@@ -78,7 +77,6 @@ interface Props {
 
 export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, onSaved }: Props) {
   const { meta } = useSession()
-  const phone = useIsPhone()
   const first = meta.interaction_types[0]
   const people = contacts ?? []
   const [base, setBase] = useState(initial)
@@ -194,7 +192,6 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       onClose={onClose}
       title={base ? 'Edit log' : 'Log'}
       size="md"
-      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
@@ -205,11 +202,11 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
         </>
       }
     >
-      <form id="log-form" className="tn-custom-form" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="log-form" className="tn-stack" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         {!base && meta.ai && (
-          <div className="tn-custom-field">
-            <div className="tn-custom-chips">
+          <>
+            <div className="tn-cluster">
               <ToggleChip pressed={pasting} onClick={() => setPasting((p) => !p)}>Paste and summarise</ToggleChip>
             </div>
             {pasting && (
@@ -227,11 +224,11 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
                 </Button>
               </div>
             )}
-          </div>
+          </>
         )}
         {filled && <Alert tone="info">Filled in from the pasted text. Check it, then save.</Alert>}
-        <div className="tn-custom-field">
-          <span className="tenon-label">Type</span>
+        <div className="tenon-field">
+          <span className="tenon-field__label">Type</span>
           <SegmentedControl
             aria-label="Type"
             value={form.type}
@@ -241,9 +238,9 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
         </div>
         <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />
         {people.length > 0 && (
-          <div className="tn-custom-field">
-            <span className="tenon-label">With</span>
-            <div className="tn-custom-chips" role="group" aria-label="With">
+          <div className="tenon-field">
+            <span className="tenon-field__label">With</span>
+            <div className="tn-cluster" role="group" aria-label="With">
               {people.map((c) => (
                 <ToggleChip key={c.id} pressed={form.contact_ids.includes(c.id)} onClick={() => toggle(c.id)}>
                   {c.name}

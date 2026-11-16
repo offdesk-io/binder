@@ -14,13 +14,9 @@ const NAV = [
 
 /** The desktop links sit in the header; on a phone they are a tab bar at the foot of the screen. */
 function Nav({ tabs }: { tabs?: boolean }) {
-  const links = NAV.map((n) => (
-    <NavLink key={n.to} to={n.to} end={n.end}>{n.label}</NavLink>
-  ))
-  if (tabs) return <nav className="tn-custom-tabs" aria-label="Main">{links}</nav>
   return (
-    <nav aria-label="Main">
-      <ul className="tn-nav">
+    <nav aria-label="Main" className={tabs ? 'tn-custom-tabs' : undefined}>
+      <ul className={tabs ? 'tn-nav tn-custom-tab-list' : 'tn-nav'}>
         {NAV.map((n) => (
           <li key={n.to}><NavLink to={n.to} end={n.end}>{n.label}</NavLink></li>
         ))}
@@ -37,13 +33,13 @@ export function Layout() {
   return (
     <div className="tn-page">
       <a className="tn-skip-link" href="#main">Skip to content</a>
-      <header className="tn-header tn-custom-header">
+      <header className="tn-header">
         <div className="tn-custom-brand">
           <Link to="/" className="tn-identity">Binder</Link>
           {!phone && <Nav />}
         </div>
         <SearchBox />
-        <div className="tn-custom-tools">
+        <div className="tn-cluster tn-custom-tools">
           <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
           {!phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
           {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}

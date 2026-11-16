@@ -1,4 +1,4 @@
-import { Alert, Column } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty } from '@tiagopedras/tenon'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
@@ -24,7 +24,7 @@ export function Snippet({ text }: { text: string }) {
   return (
     <span className="tn-custom-faint">
       {text.split(/(\u0002[^\u0003]*\u0003)/).map((part, i) =>
-        part.startsWith('\u0002') && part.endsWith('\u0003') ? <mark key={i}>{part.slice(1, -1)}</mark> : part,
+        part.startsWith('\u0002') && part.endsWith('\u0003') ? <mark key={i} className="tn-custom-mark">{part.slice(1, -1)}</mark> : part,
       )}
     </span>
   )
@@ -35,10 +35,10 @@ export function SearchPage() {
   const q = (params.get('q') ?? '').trim()
   const hits = useApi(() => (q ? api.search(q) : Promise.resolve([] as SearchHit[])), [q], { keep: true })
 
-  if (!q) return <p className="tn-custom-faint">Type in the search box to find organisations, people and notes.</p>
+  if (!q) return <ColumnEmpty>Type in the search box to find organisations, people and notes.</ColumnEmpty>
   if (hits.error) return <Alert tone="error">{hits.error.message}</Alert>
   if (!hits.data) return <Loading />
-  if (hits.data.length === 0) return <p className="tn-custom-faint">No matches for “{q}”.</p>
+  if (hits.data.length === 0) return <ColumnEmpty>No matches for “{q}”.</ColumnEmpty>
 
   return (
     <div className="tn-stack">
@@ -50,7 +50,7 @@ export function SearchPage() {
         if (list.length === 0) return null
         return (
           <Column key={g.kind} titleAs="h2" title={g.title}>
-            <ul className="tn-custom-hits">
+            <ul className="tn-custom-rows">
               {list.map((h) => (
                 <li key={`${h.kind}${h.id}`}>
                   <Link to={hitLink(h)}>{h.title}</Link>

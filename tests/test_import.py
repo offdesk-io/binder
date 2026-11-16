@@ -106,3 +106,12 @@ def test_a_note_from_the_same_task_is_not_added_again_under_a_new_title(tmp_path
                                             "updated_at": n["updated_at"]}, "ana@example.com")
     imp.apply_rows(conn, [dict(r, title="Renamed") for r in rows], by="ana@example.com")
     assert len(interactions.list_for_org(conn, acme["id"])) == 2
+
+
+def test_plan_says_when_it_cannot_read_the_board(tmp_path, bench_core, monkeypatch, capsys):
+    from scripts import import_from_bench as imp
+    monkeypatch.setenv("BINDER_DB", str(tmp_path / "b.db"))
+    monkeypatch.setenv("BINDER_BENCH_FILE", str(tmp_path / "missing.md"))
+    monkeypatch.setenv("BINDER_BENCH_CORE", bench_core)
+    assert imp.main(["plan", "--out", str(tmp_path / "plan.csv")]) == 2
+    assert "Could not read" in capsys.readouterr().out

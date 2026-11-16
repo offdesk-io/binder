@@ -143,7 +143,12 @@ def main(argv: List[str]) -> int:
         if reader is None:
             print("Bench is off: set BINDER_BENCH_TOKEN (or BINDER_BENCH_FILE) and BINDER_BENCH_CORE.")
             return 2
-        rows = plan_rows(bench.bucket_tasks(reader["todo"], reader["source"].fetch(), BUCKET))
+        try:
+            text = reader["source"].fetch()
+        except bench.BenchError as e:
+            print(e)
+            return 2
+        rows = plan_rows(bench.bucket_tasks(reader["todo"], text, BUCKET))
         write_plan(args.out, rows)
         _print_table(rows)
         print("\n%d tasks. Edit %s, then run: apply %s --by <your email>" % (len(rows), args.out, args.out))

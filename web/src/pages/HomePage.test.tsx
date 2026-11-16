@@ -22,7 +22,7 @@ test('shows what needs attention, with its reasons, and recent activity', async 
   expect(screen.getByText('1 Jan 2000')).toHaveClass('tenon-tag--urgent')
   expect(screen.getByText('Next step overdue')).toHaveClass('tenon-tag--urgent')
   expect(screen.getByText('Open pipeline').closest('.tenon-stat')).toHaveClass('tenon-stat')
-  expect(await screen.findByText('£1,000')).toBeInTheDocument()
+  expect(await screen.findByText('€1,000')).toBeInTheDocument()
   expect(screen.getByText('1 with a missed next step')).toBeInTheDocument()
   expect(await screen.findByText('Moved from Lead to Contacted')).toBeInTheDocument()
   expect(screen.getByText('Call: Rang about rates')).toBeInTheDocument()

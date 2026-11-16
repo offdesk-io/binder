@@ -68,10 +68,11 @@ export function isOverdue(due: string | null | undefined, now: Date = new Date()
   return !!due && due < todayIso(now)
 }
 
-const GBP = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 })
+/** Offdesk works in euros. en-IE writes €12,000, as an English page expects. */
+const EUR = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 
 export function money(n: number | null | undefined): string {
-  return n == null ? '' : GBP.format(n)
+  return n == null ? '' : EUR.format(n)
 }
 
 /** The value for an <input type="datetime-local">, in the browser's zone. */

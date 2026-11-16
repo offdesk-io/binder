@@ -171,7 +171,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
         <Field label="Size" value={form.size} onChange={set('size')} />
         <Field label="Location" value={form.location} onChange={set('location')} />
         <Field label="Source" hint="How they came to us" value={form.source} onChange={set('source')} />
-        <Field label="Value (£)" type="number" min={0} value={form.value} onChange={set('value')} />
+        <Field label="Value (€)" type="number" min={0} value={form.value} onChange={set('value')} />
         <Field label="Tags" hint="Separated by commas" value={form.tags} onChange={set('tags')} />
         <Field label="Summary" multiline rows={3} value={form.summary} onChange={set('summary')} />
         <Field label="Next step" value={form.next_step} onChange={set('next_step')} />

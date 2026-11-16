@@ -42,7 +42,7 @@ describe('format', () => {
   })
 
   test('money is whole pounds', () => {
-    expect(money(12000)).toBe('£12,000')
+    expect(money(12000)).toBe('€12,000')
     expect(money(null)).toBe('')
   })
 

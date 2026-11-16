@@ -2,8 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-import { contact, interaction, org, research } from '../test/fixtures'
-import { renderApp, stubFetch } from '../test/render'
+import { AT, contact, interaction, org, research } from '../test/fixtures'
+import { renderApp, SESSION, stubFetch } from '../test/render'
 import { OrgPage } from './OrgPage'
 
 const acme = org({ summary: 'Design studio in Leeds', sector: 'Design', value_estimate: 5000, tags: ['design'], website: 'acme.example.com' })
@@ -18,6 +18,7 @@ function stubs(extra: Record<string, (b: unknown) => unknown> = {}) {
     'GET /api/orgs/1/contacts': () => [contact({ is_primary: true, phone: '+44 20 0000 0000', email: 'bo@example.com' })],
     'GET /api/orgs/1/timeline': () => [],
     'GET /api/orgs/1/research': () => [],
+    'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
     ...extra,
   })
 }
@@ -158,4 +159,24 @@ test('the research section shows the latest brief, and the header links to it', 
   page()
   expect(await screen.findByText('A made-up pottery.')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Research' })).toHaveAttribute('href', '#research')
+})
+
+test('a finished Bench task joins the timeline, linked to Bench', async () => {
+  stubs({
+    'GET /api/orgs/1/timeline': () => [
+      { kind: 'bench', id: 'bb0001', title: 'Kickoff deck', at: '2026-11-01T00:00:00.000000+00:00', by_email: null, url: 'https://bench.example.com/#!board=work!task=bb0001' },
+    ],
+  })
+  page()
+  expect(await screen.findByRole('link', { name: 'Kickoff deck' })).toHaveAttribute('href', 'https://bench.example.com/#!board=work!task=bb0001')
+  expect(screen.getByText(/Finished in Bench:/)).toBeInTheDocument()
+  expect(screen.getByText('· 1 Nov 2026')).toBeInTheDocument()
+})
+
+test('with Bench off the Work section is not shown and Work is not asked for', async () => {
+  const calls = stubs()
+  renderApp(<Routes><Route path="/o/:slug" element={<OrgPage />} /></Routes>, '/o/acme', { ...SESSION, meta: { ...SESSION.meta, bench: false } })
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(screen.queryByRole('heading', { name: 'Work' })).toBeNull()
+  expect(calls.some((c) => c.key === 'GET /api/orgs/1/work')).toBe(false)
 })

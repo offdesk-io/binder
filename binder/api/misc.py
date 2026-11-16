@@ -25,6 +25,7 @@ def meta(request: Request):
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
         "ai": request.app.state.ai is not None,
+        "bench": request.app.state.bench is not None,
     }
 
 

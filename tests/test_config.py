@@ -81,3 +81,50 @@ def test_unknown_ai_mode_refuses_to_start():
 def test_fake_ai_is_refused_on_the_server():
     with pytest.raises(ConfigError, match="fake"):
         load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/x/l.db", "BINDER_AI": "fake"})
+
+
+def test_bench_is_off_by_default():
+    s = load_settings({})
+    assert (s.bench_token, s.bench_file, s.bench_core) == ("", "", "")
+    assert s.bench_board == "work"
+    assert s.bench_url == "https://bench.offdesk.io"
+
+
+def test_bench_token_needs_the_bench_core(tmp_path):
+    with pytest.raises(ConfigError, match="BINDER_BENCH_CORE"):
+        load_settings({"BINDER_BENCH_TOKEN": "t0ken"})
+
+
+def test_bench_core_must_hold_todo_py(tmp_path):
+    with pytest.raises(ConfigError, match="todo.py"):
+        load_settings({"BINDER_BENCH_TOKEN": "t0ken", "BINDER_BENCH_CORE": str(tmp_path)})
+
+
+def test_bench_over_http(tmp_path):
+    (tmp_path / "todo.py").write_text("")
+    s = load_settings({"BINDER_BENCH_TOKEN": "t0ken", "BINDER_BENCH_CORE": str(tmp_path),
+                       "BINDER_BENCH_BOARD": "other", "BINDER_BENCH_URL": "https://bench.example.com/"})
+    assert (s.bench_token, s.bench_board, s.bench_url) == ("t0ken", "other", "https://bench.example.com")
+    assert "t0ken" not in repr(s)  # the token never reaches a log line
+
+
+def test_bench_url_must_be_https_unless_loopback(tmp_path):
+    (tmp_path / "todo.py").write_text("")
+    base = {"BINDER_BENCH_TOKEN": "t", "BINDER_BENCH_CORE": str(tmp_path)}
+    with pytest.raises(ConfigError, match="https"):
+        load_settings(dict(base, BINDER_BENCH_URL="http://bench.example.com"))
+    with pytest.raises(ConfigError, match="https"):
+        load_settings(dict(base, BINDER_BENCH_URL="http://localhost.example.com"))
+    with pytest.raises(ConfigError, match="https"):
+        load_settings(dict(base, BINDER_BENCH_URL="http://localhost:8765"))  # a name, not a literal loopback address
+    assert load_settings(dict(base, BINDER_BENCH_URL="http://127.0.0.1:8765")).bench_url == "http://127.0.0.1:8765"
+    assert load_settings(dict(base, BINDER_BENCH_URL="http://[::1]:8765")).bench_url == "http://[::1]:8765"
+
+
+def test_bench_file_is_for_local_development_only(tmp_path):
+    (tmp_path / "todo.py").write_text("")
+    s = load_settings({"BINDER_BENCH_FILE": "board.md", "BINDER_BENCH_CORE": str(tmp_path)})
+    assert s.bench_file == "board.md"
+    with pytest.raises(ConfigError, match="BINDER_BENCH_FILE"):
+        load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/x/b.db", "BINDER_BENCH_FILE": "board.md",
+                       "BINDER_BENCH_CORE": str(tmp_path)})

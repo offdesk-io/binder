@@ -1,8 +1,9 @@
 import sqlite3
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
 from ..auth import Identity, guard
+from ..bench import task_url
 from ..db import get_db
 from ..repo import interactions, timeline
 from ..schemas import InteractionCreate, InteractionPatch
@@ -22,8 +23,10 @@ def log_interaction(org_id: int, body: InteractionCreate, db: sqlite3.Connection
 
 
 @router.get("/orgs/{org_id}/timeline")
-def org_timeline(org_id: int, db: sqlite3.Connection = Depends(get_db)):
-    return timeline.for_org(db, org_id)
+def org_timeline(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db)):
+    reader = request.app.state.bench
+    link = (lambda board, key: task_url(reader["url"], board, key)) if reader is not None else None
+    return timeline.for_org(db, org_id, task_url=link)
 
 
 @router.get("/contacts/{contact_id}/interactions")

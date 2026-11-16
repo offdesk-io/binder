@@ -1,4 +1,4 @@
-import type { ActivityItem, Brief, Contact, Interaction, Org, Research } from '../api/types'
+import type { ActivityItem, Brief, BenchTask, Contact, Interaction, Org, Research } from '../api/types'
 
 export const AT = '2026-11-10T12:00:00.000000+00:00'
 
@@ -31,6 +31,13 @@ export function activity(o: Partial<ActivityItem> = {}): ActivityItem {
   return {
     kind: 'status', id: 1, org_id: 2, org_name: 'Bolt', org_slug: 'bolt', at: AT, type: null,
     summary: null, from_status: 'lead', to_status: 'contacted', by_email: 'ana@example.com', ...o,
+  }
+}
+
+export function benchTask(o: Partial<BenchTask> = {}): BenchTask {
+  return {
+    task_key: 'aa0002', board: 'work', title: 'Acme site rebuild', state: 'Doing', done: false, cancelled: false,
+    done_on: null, due: null, assignee: null, fetched_at: AT, url: 'https://bench.example.com/#!board=work!task=aa0002', ...o,
   }
 }
 

@@ -1,7 +1,7 @@
 import { request } from './client'
 import type {
   ActivityItem, AttentionItem, Contact, ContactInput, ContactPatch, Interaction, InteractionInput,
-  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who,
+  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who, Work,
 } from './types'
 
 export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value'
@@ -51,5 +51,6 @@ export const api = {
   research: (id: number) => request<Research>('GET', `/api/research/${id}`),
   startOrgResearch: (orgId: number) => request<Research>('POST', `/api/orgs/${orgId}/research`),
   startContactResearch: (contactId: number) => request<Research>('POST', `/api/contacts/${contactId}/research`),
+  work: (orgId: number) => request<Work>('GET', `/api/orgs/${orgId}/work`),
   summarise: (orgId: number, text: string) => request<Summary>('POST', '/api/summarise', { org_id: orgId, text }),
 }

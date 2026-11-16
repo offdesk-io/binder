@@ -11,3 +11,5 @@ dist/
 *.migrate.lock
 web/test-results/
 web/playwright-report/
+import-plan.csv
+import-links.json

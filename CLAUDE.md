@@ -11,6 +11,7 @@ Read before changing anything:
 - Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-binder-1-core-api.md`
 - Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-binder-2-frontend.md`
 - Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-binder-3-ai.md`
+- Plan 4, Bench link and import: `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
 
 ## Where the work stands
 
@@ -19,10 +20,9 @@ There are five plans, each one spec → plan → build → review:
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
 3. AI (research briefs and paste-and-summarise): done.
-4. Bench link and import: the `[lead:: <slug>]` field, card chip and Lead
-   picker in Bench, plus the import of the offdesk board's **Leads** bucket:
-   **next**.
-5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner.
+4. Bench link and import: built on `feature/bench-link` (Binder) and
+   `feature/lead-tag` (Bench, PR for the owner's review). Review, then merge.
+5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: **next**.
 
 ## Run and test
 
@@ -107,6 +107,9 @@ services and never run in CI.
   together.
 - **Binder reads Bench's tasks** server to server, through Bench's
   `core/todo.py`.
+- Binder reads Bench over HTTP with `BINDER_BENCH_TOKEN`, GET only, and parses
+  with Bench's `core/todo.py` from `BINDER_BENCH_CORE`. Tests use
+  `tests/bench_todo.md`, written from scratch: never copy from Bench's `data/`.
 
 ## Commits and privacy
 

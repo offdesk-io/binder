@@ -1,4 +1,4 @@
-import { Alert, Dropdown, SegmentedControl, type DropdownOption } from '@tiagopedras/tenon'
+import { Alert, ColumnEmpty, Dropdown, SegmentedControl, type DropdownOption } from '@tiagopedras/tenon'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
@@ -74,7 +74,7 @@ export function ListPage() {
     <div className="tn-stack">
       <div className="tn-toolbar">
         <h1 className="tenon-heading-3">Organisations</h1>
-        <div className="tn-custom-filters">
+        <div className="tn-cluster">
           <SegmentedControl
             aria-label="Kind"
             value={f.kind}
@@ -95,12 +95,12 @@ export function ListPage() {
       ) : !orgs.data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <p className="tn-custom-faint">Nothing matches these filters.</p>
+        <ColumnEmpty>Nothing matches these filters.</ColumnEmpty>
       ) : phone ? (
-        <div className="tn-custom-cards">{rows.map((o) => <OrgCard key={o.id} org={o} />)}</div>
+        <div className="tn-stack">{rows.map((o) => <OrgCard key={o.id} org={o} />)}</div>
       ) : (
-        <div className="tn-table-wrap tn-custom-table-wrap">
-          <table>
+        <div className="tn-table-wrap">
+          <table className="tn-custom-table">
             <caption>{rows.length === 1 ? '1 organisation' : `${rows.length} organisations`}</caption>
             <thead>
               <tr>

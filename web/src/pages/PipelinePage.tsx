@@ -4,9 +4,11 @@ import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useSession } from '../app/session'
+import { ColourDot } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { StatusPicker } from '../components/StatusPicker'
+import { columnHead, stageColour } from '../lib/colour'
 import { label } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
@@ -70,11 +72,11 @@ export function PipelinePage() {
             onChange={setStage}
             options={meta.lead_statuses.map((s) => ({
               value: s,
-              label: <>{label(s)} <span className="tn-custom-muted">{groups[s].length}</span></>,
+              label: <><ColourDot colour={stageColour(s)} /> {label(s)} <span className="tn-custom-muted">{groups[s].length}</span></>,
             }))}
           />
         </div>
-        <div className="tn-custom-cards">
+        <div className="tn-stack">
           {groups[stage].length === 0 && <ColumnEmpty>{EMPTY_PHONE[stage] ?? 'None at this stage.'}</ColumnEmpty>}
           {groups[stage].map((o) => (
             <OrgCard key={o.id} org={o} showStatus={false}
@@ -98,6 +100,9 @@ export function PipelinePage() {
             data-testid={`stage-${s}`}
             titleAs="h2"
             title={label(s)}
+            titleAfter={<ColourDot colour={stageColour(s)} />}
+            tone={columnHead(s).tone}
+            muted={columnHead(s).muted}
             count={groups[s].length}
             className={over === s ? 'tn-custom-drop' : undefined}
             onDragOver={(e) => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
-  ago, day, fromLocalInput, isOverdue, label, money, person, REASON_TEXT, statusLine, statusTone,
+  ago, day, fromLocalInput, isOverdue, label, money, person, REASON_TEXT, statusLine,
   toLocalInput, todayIso, safeHref, usd,
 } from './format'
 
@@ -8,12 +8,6 @@ describe('format', () => {
   test('label turns a code into words', () => {
     expect(label('in_conversation')).toBe('In conversation')
     expect(label('call')).toBe('Call')
-  })
-
-  test('every status has a tone, and an unknown one is neutral', () => {
-    expect(statusTone('won')).toBe('success')
-    expect(statusTone('lost')).toBe('error')
-    expect(statusTone('what')).toBe('neutral')
   })
 
   test('day shows a plain date and a time the same way', () => {
@@ -48,7 +42,7 @@ describe('format', () => {
   })
 
   test('money is whole pounds', () => {
-    expect(money(12000)).toBe('£12,000')
+    expect(money(12000)).toBe('€12,000')
     expect(money(null)).toBe('')
   })
 

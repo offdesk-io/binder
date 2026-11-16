@@ -1,10 +1,13 @@
-import { Alert, Column, ColumnEmpty, Tag } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
-import type { ActivityItem } from '../api/types'
+import type { ActivityItem, Org } from '../api/types'
+import { useSession } from '../app/session'
+import { ColourDot } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
-import { ago, label, person, REASON_TEXT, statusLine } from '../lib/format'
+import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
+import { ago, label, money, person, REASON_TEXT, statusLine } from '../lib/format'
 import { useApi } from '../lib/useApi'
 
 function what(a: ActivityItem): string {
@@ -12,14 +15,48 @@ function what(a: ActivityItem): string {
   return `${label(a.type ?? '')}: ${a.summary ?? ''}`
 }
 
+/** The figures the stat strip counts, from the organisations and the attention list the page already loads. */
+export function headline(orgs: Org[], openStatuses: string[], overdue: number, attention: number) {
+  const open = orgs.filter((o) => o.kind === 'lead' && openStatuses.includes(o.status))
+  const clients = orgs.filter((o) => o.kind === 'client')
+  return {
+    pipeline: open.reduce((sum, o) => sum + (o.value_estimate ?? 0), 0),
+    openLeads: open.length,
+    attention,
+    overdue,
+    active: clients.filter((o) => o.status === 'active').length,
+    paused: clients.filter((o) => o.status === 'paused').length,
+  }
+}
+
 export function HomePage() {
+  const { meta } = useSession()
   const attention = useApi(api.attention, [])
   const activity = useApi(() => api.activity(30), [])
+  const orgs = useApi(() => api.orgs(), [])
+  const overdue = attention.data?.filter((a) => a.reasons.includes('overdue')).length ?? 0
+  const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
     <div className="tn-stack">
       <div className="tn-toolbar">
         <h1 className="tenon-heading-3">Home</h1>
       </div>
+      {orgs.error ? (
+        <Alert tone="error">{orgs.error.message}</Alert>
+      ) : !figures ? (
+        <Loading />
+      ) : (
+        <div className="tn-stat-strip">
+          <Stat eyebrow="Open pipeline" tone="accent" value={money(figures.pipeline)} caption={`${figures.openLeads} open leads`} />
+          <Stat
+            eyebrow="Needs attention"
+            tone={figures.overdue > 0 ? 'error' : figures.attention > 0 ? 'warning' : 'success'}
+            value={String(figures.attention)}
+            caption={`${figures.overdue} with a missed next step`}
+          />
+          <Stat eyebrow="Active clients" tone="success" value={String(figures.active)} caption={`${figures.paused} paused`} />
+        </div>
+      )}
       <div className="tn-grid tn-custom-split">
         <Column className="tn-col-8" titleAs="h2" title="Needs attention" count={attention.data?.length}>
           {attention.error ? (
@@ -27,14 +64,14 @@ export function HomePage() {
           ) : !attention.data ? (
             <Loading />
           ) : attention.data.length === 0 ? (
-            <ColumnEmpty>Nothing needs you today.</ColumnEmpty>
+            <ColumnEmpty boxed>Nothing needs you today.</ColumnEmpty>
           ) : (
             attention.data.map((a) => (
               <OrgCard
                 key={a.org.id}
                 org={a.org}
                 footer={a.reasons.map((r) => (
-                  <Tag key={r} tone={r === 'overdue' ? 'urgent' : 'soon'}>{REASON_TEXT[r]}</Tag>
+                  <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>
                 ))}
               />
             ))
@@ -46,17 +83,18 @@ export function HomePage() {
           ) : !activity.data ? (
             <Loading />
           ) : activity.data.length === 0 ? (
-            <p className="tenon-body tn-custom-faint">Nothing has happened yet.</p>
+            <ColumnEmpty>Nothing has happened yet.</ColumnEmpty>
           ) : (
-            <ul className="tn-custom-activity">
+            <ul className="tn-custom-rows">
               {activity.data.map((a) => (
                 <li key={`${a.kind}${a.id}`}>
-                  <p className="tenon-body tn-custom-activity-line">
+                  <p className="tenon-body">
+                    <ColourDot colour={a.kind === 'status' ? stageColour(a.to_status ?? '') : typeColour(a.type ?? '')} />{' '}
                     <Link to={`/o/${a.org_slug}${a.kind === 'interaction' ? `#i-${a.id}` : ''}`}>{a.org_name}</Link>
                     <span className="tn-custom-faint" aria-hidden="true"> · </span>
-                    <span className="tn-custom-activity-what">{what(a)}</span>
+                    <span>{what(a)}</span>
                   </p>
-                  <span className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</span>
+                  <div className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</div>
                 </li>
               ))}
             </ul>

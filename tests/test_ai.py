@@ -128,12 +128,12 @@ def test_summarise_is_quick_and_has_no_tools():
               "next_step_due": None, "contact_ids": [5]}
     client = Client(message(text=json.dumps(answer)))
     fields, usage = AnthropicAI(client).summarise(
-        "Met Bo for coffee", "Acme", [{"id": 5, "name": "Bo", "role": None}], "2026-11-11T10:00+00:00 (Europe/London)")
+        "Met Bo for coffee", "Acme", [{"id": 5, "name": "Bo", "role": None}], "2026-11-11T10:00+00:00 (Europe/Lisbon)")
     kw = client.calls[0]
     assert kw["output_config"]["effort"] == "low"
     assert "tools" not in kw
     prompt = kw["messages"][0]["content"]
-    assert "Met Bo for coffee" in prompt and '"name": "Bo"' in prompt and "Europe/London" in prompt
+    assert "Met Bo for coffee" in prompt and '"name": "Bo"' in prompt and "Europe/Lisbon" in prompt
     assert fields == answer
     assert usage.output_tokens == 50
 

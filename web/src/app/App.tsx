@@ -1,3 +1,4 @@
+import { ColumnEmpty } from '@tiagopedras/tenon'
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './Layout'
 import { HomePage } from '../pages/HomePage'
@@ -9,7 +10,7 @@ import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
 
 function NotFound() {
-  return <p className="tn-custom-faint">There is nothing at this address.</p>
+  return <ColumnEmpty>There is nothing at this address.</ColumnEmpty>
 }
 
 export function App() {

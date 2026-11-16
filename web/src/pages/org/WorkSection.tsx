@@ -1,8 +1,9 @@
-import { Alert, Column, Tag } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty, Spinner, Tag } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { api } from '../../api/endpoints'
 import type { BenchTask } from '../../api/types'
 import { Loading } from '../../components/Loading'
+import { taskTone } from '../../lib/colour'
 import { clock, day, safeHref } from '../../lib/format'
 import { useApi } from '../../lib/useApi'
 
@@ -24,14 +25,22 @@ function caption(task: BenchTask, finished: boolean): string {
   return [task.due && `Due ${day(task.due)}`, task.assignee].filter(Boolean).join(' · ')
 }
 
+/** An open task shows its column as a tag. A finished one puts its caption (Done or Cancelled, and the day) in a tag
+ * of the column's colour: Done is success, and Cancelled is muted. */
 function TaskLine({ task, finished }: { task: BenchTask; finished: boolean }) {
   const href = safeHref(task.url) ?? undefined
   const text = caption(task, finished)
   return (
     <li>
-      <a href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
-      {!finished && <Tag>{task.state}</Tag>}
-      {text && <div className="tenon-caption tn-custom-faint">{text}</div>}
+      <div className="tn-cluster">
+        <a className={task.cancelled ? 'tn-custom-muted' : undefined} href={href} target="_blank" rel="noopener noreferrer">{task.title}</a>
+        {!finished && <Tag tone={taskTone(task.state)}>{task.state}</Tag>}
+      </div>
+      {finished ? (
+        <div><Tag tone={taskTone(task.state)}>{text}</Tag></div>
+      ) : (
+        text && <div className="tenon-caption tn-custom-faint">{text}</div>
+      )}
     </li>
   )
 }
@@ -72,12 +81,15 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
             </Alert>
           )}
           {tasks.length === 0 && !error && !readAt && (
-            <p className="tenon-body tn-custom-faint">Reading Bench…</p>
+            <p className="tn-cluster tenon-body tn-custom-muted">
+              <Spinner variant="ring" size="sm" label="Reading Bench" />
+              Reading Bench…
+            </p>
           )}
           {tasks.length === 0 && !error && readAt && (
-            <p className="tenon-body tn-custom-faint">
+            <ColumnEmpty>
               No Bench tasks are tagged with this organisation yet. Add <code className="tenon-code">[lead:: {slug}]</code> to a task in Bench to link it.
-            </p>
+            </ColumnEmpty>
           )}
           {open.length > 0 && (
             <ul className="tn-custom-tight">
@@ -85,8 +97,8 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
             </ul>
           )}
           {done.length > 0 && (
-            <div className="tn-stack">
-              <h3 className="tenon-label">Done</h3>
+            <div className="tn-custom-part">
+              <h3 className="tenon-label tn-custom-muted">Done</h3>
               <ul className="tn-custom-tight">
                 {done.map((t) => <TaskLine key={t.task_key} task={t} finished />)}
               </ul>

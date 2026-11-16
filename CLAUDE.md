@@ -62,7 +62,7 @@ services and never run in CI.
 - **Times.** Store times as UTC ISO with microseconds, as `db.now()` and
   `schemas.iso_datetime` produce, because feeds and sorting compare them as
   strings. Dates are `YYYY-MM-DD`. "Today" uses `BINDER_TZ`
-  (default `Europe/London`).
+  (default `Europe/Lisbon`).
 - **Migrations.**
   - Files are named `binder/migrations/NNN_name.sql` and applied in order at
     startup. Each runs in one transaction with foreign keys off and a

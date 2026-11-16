@@ -30,7 +30,7 @@ def _cutoff(today: str, days: int) -> str:
 
 
 def attention(conn: sqlite3.Connection, today: Optional[str] = None,
-              tz: str = "Europe/London") -> List[Dict[str, Any]]:
+              tz: str = "Europe/Lisbon") -> List[Dict[str, Any]]:
     """`today` (YYYY-MM-DD) is for tests; by default it is the date now in `tz`."""
     today = today or _today(tz)
     quiet_before = _cutoff(today, QUIET_DAYS)

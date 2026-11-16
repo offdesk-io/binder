@@ -36,7 +36,7 @@ def test_summarise_fills_a_log():
     text = ("From: Rowan Example\nSubject: Next week\n\nThanks for the call today. "
             "Let's meet on 20 November 2026 to look at the kiln designs.")
     fields, usage = AnthropicAI().summarise(text, "Quillmere Kilnworks", [{"id": 1, "name": "Rowan Example",
-                                            "role": "Founder"}], "2026-11-11T10:00+00:00 (Europe/London)")
+                                            "role": "Founder"}], "2026-11-11T10:00+00:00 (Europe/Lisbon)")
     assert fields["contact_ids"] == [1]
     assert fields["next_step_due"] == "2026-11-20"
     assert usage.output_tokens > 0

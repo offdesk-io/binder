@@ -1,4 +1,4 @@
-import { Alert, Button, Column, LinkButton } from '@tiagopedras/tenon'
+import { Alert, Button, Column, ColumnEmpty, LinkButton, Tag } from '@tiagopedras/tenon'
 import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
@@ -9,6 +9,7 @@ import { Loading } from '../components/Loading'
 import { QuickLog } from '../components/QuickLog'
 import { ResearchSection } from '../components/ResearchSection'
 import { useSession } from '../app/session'
+import { relationshipTone } from '../lib/colour'
 import { label, safeHref } from '../lib/format'
 import { useApi } from '../lib/useApi'
 
@@ -36,7 +37,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
       ['Email', c.email && <a href={`mailto:${c.email}`}>{c.email}</a>],
       ['Phone', c.phone && <a href={`tel:${c.phone}`}>{c.phone}</a>],
       ['LinkedIn', c.linkedin_url && (linkedin ? <a href={linkedin} target="_blank" rel="noreferrer">Profile</a> : c.linkedin_url)],
-      ['Relationship', c.relationship && label(c.relationship)],
+      ['Relationship', c.relationship && <Tag tone={relationshipTone(c.relationship)}>{label(c.relationship)}</Tag>],
       ['Talk to', c.is_primary && 'Yes, the one to talk to'],
     ] as [string, ReactNode][]
   ).filter(([, v]) => v)
@@ -45,10 +46,10 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
     <div className="tn-stack">
       <header className="tn-stack">
         <div className="tn-toolbar">
-          <div className="tn-custom-title">
+          <div className="tn-cluster tn-custom-title">
             <h1 className="tenon-heading-3">{c.name}</h1>
           </div>
-          <div className="tn-cluster tn-custom-actions">
+          <div className="tn-cluster">
             <Button variant="primary" onClick={() => setLogging(true)}>Log</Button>
             <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
             {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
@@ -70,9 +71,9 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
             ) : !history.data ? (
               <Loading />
             ) : history.data.length === 0 ? (
-              <p className="tenon-body tn-custom-faint">Nothing logged with {c.name} yet.</p>
+              <ColumnEmpty boxed>Nothing logged with {c.name} yet.</ColumnEmpty>
             ) : (
-              <ol className="tn-custom-timeline">
+              <ol className="tn-custom-rows">
                 {history.data.map((i) => (
                   <li key={i.id}>
                     <InteractionEntry

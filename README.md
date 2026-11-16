@@ -20,7 +20,7 @@ From `web/`: `npm run check` type-checks, `npm test` runs the Vitest suite, and
 `npm run e2e` builds and runs the Playwright flows at 390px and 1280px against a
 throwaway database (`npx playwright install chromium` once first).
 
-`BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/London`) decides what "today" means for the needs-attention feed.
+`BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/Lisbon`) decides what "today" means for the needs-attention feed.
 
 Research and "Paste and summarise" call the Anthropic API from the server.
 `ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides
@@ -104,7 +104,7 @@ what the item is, and the pair (`kind`, `id`) identifies it: an interaction and
 a status change can share an `id`.
 
 - **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
-  `research`), `id`, `org_id`, `org_name`, `org_slug`, `title`, `snippet`
+  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `title`, `snippet`
   (each match wrapped in the control characters `\u0002` and `\u0003`), and
   `contact_id`: the person a research brief is about, null otherwise.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**

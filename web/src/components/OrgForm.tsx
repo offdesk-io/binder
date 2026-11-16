@@ -5,7 +5,6 @@ import { api } from '../api/endpoints'
 import type { Kind, Org, OrgFields, Who } from '../api/types'
 import { useSession } from '../app/session'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
-import { useIsPhone } from '../lib/useIsPhone'
 import { ConfirmDelete } from './ConfirmDelete'
 
 export interface OrgFormState {
@@ -73,7 +72,6 @@ interface Props {
 
 export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   const { me } = useSession()
-  const phone = useIsPhone()
   const [base, setBase] = useState(org)
   const [form, setForm] = useState(() => orgForm(org, me))
   const [error, setError] = useState<string>()
@@ -143,7 +141,6 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
       onClose={onClose}
       title={base ? `Edit ${base.name}` : 'New organisation'}
       size="md"
-      className={phone ? 'tn-custom-sheet' : undefined}
       onSubmit={() => void save()}
       footer={
         <>
@@ -154,12 +151,12 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
         </>
       }
     >
-      <form id="org-form" className="tn-custom-form" onSubmit={(e) => { e.preventDefault(); void save() }}>
+      <form id="org-form" className="tn-stack" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         {!base && (
-          <div className="tn-custom-field">
-            <span className="tenon-label">Kind</span>
+          <div className="tenon-field">
+            <span className="tenon-field__label">Kind</span>
             <SegmentedControl
               aria-label="Kind"
               value={form.kind}
@@ -174,7 +171,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
         <Field label="Size" value={form.size} onChange={set('size')} />
         <Field label="Location" value={form.location} onChange={set('location')} />
         <Field label="Source" hint="How they came to us" value={form.source} onChange={set('source')} />
-        <Field label="Value (£)" type="number" min={0} value={form.value} onChange={set('value')} />
+        <Field label="Value (€)" type="number" min={0} value={form.value} onChange={set('value')} />
         <Field label="Tags" hint="Separated by commas" value={form.tags} onChange={set('tags')} />
         <Field label="Summary" multiline rows={3} value={form.summary} onChange={set('summary')} />
         <Field label="Next step" value={form.next_step} onChange={set('next_step')} />

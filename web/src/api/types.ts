@@ -119,6 +119,8 @@ export interface SearchHit {
   org_id: number
   org_name: string
   org_slug: string
+  /** The organisation's current status, which sets the stage colour the hit shows. */
+  org_status: string
   title: string
   snippet: string
   /** The person a research brief is about; null for every other hit. */

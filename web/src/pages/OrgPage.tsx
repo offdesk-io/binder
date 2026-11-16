@@ -1,5 +1,5 @@
-import { Alert, Button, Column, LinkButton, Tag } from '@tiagopedras/tenon'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Alert, Button, Column, ColumnEmpty, LinkButton, Stat, Tag } from '@tiagopedras/tenon'
+import { Fragment, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
@@ -11,7 +11,8 @@ import { QuickLog } from '../components/QuickLog'
 import { ResearchSection } from '../components/ResearchSection'
 import { StatusPicker } from '../components/StatusPicker'
 import { useSession } from '../app/session'
-import { label, money, person, safeHref } from '../lib/format'
+import { lastContactTone, stageColour } from '../lib/colour'
+import { ago, label, money, person, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -28,6 +29,7 @@ export function OrgPage() {
   return <OrgView key={org.data.id} org={org.data} setOrg={org.setData} reloadOrg={org.reload} refreshError={org.error?.message} />
 }
 
+/** The facts under the overview. Value and last contact are the key figures, shown as Stats above it. */
 function facts(org: Org): [string, ReactNode][] {
   const all: [string, ReactNode][] = [
     ['Next step', org.next_step ? <NextStep org={org} /> : null],
@@ -35,7 +37,6 @@ function facts(org: Org): [string, ReactNode][] {
     ['Size', org.size],
     ['Location', org.location],
     ['Source', org.source],
-    ['Value', money(org.value_estimate)],
     ['Tags', org.tags.length ? org.tags.map((t) => <Tag key={t}>{t}</Tag>) : null],
   ]
   return all.filter(([, v]) => v)
@@ -85,13 +86,13 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
 
   return (
     <div className="tn-stack">
-      <header className="tn-stack">
+      <header className="tn-stack tn-custom-stage" style={{ '--tn-stage': stageColour(org.status).mark } as CSSProperties}>
         <div className="tn-toolbar">
-          <div className="tn-custom-title">
+          <div className="tn-cluster tn-custom-title">
             <h1 className="tenon-heading-3">{org.name}</h1>
             <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
           </div>
-          <div className="tn-cluster tn-custom-actions">
+          <div className="tn-cluster">
             {!phone && <Button variant="primary" onClick={() => setLog('new')}>Log</Button>}
             <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
             {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
@@ -106,10 +107,15 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
         {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh this page: ${refreshError}`}</Alert>}
       </header>
 
+      <div className="tn-cluster">
+        {org.value_estimate != null && <Stat eyebrow="Value" tone="accent" value={money(org.value_estimate)} />}
+        <Stat eyebrow="Last contact" tone={lastContactTone(org.last_contact)} value={ago(org.last_contact)} />
+      </div>
+
       <div className="tn-grid tn-custom-split">
         <div className="tn-col-8 tn-stack">
           <Column titleAs="h2" title="Overview">
-            {org.summary ? <p className="tenon-body tn-custom-body">{org.summary}</p> : <p className="tenon-body tn-custom-faint">No summary yet.</p>}
+            {org.summary ? <p className="tenon-body tn-custom-body">{org.summary}</p> : <ColumnEmpty>No summary yet.</ColumnEmpty>}
             <dl className="tn-custom-facts">
               {facts(org).map(([k, v]) => (
                 <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>

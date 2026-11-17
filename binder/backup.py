@@ -13,6 +13,7 @@ The nightly timer keeps 30 days of nightly copies. A deploy keeps its last
 """
 
 import argparse
+import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -29,17 +30,27 @@ def backup(db: Path, folder: Path, prefix: str, now: Optional[datetime] = None) 
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / ("%s-%s.db" % (prefix, now.strftime(STAMP)))
     part = folder / (target.name + ".part")
-    src = sqlite3.connect(str(db))
+    os.close(os.open(str(part), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600))
     try:
-        dst = sqlite3.connect(str(part))
+        src = sqlite3.connect(str(db))
         try:
-            src.backup(dst)
+            dst = sqlite3.connect(str(part))
+            try:
+                src.backup(dst)
+                dst.execute("PRAGMA journal_mode=DELETE").fetchone()
+            finally:
+                dst.close()
         finally:
-            dst.close()
-    finally:
-        src.close()
-    part.chmod(0o600)
-    part.replace(target)
+            src.close()
+        for stray in (Path(str(part) + "-wal"), Path(str(part) + "-shm")):
+            if stray.exists():
+                stray.unlink()
+        part.replace(target)
+    except BaseException:
+        for leftover in (part, Path(str(part) + "-wal"), Path(str(part) + "-shm"), Path(str(part) + "-journal")):
+            if leftover.exists():
+                leftover.unlink()
+        raise
     return target
 
 

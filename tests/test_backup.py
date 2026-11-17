@@ -25,8 +25,12 @@ def stamp_name(prefix, when):
 def test_the_copy_holds_every_row_while_the_app_still_has_the_database_open(tmp_path):
     conn = make_db(tmp_path / "binder.db")
     out = b.backup(tmp_path / "binder.db", tmp_path / "nightly", "nightly")
-    rows = sqlite3.connect(str(out)).execute("SELECT x FROM t ORDER BY x").fetchall()
+    copy = sqlite3.connect(str(out))
+    rows = copy.execute("SELECT x FROM t ORDER BY x").fetchall()
+    mode = copy.execute("PRAGMA journal_mode").fetchone()[0]
+    copy.close()
     assert rows == [(1,), (2,)]
+    assert mode == "delete"
     conn.close()
 
 
@@ -42,6 +46,13 @@ def test_a_missing_database_is_an_error_and_is_not_created(tmp_path):
     with pytest.raises(FileNotFoundError):
         b.backup(tmp_path / "none.db", tmp_path / "d", "nightly")
     assert not (tmp_path / "none.db").exists()
+
+
+def test_a_failed_copy_leaves_nothing_behind(tmp_path):
+    (tmp_path / "binder.db").write_bytes(b"not a database")
+    with pytest.raises(sqlite3.DatabaseError):
+        b.backup(tmp_path / "binder.db", tmp_path / "d", "nightly")
+    assert list((tmp_path / "d").iterdir()) == []
 
 
 def test_keep_days_removes_only_copies_older_than_that(tmp_path):

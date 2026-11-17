@@ -1,0 +1,23 @@
+# Binder on 127.0.0.1:8770, reached only through nginx (nginx-binder.conf).
+# Installed by setup-server.sh to /etc/systemd/system/binder.service.
+[Unit]
+Description=Binder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=binder
+Group=binder
+WorkingDirectory=/opt/binder/app
+EnvironmentFile=/etc/binder/binder.env
+ExecStart=/opt/binder/app/.venv/bin/python -m binder
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/binder
+
+[Install]
+WantedBy=multi-user.target

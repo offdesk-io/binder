@@ -1,0 +1,12 @@
+# A copy of Binder's database, run by binder-backup.timer. Keeps 30 days.
+[Unit]
+Description=Binder nightly database copy
+
+[Service]
+Type=oneshot
+User=binder
+Group=binder
+ExecStart=/opt/binder/app/.venv/bin/python -m binder.backup /var/lib/binder/binder.db /var/lib/binder/nightly --prefix nightly --keep-days 30
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/binder

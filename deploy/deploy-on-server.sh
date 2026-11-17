@@ -16,12 +16,18 @@
 set -uo pipefail
 # So the commit-id check and tool output don't depend on the caller's locale.
 export LC_ALL=C
+# The CI runner can be cancelled or the ssh connection can drop. Ignore the
+# hangup and the broken pipe so the script still finishes, rollback included,
+# instead of leaving Binder stopped.
+trap '' HUP PIPE
+# Root's working directory must not end up on python's sys.path as binder.
+cd / || exit 1
 REF="${1-}"
 APP="${BINDER_APP:-/opt/binder/app}"
 DB="${BINDER_DB_PATH:-/var/lib/binder/binder.db}"
 SNAPS="${BINDER_SNAPSHOTS:-/var/lib/binder/deploys}"
 HEALTH="${BINDER_HEALTH_URL:-http://127.0.0.1:8770/api/health}"
-LOCK="${BINDER_DEPLOY_LOCK:-/run/lock/binder-deploy.lock}"
+LOCK="${BINDER_DEPLOY_LOCK:-/run/binder-deploy.lock}"
 WAIT="${BINDER_HEALTH_WAIT:-20}"
 UNIT=binder.service
 
@@ -31,6 +37,7 @@ die() { say "ABORT: $*" >&2; exit 1; }
 [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || die "give one full 40-character commit id"
 
 BHOME="$(getent passwd binder | cut -d: -f6)"
+[ -n "$BHOME" ] || die "no binder user"
 as_binder() { runuser -u binder -- env HOME="$BHOME" "$@"; }
 git_app() { as_binder git -C "$APP" "$@"; }
 py() { as_binder "$APP/.venv/bin/python" "$@"; }
@@ -73,7 +80,7 @@ health() {
   say "== Waiting for $HEALTH ($WAIT s)"
   local i code=""
   for i in $(seq 1 "$WAIT"); do
-    code="$(curl -s -o /dev/null -w '%{http_code}' "$HEALTH" || true)"
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$HEALTH" || true)"
     if [ "$code" = 200 ]; then say "  200 after $i s"; return 0; fi
     sleep 1
   done
@@ -82,7 +89,10 @@ health() {
 }
 
 say "== Checkout"
-git_app checkout --quiet --detach "$REF" || die "checkout failed; still on $OLD"
+if ! git_app checkout --quiet --detach "$REF"; then
+  git_app checkout --quiet -f --detach "$OLD"
+  die "checkout failed; still on $OLD"
+fi
 
 if build && systemctl restart "$UNIT" && health; then
   say "Deployed $REF"
@@ -91,22 +101,38 @@ fi
 
 say
 say "== FAILED, rolling back to $OLD"
+rb_ok=1 failed=""
 systemctl stop "$UNIT"
-git_app checkout --quiet -- . && git_app checkout --quiet --detach "$OLD" \
-  || say "  rollback checkout failed; check $APP by hand"
+if ! git_app checkout --quiet -f --detach "$OLD"; then
+  rb_ok=0; failed="$failed the checkout of $OLD;"
+  say "  rollback checkout failed; check $APP by hand"
+fi
 if [ -n "$SNAP" ]; then
   NOW_VERSION="$(db_version)"
   if [ "$NOW_VERSION" != "$OLD_VERSION" ]; then
     say "  the new code moved the database from version $OLD_VERSION to $NOW_VERSION; restoring $SNAP"
-    as_binder cp -f "$SNAP" "$DB" && as_binder rm -f "$DB-wal" "$DB-shm" \
-      || say "  restoring the snapshot failed; copy $SNAP over $DB by hand"
+    as_binder rm -f "$DB-wal" "$DB-shm" \
+      && as_binder cp -f "$SNAP" "$DB.restore" \
+      && as_binder mv -f "$DB.restore" "$DB" \
+      || { rb_ok=0; failed="$failed the database restore (copy $SNAP over $DB by hand);"
+           say "  restoring the snapshot failed; copy $SNAP over $DB by hand"; }
   fi
+elif [ -f "$DB" ]; then
+  ASIDE="$DB.failed-$(date -u +%Y%m%dT%H%M%SZ)"
+  say "  the failed first deploy created $DB; setting it aside as $ASIDE"
+  as_binder mv -f "$DB" "$ASIDE" || { rb_ok=0; failed="$failed moving $DB aside;"; }
+  as_binder rm -f "$DB-wal" "$DB-shm"
 fi
-build || say "  rebuild failed"
+if ! build; then
+  rb_ok=0; failed="$failed the rebuild;"
+  say "  rebuild failed"
+fi
 systemctl start "$UNIT"
-if health; then
+if health && [ "$rb_ok" = 1 ]; then
   say "Rolled back; Binder answers."
-else
+elif [ "$rb_ok" = 1 ]; then
   say "Rolled back, but Binder is not answering. Check: journalctl -u $UNIT -n 50"
+else
+  say "PARTIAL rollback, failed:$failed Check: journalctl -u $UNIT -n 50"
 fi
 exit 1

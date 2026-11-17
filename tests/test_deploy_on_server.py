@@ -20,20 +20,25 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "deploy" / "deploy-on-server.sh"
 
 MIGRATE = ("import sqlite3, sys; c = sqlite3.connect(sys.argv[1]); "
-           "c.execute('PRAGMA user_version = 5'); c.execute('CREATE TABLE added(x)'); c.commit()")
+           "c.execute('PRAGMA user_version = 5'); c.execute('CREATE TABLE added(x)'); c.commit(); open(sys.argv[1] + '-wal', 'wb').write(b'junk')")
+MIGRATE_ROW = ("import sqlite3, sys; c = sqlite3.connect(sys.argv[1]); "
+               "c.execute('INSERT INTO t VALUES (99)'); c.commit()")
 
 STUBS = {
     # runuser -u binder -- env HOME=... cmd: run the command as whoever we are.
     "runuser": 'while [ "$1" != -- ]; do shift; done; shift; exec "$@"',
-    "getent": 'echo "binder:x:1000:1000::$STUB_HOME:/bin/bash"',
+    "getent": '[ -n "${STUB_NO_USER-}" ] && exit 2; echo "binder:x:1000:1000::$STUB_HOME:/bin/bash"',
     "flock": "exit 0",
     "sleep": "exit 0",
-    "npm": 'echo "npm $*" >> "$STUB_LOG"',
-    "curl": 'if grep -q BAD "$STUB_APP/f.txt"; then printf 500; else printf 200; fi',
+    "npm": ('echo "npm $*" >> "$STUB_LOG"\n'
+            'if [ -n "${STUB_NPM_FAIL-}" ] || grep -q BUILDFAIL "$STUB_APP/f.txt"; then exit 1; fi'),
+    "curl": 'echo "curl $*" >> "$STUB_LOG"; if grep -q BAD "$STUB_APP/f.txt"; then printf 500; else printf 200; fi',
     "systemctl": (
         'echo "systemctl $*" >> "$STUB_LOG"\n'
         'case "$1" in restart|start)\n'
-        '  if grep -q MIGRATE "$STUB_APP/f.txt"; then "$STUB_PY" -c "$STUB_MIGRATE" "$STUB_DB"; fi ;;\n'
+        '  if grep -q MIGRATE "$STUB_APP/f.txt"; then "$STUB_PY" -c "$STUB_MIGRATE" "$STUB_DB"; fi\n'
+        '  if grep -q ROW "$STUB_APP/f.txt"; then "$STUB_PY" -c "$STUB_MIGRATE_ROW" "$STUB_DB"; fi\n'
+        '  if grep -q HUP "$STUB_APP/f.txt"; then kill -HUP $PPID; sleep 0; fi ;;\n'
         'esac'),
 }
 
@@ -74,6 +79,9 @@ def world(tmp_path):
     w.b = commit(work, "B")
     w.bad = commit(work, "B BAD")
     w.bad_migrate = commit(work, "B BAD MIGRATE")
+    w.buildfail = commit(work, "B BUILDFAIL")
+    w.bad_row = commit(work, "B BAD ROW")
+    w.bad_hup = commit(work, "B BAD HUP")
     git(work, "switch", "-q", "-c", "side", w.a)
     w.c = commit(work, "C")
     git(work, "switch", "-q", "main")
@@ -110,10 +118,11 @@ def world(tmp_path):
     env.update({
         "PATH": "%s:%s" % (stubs, os.environ["PATH"]),
         "STUB_HOME": str(tmp_path), "STUB_LOG": str(w.log), "STUB_APP": str(w.app),
-        "STUB_DB": str(w.db), "STUB_PY": sys.executable, "STUB_MIGRATE": MIGRATE,
+        "STUB_DB": str(w.db), "STUB_PY": sys.executable, "STUB_MIGRATE": MIGRATE, "STUB_MIGRATE_ROW": MIGRATE_ROW,
         "BINDER_APP": str(w.app), "BINDER_DB_PATH": str(w.db), "BINDER_SNAPSHOTS": str(w.snaps),
         "BINDER_DEPLOY_LOCK": str(tmp_path / "lock"), "BINDER_HEALTH_WAIT": "2",
     })
+    w.env = env
     w.run = lambda ref: subprocess.run(["bash", str(SCRIPT), ref], env=env,
                                        capture_output=True, text=True)
     w.head = lambda: git(w.app, "rev-parse", "HEAD")
@@ -185,3 +194,70 @@ def test_the_first_deploy_has_no_database_to_snapshot(world):
     r = world.run(world.b)
     assert r.returncode == 0, r.stdout + r.stderr
     assert not world.snaps.exists() or not list(world.snaps.iterdir())
+
+
+def test_curl_is_given_a_timeout(world):
+    world.run(world.b)
+    assert "--max-time" in world.calls()
+
+
+def test_a_hangup_during_a_deploy_does_not_stop_the_rollback(world):
+    r = world.run(world.bad_hup)
+    assert r.returncode == 1
+    assert world.head() == world.a
+    assert "Rolled back; Binder answers." in r.stdout
+
+
+def test_a_failed_build_rolls_back_and_rebuilds(world):
+    r = world.run(world.buildfail)
+    assert r.returncode == 1
+    assert world.head() == world.a
+    assert world.calls().count("npm ci") == 2
+    assert "Rolled back; Binder answers." in r.stdout
+
+
+def test_a_failed_rollback_rebuild_is_not_reported_as_success(world):
+    world.env["STUB_NPM_FAIL"] = "1"
+    r = world.run(world.b)
+    assert r.returncode == 1
+    assert world.head() == world.a
+    assert "PARTIAL rollback" in r.stdout
+    assert "Rolled back; Binder answers." not in r.stdout
+    assert "journalctl" in r.stdout
+
+
+def test_a_failure_that_did_not_migrate_keeps_rows_written_since_the_snapshot(world):
+    r = world.run(world.bad_row)
+    assert r.returncode == 1
+    assert world.head() == world.a
+    assert "restoring" not in r.stdout
+    conn = sqlite3.connect(str(world.db))
+    assert sorted(conn.execute("SELECT x FROM t").fetchall()) == [(42,), (99,)]
+    conn.close()
+
+
+def test_restoring_the_snapshot_leaves_no_stale_wal(world):
+    r = world.run(world.bad_migrate)
+    assert r.returncode == 1
+    assert not Path(str(world.db) + "-wal").exists()
+    assert not Path(str(world.db) + "-shm").exists()
+    assert not Path(str(world.db) + ".restore").exists()
+    assert db_version(world.db) == 1
+
+
+def test_a_failed_first_deploy_sets_the_new_database_aside(world):
+    world.db.unlink()
+    r = world.run(world.bad_migrate)
+    assert r.returncode == 1
+    assert not world.db.exists()
+    aside = list(world.db.parent.glob("binder.db.failed-*"))
+    assert len(aside) == 1
+    assert "binder.db.failed-" in r.stdout
+
+
+def test_dies_clearly_without_a_binder_user(world):
+    world.env["STUB_NO_USER"] = "1"
+    r = world.run(world.b)
+    assert r.returncode != 0
+    assert "no binder user" in r.stderr
+    assert world.head() == world.a

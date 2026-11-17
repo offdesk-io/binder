@@ -13,3 +13,4 @@ web/test-results/
 web/playwright-report/
 import-plan.csv
 import-links.json
+IMPROVEMENTS.md

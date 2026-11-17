@@ -1,0 +1,95 @@
+# Tests every PR to main. On a merge to main (or a manual run), tests the
+# merged commit again and deploys exactly that commit to the server. The
+# server side is deploy/deploy-forced-command.sh; the plan is
+# docs/superpowers/plans/2026-11-16-binder-5-deploy.md.
+#
+# The deploy job runs only once the repository variable DEPLOY_ENABLED is
+# "true", which the owner sets after setup-server.sh (README, Deploy).
+name: Test and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      TZ: Europe/Lisbon
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.9 is the owner's Mac (CLAUDE.md, Python 3.9); 3.14 is the server.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.9
+            3.14
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Python suite on 3.9
+        run: |
+          python3.9 -m venv "$RUNNER_TEMP/venv39"
+          "$RUNNER_TEMP/venv39/bin/pip" install --quiet -e '.[dev]'
+          "$RUNNER_TEMP/venv39/bin/pytest" -q
+
+      # Playwright starts the app from .venv, so the server's version lives there.
+      - name: Python suite on 3.14
+        run: |
+          python3.14 -m venv .venv
+          .venv/bin/pip install --quiet -e '.[dev]'
+          .venv/bin/pytest -q
+
+      - name: Shell scripts
+        run: shellcheck -S warning deploy/*.sh
+
+      - name: Frontend
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check
+          npm test
+
+      - name: Browser suite
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The secrets live in this environment, which only main may use, so a
+    # workflow on any other branch cannot read them.
+    environment: production
+    concurrency:
+      group: deploy-server
+      cancel-in-progress: false
+    steps:
+      - name: Deploy this commit
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "root@$DEPLOY_HOST" "$GITHUB_SHA"

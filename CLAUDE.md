@@ -11,7 +11,8 @@ Read before changing anything:
 - Plan 1, core API (done): `docs/superpowers/plans/2026-11-11-binder-1-core-api.md`
 - Plan 2, frontend (done): `docs/superpowers/plans/2026-11-11-binder-2-frontend.md`
 - Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-binder-3-ai.md`
-- Plan 4, Bench link and import: `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
+- Plan 4, Bench link and import (done): `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
+- Plan 5, deploy: `docs/superpowers/plans/2026-11-16-binder-5-deploy.md`
 
 ## Where the work stands
 
@@ -20,9 +21,10 @@ There are five plans, each one spec → plan → build → review:
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
 3. AI (research briefs and paste-and-summarise): done.
-4. Bench link and import: built on `feature/bench-link` (Binder) and
-   `feature/lead-tag` (Bench, PR for the owner's review). Review, then merge.
-5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: **next**.
+4. Bench link and import: merged to `main`. Bench's side (`feature/lead-tag`)
+   is a PR for the owner's review.
+5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: built on
+   `feature/deploy`.
 
 ## Run and test
 
@@ -96,6 +98,25 @@ services and never run in CI.
 - Lists, filters and vocabularies come from `GET /api/meta`, never a copy in
   the frontend.
 - One breakpoint: below 768px is the phone layout (`useIsPhone`).
+
+## Rules for deploy
+
+- `main` deploys itself, so merge only what is ready to run for the team.
+- Files in `deploy/` name no domain: the nginx template uses `@DOMAIN@`, and
+  `setup-server.sh` takes `--domain`. The server's address lives only in the
+  `DEPLOY_HOST` secret, never in a tracked file.
+- Keep the deploy scripts runnable by bash 3.2, so their tests run on a Mac.
+- A change to `deploy-on-server.sh`, `deploy-forced-command.sh`,
+  `binder.service` or `binder-backup.*` needs `setup-server.sh --apply` on the
+  server afterwards, and a new setting in `binder.env.example` a hand edit of
+  `/etc/binder/binder.env`. Say so in the PR.
+- A migration must work with the snapshot rollback: a failed deploy that
+  changed the database's version puts the pre-deploy copy back.
+- A script piped over ssh with `bash -s` wraps its body in
+  `main "$@" </dev/null`, so it is read whole before it runs and nothing in it
+  eats the rest of the script from stdin.
+- A script that edits root's files (`authorized_keys`, nginx sites) must never
+  leave a partial or broken file behind.
 
 ## Binder and Bench
 

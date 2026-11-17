@@ -1,0 +1,34 @@
+# Binder on 127.0.0.1:8770, reached only through nginx (nginx-binder.conf).
+# Installed by setup-server.sh to /etc/systemd/system/binder.service.
+[Unit]
+Description=Binder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=binder
+Group=binder
+WorkingDirectory=/opt/binder/app
+EnvironmentFile=/etc/binder/binder.env
+ExecStart=/opt/binder/app/.venv/bin/python -m binder
+Restart=on-failure
+RestartSec=5
+# python -m binder exits 2 on bad settings; restarting would only loop.
+RestartPreventExitStatus=2
+NoNewPrivileges=true
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectSystem=strict
+ReadWritePaths=/var/lib/binder
+
+[Install]
+WantedBy=multi-user.target

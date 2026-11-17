@@ -2,6 +2,7 @@
 binder/config.py, and the nginx block never lets a browser's own sign-in
 headers reach Binder."""
 
+import re
 from pathlib import Path
 
 from binder.config import load_settings
@@ -50,6 +51,7 @@ def test_the_settings_template_is_a_valid_server_configuration():
 
 
 def test_nginx_overwrites_every_sign_in_header_and_drops_authorization():
+    # the trailing space keeps "location / " from matching "location /auth/"
     app = lines(block(read("nginx-binder.conf"), "location / "))
     assert "auth_request /_offdesk_check;" in app
     for header, var in [("Email", "email"), ("Name", "name"), ("Teams", "teams")]:
@@ -72,13 +74,47 @@ def test_nginx_asks_the_sign_in_service_internally_and_names_no_domain():
     assert "offdesk.io" not in conf
 
 
+def test_nginx_has_no_unguarded_route_to_binder():
+    conf = read("nginx-binder.conf")
+    assert conf.count("proxy_pass http://127.0.0.1:8770") == 1
+    app = lines(block(conf, "location / "))
+    assert "proxy_pass http://127.0.0.1:8770;" in app
+    assert "auth_request /_offdesk_check;" in app
+    assert "underscores_in_headers on" not in conf
+    assert "proxy_pass_request_headers off" not in conf
+
+
+def test_nginx_sets_every_sign_in_header_binder_reads():
+    read_by_binder = set(re.findall(r"x-offdesk-([a-z]+)", read_auth(), re.I))
+    assert read_by_binder
+    app = lines(block(read("nginx-binder.conf"), "location / "))
+    for name in read_by_binder:
+        assert any(ln.lower().startswith("proxy_set_header x-offdesk-%s " % name.lower()) for ln in app), name
+
+
+def read_auth():
+    return (DEPLOY.parent / "binder" / "auth.py").read_text()
+
+
 def test_the_service_runs_binder_as_its_own_user_with_only_its_data_writable():
     unit = lines(read("binder.service"))
     for want in ["User=binder", "Group=binder", "WorkingDirectory=/opt/binder/app",
                  "EnvironmentFile=/etc/binder/binder.env",
                  "ExecStart=/opt/binder/app/.venv/bin/python -m binder",
-                 "ProtectSystem=strict", "ReadWritePaths=/var/lib/binder", "NoNewPrivileges=true"]:
+                 "ProtectSystem=strict", "ReadWritePaths=/var/lib/binder", "NoNewPrivileges=true",
+                 "RestartPreventExitStatus=2", "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6"]:
         assert want in unit
+    assert "MemoryDenyWriteExecute=true" not in unit
+
+
+def test_both_units_are_hardened():
+    for name in ["binder.service", "binder-backup.service"]:
+        unit = lines(read(name))
+        for want in ["UMask=0077", "PrivateTmp=true", "ProtectHome=true", "PrivateDevices=true",
+                     "ProtectKernelTunables=true", "ProtectKernelModules=true",
+                     "ProtectControlGroups=true", "RestrictSUIDSGID=true",
+                     "LockPersonality=true", "CapabilityBoundingSet="]:
+            assert want in unit, (name, want)
 
 
 def test_the_nightly_backup_keeps_30_days_and_runs_late_runs_on_boot():
@@ -87,7 +123,7 @@ def test_the_nightly_backup_keeps_30_days_and_runs_late_runs_on_boot():
             "/var/lib/binder/nightly --prefix nightly --keep-days 30") in service
     assert "User=binder" in service
     timer = lines(read("binder-backup.timer"))
-    assert any(ln.startswith("OnCalendar=") for ln in timer)
+    assert "OnCalendar=*-*-* 03:30:00 Europe/Lisbon" in timer
     assert "Persistent=true" in timer
 
 

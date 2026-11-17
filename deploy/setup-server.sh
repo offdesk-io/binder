@@ -83,7 +83,7 @@ put() {  # install a file from the checkout, saying whether anything changed
   CHANGED=1
 }
 code_ready() {
-  [ -x "$APP/.venv/bin/python" ] && as_binder "$APP/.venv/bin/python" -c 'import binder' >/dev/null 2>&1 \
+  [ -x "$APP/.venv/bin/python" ] && as_binder "$APP/.venv/bin/python" -B -c 'import binder' >/dev/null 2>&1 \
     && [ -f "$APP/web/dist/index.html" ]
 }
 need_reload() {

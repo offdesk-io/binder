@@ -64,11 +64,16 @@ def test_a_dry_run_changes_nothing_and_fails_nothing():
     assert not [line for line in r.stdout.splitlines() if line.startswith("FAILED")]
 
 
-def test_it_reads_itself_whole_when_piped_to_bash_s():
-    """Over `bash -s` a child that reads stdin would eat the rest of the script."""
+def test_it_reads_itself_whole_when_piped_to_bash_s(tmp_path):
+    """Over `bash -s` a child that reads stdin would eat the rest of the script.
+    The shim python3 is such a child: the Packages step runs it."""
+    shim = tmp_path / "python3"
+    shim.write_text("#!/bin/sh\ncat >/dev/null\nexit 1\n")
+    shim.chmod(0o755)
+    env = {**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"}
     with open(SETUP) as f:
         r = subprocess.run(
             ["bash", "-s", "--", "--domain", "binder.example.com"],
-            stdin=f, capture_output=True, text=True,
+            stdin=f, capture_output=True, text=True, env=env,
         )
     assert r.stdout.splitlines()[-1].startswith("Dry run done")

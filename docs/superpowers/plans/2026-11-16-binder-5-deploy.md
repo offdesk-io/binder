@@ -1805,8 +1805,6 @@ printf '%s' '<host>' | gh secret set DEPLOY_HOST --env production --repo offdesk
 gh variable set DEPLOY_ENABLED --body true --repo offdesk-io/binder
 ```
 
-After that, the private key can be deleted from the Mac (`rm ~/.ssh/binder-deploy`). GitHub holds it, and a new one can always be made the same way.
-
 - [ ] **Step 7 (owner): prove the pipeline.**
 
 ```bash
@@ -1814,7 +1812,7 @@ gh workflow run deploy.yml --repo offdesk-io/binder --ref main
 gh run watch --repo offdesk-io/binder
 ```
 
-Expected: `test` passes and `deploy` ends with `Deployed <sha>`. Then check that the key can't do anything else: `ssh -i <a copy of the key> root@<host> bash` should print `Refused: this key only deploys one full commit id.`
+Expected: `test` passes and `deploy` ends with `Deployed <sha>`. Then check that the key can't do anything else: `ssh -i ~/.ssh/binder-deploy root@<host> bash` should print `Refused: this key only deploys one full commit id.` After that, delete the private key from the Mac (`rm ~/.ssh/binder-deploy`). GitHub holds it, and a new one can always be made the same way.
 
 - [ ] **Step 8 (owner): the outside check and a real sign-in.**
 

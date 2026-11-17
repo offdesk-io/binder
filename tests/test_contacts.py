@@ -73,7 +73,9 @@ def test_failed_create_leaves_no_open_transaction(tmp_path):
         contacts.create(conn, 999, {"name": "X"}, "ana@example.com")
     assert not conn.in_transaction
     org = orgs.create(conn, {"name": "A", "tags": []}, "ana@example.com")
-    with pytest.raises(sqlite3.InterfaceError):  # the insert fails after the write lock is taken
+    # The insert fails after the write lock is taken. Python 3.9 raises
+    # InterfaceError for an unbindable value, 3.14 ProgrammingError.
+    with pytest.raises((sqlite3.InterfaceError, sqlite3.ProgrammingError)):
         contacts.create(conn, org["id"], {"name": "X", "email": object()}, "ana@example.com")
     assert not conn.in_transaction
 

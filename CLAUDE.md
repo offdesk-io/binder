@@ -106,8 +106,10 @@ services and never run in CI.
   `setup-server.sh` takes `--domain`. The server's address lives only in the
   `DEPLOY_HOST` secret, never in a tracked file.
 - Keep the deploy scripts runnable by bash 3.2, so their tests run on a Mac.
-- A change to `deploy-on-server.sh` or `deploy-forced-command.sh` needs
-  `setup-server.sh --apply` on the server afterwards. Say so in the PR.
+- A change to `deploy-on-server.sh`, `deploy-forced-command.sh`,
+  `binder.service` or `binder-backup.*` needs `setup-server.sh --apply` on the
+  server afterwards, and a new setting in `binder.env.example` a hand edit of
+  `/etc/binder/binder.env`. Say so in the PR.
 - A migration must work with the snapshot rollback: a failed deploy that
   changed the database's version puts the pre-deploy copy back.
 - A script piped over ssh with `bash -s` wraps its body in

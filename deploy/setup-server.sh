@@ -104,6 +104,7 @@ other_site_serving() {  # prints another enabled site that already names $DOMAIN
 }
 
 main() {
+  cd / || exit 1  # root's home is closed to the binder user that git and pip run as
   [ "$APPLY" = 1 ] || say "DRY RUN (nothing on this server changes). Add --apply to set up."
 
   step "Packages"

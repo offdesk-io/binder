@@ -100,11 +100,27 @@ Options:
 ssh root@<host> "bash -s -- --domain binder.offdesk.io --apply --deploy-key 'ssh-ed25519 AAAA... binder-deploy'" < deploy/setup-server.sh
 ```
 
-After changing `deploy-on-server.sh` or `deploy-forced-command.sh`, run it
-again with `--apply` once the change is deployed: the key runs root's
-installed copies, never the checkout's. After changing
+After changing `deploy-on-server.sh`, `deploy-forced-command.sh`,
+`binder.service` or `binder-backup.*`, run it again with `--apply` once the
+change is deployed: the key runs root's installed copies of the scripts, and
+only set-up installs the units. A new setting in `binder.env.example` is added
+to `/etc/binder/binder.env` by hand, since that file is never rewritten. After changing
 `deploy/nginx-binder.conf`, apply the change to the installed file by hand,
 since certbot has edited it.
+
+The pipeline deploys only once GitHub is set up for it, on `offdesk-io/binder`:
+
+- an environment `production`, limited to the `main` branch;
+- in it, the secrets `DEPLOY_SSH_KEY` (the private half of the key given to
+  `--deploy-key`), `DEPLOY_KNOWN_HOSTS` (`ssh-keyscan -t ed25519 <host>`) and
+  `DEPLOY_HOST`;
+- the repository variable `DEPLOY_ENABLED` set to `true`. Until then, merges
+  to `main` are tested but not deployed.
+
+The exact commands are in plan 5's last task.
+
+While a deploy builds, the running app is serving from the same checkout, so
+for that minute a page can miss an asset; a reload fixes it.
 
 To check from outside that sign-in is required and forged headers do nothing:
 

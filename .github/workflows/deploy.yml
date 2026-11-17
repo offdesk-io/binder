@@ -39,6 +39,13 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      # The Bench-link tests parse with Bench's own core/todo.py (public repo).
+      - name: Bench's core next to the tests
+        run: |
+          git clone --quiet --depth 1 --filter=blob:none --sparse https://github.com/offdesk-io/bench.git "$RUNNER_TEMP/bench"
+          git -C "$RUNNER_TEMP/bench" sparse-checkout set core
+          echo "BINDER_TEST_BENCH_CORE=$RUNNER_TEMP/bench/core" >> "$GITHUB_ENV"
+
       - name: Python suite on 3.9
         run: |
           python3.9 -m venv "$RUNNER_TEMP/venv39"

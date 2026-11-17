@@ -42,6 +42,84 @@ board; it never writes `todo.md`. A refresh runs every 10 minutes, and when the
 cache is more than a minute old as an organisation opens. While Bench is down,
 it retries at most once a minute.
 
+## Deploy
+
+Offdesk's own install is `https://binder.offdesk.io`, on the same server as
+Bench. Every merge to `main` that passes CI deploys itself:
+`.github/workflows/deploy.yml` sshes to the server with a key that can only
+run `deploy/deploy-forced-command.sh`, which hands the commit id to
+`deploy/deploy-on-server.sh`. That script takes a lock
+(`/run/binder-deploy.lock`), refuses anything `origin/main` has not reached,
+snapshots the database, builds, restarts, waits for `/api/health`, and rolls
+back when Binder doesn't answer. A rollback puts the old code back and, if the
+new code changed the database's version, the old database too (from
+`/var/lib/binder/deploys/`). A failed first deploy sets the new database
+aside as `binder.db.failed-<time>`.
+
+If CI's ssh session drops mid-deploy, the script ignores the hangup and
+finishes. A build whose output pipe has gone may still count as failed and
+roll back, so the old code keeps running. Check the Actions run and
+`/api/health`, and deploy again if needed.
+
+On the server:
+
+| What | Where |
+|---|---|
+| Code, as the `binder` user | `/opt/binder/app` (detached at the deployed commit) |
+| Database | `/var/lib/binder/binder.db` |
+| Nightly copies (30 days) | `/var/lib/binder/nightly/` |
+| Copies before each deploy (last 10) | `/var/lib/binder/deploys/` |
+| Settings (root, 600) | `/etc/binder/binder.env`, from `deploy/binder.env.example` |
+| Service | `binder.service` on 127.0.0.1:8770, `binder-backup.timer` |
+| nginx | `/etc/nginx/sites-available/binder`, from `deploy/nginx-binder.conf` |
+| Deploy command (root's copies) | `/usr/local/lib/binder-deploy/` |
+
+`deploy/setup-server.sh` sets up or checks a server. It installs no
+packages. If any are missing it says which and stops, so install them first
+(git, node and npm, nginx and curl are already on the server):
+
+```
+apt-get install python3-venv certbot python3-certbot-nginx
+```
+
+Run it piped over ssh. Without `--apply` it only reports what it would do:
+
+```
+ssh root@<host> 'bash -s -- --domain binder.offdesk.io' < deploy/setup-server.sh
+```
+
+Options:
+
+- `--apply` makes the changes.
+- `--tls` gets the certificate. Use it once DNS points at the server.
+- `--email ADDR` is for certbot on a server with no Let's Encrypt account yet.
+- `--deploy-key KEY` installs the CI key. Quote it twice, so the key reaches
+  the script as one argument:
+
+```
+ssh root@<host> "bash -s -- --domain binder.offdesk.io --apply --deploy-key 'ssh-ed25519 AAAA... binder-deploy'" < deploy/setup-server.sh
+```
+
+After changing `deploy-on-server.sh` or `deploy-forced-command.sh`, run it
+again with `--apply` once the change is deployed: the key runs root's
+installed copies, never the checkout's. After changing
+`deploy/nginx-binder.conf`, apply the change to the installed file by hand,
+since certbot has edited it.
+
+To check from outside that sign-in is required and forged headers do nothing:
+
+```
+deploy/check-live.sh https://binder.offdesk.io
+```
+
+Set `BINDER_COOKIE` to a signed-in session cookie to check the signed-in
+side too.
+
+To look at it: `journalctl -u binder.service -n 50`, and
+`systemctl list-timers binder-backup.timer`. Binder does not restart-loop on
+bad settings: it exits with code 2 and stays stopped, and the journal says
+which setting is wrong.
+
 ## API
 
 Every route sits under `/api` and needs sign-in, except `GET /api/health`.

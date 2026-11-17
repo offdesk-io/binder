@@ -98,7 +98,7 @@ other_site_serving() {  # prints another enabled site that already names $DOMAIN
   for f in /etc/nginx/sites-enabled/*; do
     [ -e "$f" ] || continue
     [ "$(basename "$f")" = binder ] && continue
-    if grep -qE "server_name[^;]*[[:space:]]$dom_re[[:space:];]" "$f" 2>/dev/null; then echo "$f"; return 0; fi
+    if grep -qE "server_name[^;]*[[:space:]]${dom_re}[[:space:];]" "$f" 2>/dev/null; then echo "$f"; return 0; fi
   done
   return 1
 }

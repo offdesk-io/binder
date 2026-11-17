@@ -2,6 +2,7 @@
 authorized_keys file, replaces an earlier Binder line, and leaves every
 other line (people's keys, Bench's deploy key) exactly as it was."""
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -58,3 +59,24 @@ def test_refuses_anything_but_one_ed25519_public_key(keys, bad):
     before = keys.read_text()
     assert run(keys, bad).returncode == 2
     assert keys.read_text() == before
+
+
+def test_a_grep_read_error_leaves_the_file_untouched(keys, tmp_path):
+    shim = tmp_path / "shim"
+    shim.mkdir()
+    g = shim / "grep"
+    g.write_text("#!/bin/sh\nexit 2\n")
+    g.chmod(0o755)
+    before = keys.read_bytes()
+    env = {**os.environ, "PATH": str(shim) + os.pathsep + os.environ["PATH"]}
+    r = subprocess.run(["bash", str(SETKEY), str(keys), KEY1], capture_output=True, text=True, env=env)
+    assert r.returncode != 0
+    assert keys.read_bytes() == before
+    assert not Path(str(keys) + ".new").exists()
+
+
+def test_a_line_with_a_nul_byte_survives(keys):
+    odd = b"ssh-ed25519 AAAAodd\x00tail odd@example.com\n"
+    keys.write_bytes(keys.read_bytes() + odd)
+    assert run(keys, KEY1).returncode == 0
+    assert keys.read_bytes() == (PERSON + "\n" + BENCH + "\n").encode() + odd + (LINE + KEY1 + "\n").encode()

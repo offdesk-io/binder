@@ -8,6 +8,9 @@
 # deploy-on-server.sh and refuses everything else. That script refuses,
 # after its fetch, a commit that origin/main has not reached.
 set -uo pipefail
+# Ubuntu's sshd accepts the client's LC_* variables, and a range like [0-9a-f]
+# must mean ASCII whatever locale the client sends.
+export LC_ALL=C
 DEPLOY_SCRIPT="${BINDER_DEPLOY_SCRIPT:-/usr/local/lib/binder-deploy/deploy-on-server.sh}"
 ref="${SSH_ORIGINAL_COMMAND-}"
 

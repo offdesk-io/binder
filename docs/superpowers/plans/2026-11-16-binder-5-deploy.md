@@ -1774,13 +1774,17 @@ ssh root@<host> 'bash -s -- --domain binder.offdesk.io' < deploy/setup-server.sh
 ssh root@<host> 'bash -s -- --domain binder.offdesk.io --apply' < deploy/setup-server.sh
 ```
 
-Expected: it ends with `Done.` and says `Binder answers on 127.0.0.1:8770`.
+The dry run lists anything missing. The script installs no packages itself, so that Bench's Python is never upgraded by surprise. If the dry run names any, install them first (`apt-get install python3-venv certbot python3-certbot-nginx`, only the missing ones), after checking that nothing else would be upgraded. Then apply.
+
+Expected: it ends with `Done.` and says `Binder answers on 127.0.0.1:8770`. The first `npm ci` on the server also proves that Tenon installs over https; its lockfile entry is `git+ssh`, and the `binder` user has no GitHub key. If it fails there, the lockfile needs Tenon's URL as https.
 
 - [ ] **Step 4 (owner): TLS, once Step 2 resolves.**
 
 ```bash
 ssh root@<host> 'bash -s -- --domain binder.offdesk.io --apply --tls' < deploy/setup-server.sh
 ```
+
+It skips certbot while the name doesn't resolve yet. Certbot reuses the account Bench's certificates were made with; on a server without one, add `--email <address>`.
 
 - [ ] **Step 5 (owner): the API key.** On the server, put the key in `/etc/binder/binder.env` (`ANTHROPIC_API_KEY=...`), then run `systemctl restart binder.service`.
 

@@ -106,8 +106,11 @@ a:hover { text-decoration: underline; }
 .tn-custom-scroll { max-width: 100%; overflow-x: auto; white-space: nowrap; }
 
 /* Pipeline. tn-board is a grid that flows into columns and scrolls sideways; here each stage is a fixed 300px, so the
- * board scrolls when the stages don't fit, and the columns run to the foot of the window below the header. */
-.tn-custom-board { min-width: 0; grid-auto-columns: 300px; align-items: stretch; min-height: calc(100vh - 170px); }
+ * board scrolls when the stages don't fit. The page fills main, and the board fills what the chips leave, so the
+ * columns run to the foot of the window. */
+.tn-custom-main:has(> .tn-custom-pipeline) { display: flex; flex-direction: column; }
+.tn-custom-pipeline { flex: 1; }
+.tn-custom-board { flex: 1; min-width: 0; grid-auto-columns: 300px; align-items: stretch; }
 /* The board's own filter box, Bench's "Search tasks…": Tenon's Input, narrower and at the chip row's height. */
 .tn-custom-find {
   width: 200px; max-width: 100%; min-height: 0; padding: 6px 10px;
@@ -127,8 +130,10 @@ a:hover { text-decoration: underline; }
   letter-spacing: .03em; text-transform: uppercase;
   color: var(--tn-sector);
 }
-/* Bench's card title weight, and the chip row under it. */
+/* Bench's card title: bold, in ink rather than link blue (the global a:hover still underlines it). These rules are
+ * deliberately global: OrgCard is the only Card in the app. Then the chip row under the title. */
 .tenon-card .tenon-card__title { font-weight: 650; }
+.tenon-card__title a, .tenon-card__title a:hover { color: var(--tenon-text-default); }
 .tn-custom-chiprow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tenon-dimension-050); }
 .tn-custom-avatar {
   display: inline-grid; place-items: center;
@@ -316,3 +321,8 @@ a:hover { text-decoration: underline; }
 /* The row the chips sit in, with the page's own filter box at its right end. */
 .tn-custom-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .tn-custom-filterbar > :last-child { margin-left: auto; }
+/* On a phone the filter box takes its own full-width line under the chips. */
+@media (max-width: 640px) {
+  .tn-custom-find { width: 100%; }
+  .tn-custom-filterbar > :last-child { margin-left: 0; }
+}

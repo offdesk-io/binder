@@ -46,3 +46,17 @@ test('a modified click still follows the link, so it can open in a new tab', asy
   await user.keyboard('{/Meta}')
   expect(onOpen).not.toHaveBeenCalled()
 })
+
+test('Enter on the focused name opens it too', async () => {
+  const user = userEvent.setup()
+  const onOpen = vi.fn()
+  renderApp(<OrgCard org={acme} onOpen={onOpen} />)
+  screen.getByRole('link', { name: 'Acme' }).focus()
+  await user.keyboard('{Enter}')
+  expect(onOpen).toHaveBeenCalledWith(acme)
+})
+
+test('on a draggable card the name link does not drag on its own', () => {
+  renderApp(<OrgCard org={acme} draggable />)
+  expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('draggable', 'false')
+})

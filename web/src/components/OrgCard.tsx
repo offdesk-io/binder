@@ -43,7 +43,12 @@ export function OrgCard({ org, showStatus = true, onOpen, ...rest }: OrgCardProp
       eyebrow={sector ? (
         <span className="tn-custom-sector" style={{ '--tn-sector': sectorColour(sector).mark } as CSSProperties}>{sector}</span>
       ) : undefined}
-      title={<Link to={`/o/${org.slug}`} data-org-open={org.slug} onClick={open}>{org.name}</Link>}
+      title={
+        // A link drags as a URL on its own; on a draggable card it doesn't, so a drag from the name moves the card.
+        <Link to={`/o/${org.slug}`} data-org-open={org.slug} draggable={rest.draggable ? false : undefined} onClick={open}>
+          {org.name}
+        </Link>
+      }
       titleAs="h3"
       accent={stageColour(org.status).mark}
       tags={showStatus ? <StatusTag status={org.status} /> : undefined}

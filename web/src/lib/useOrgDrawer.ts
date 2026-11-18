@@ -17,9 +17,12 @@ export function useOrgDrawer() {
     closing.current = false
   }, [location.key])
 
+  // `drop` names other params to remove in the same step, such as a filter that would hide the opened card: two
+  // separate setParams calls in one event would each start from the same params, and the second would undo the first.
   const open = useCallback(
-    (next: string) => {
+    (next: string, drop: string[] = []) => {
       const p = new URLSearchParams(params)
+      for (const k of drop) p.delete(k)
       p.set('org', next)
       // Opening over an open drawer swaps the slug in the same entry, keeping that entry's own state.
       const replace = slug !== undefined

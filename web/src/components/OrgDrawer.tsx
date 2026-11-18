@@ -26,7 +26,10 @@ function Loaded({ slug, onClose, onChanged, onDeleted }: Props & { slug: string 
   const title = org.data?.name ?? slug
   // The list behind may re-render while the drawer is open and replace the element that opened it, so focus goes
   // back to whichever element now carries this slug. The card and row links put data-org-open={slug} on themselves.
-  const returnFocus = () => Array.from(document.querySelectorAll<HTMLElement>('[data-org-open]')).find((el) => el.dataset.orgOpen === slug) ?? null
+  // When none does (a won lead has left the board), focus goes to the page's main region.
+  const returnFocus = () =>
+    Array.from(document.querySelectorAll<HTMLElement>('[data-org-open]')).find((el) => el.dataset.orgOpen === slug) ??
+    document.getElementById('main')
   return (
     <Drawer open title={title} onClose={onClose} returnFocus={returnFocus}>
       {org.error && !org.data ? (

@@ -45,10 +45,21 @@ export function PipelinePage() {
   const drawer = useOrgDrawer()
   const [creating, setCreating] = useState(false)
 
-  /** A saved record, from a drag or from the drawer, goes to its column; a client leaves the board with a notice. */
+  /** A saved record, from a drag or from the drawer, goes to its column. A lead that has just become a client leaves
+   * the board with a notice; later saves of that client (or of one opened by its link) say nothing. */
   function changed(saved: Org) {
+    setNotice(undefined)
+    const was = orgs.data?.find((o) => o.id === saved.id)
     orgs.setData((prev) => place(prev, saved))
-    if (saved.kind === 'client') setNotice({ tone: 'success', text: `${saved.name} is now a client.` })
+    if (saved.kind === 'client' && was?.kind === 'lead') setNotice({ tone: 'success', text: `${saved.name} is now a client.` })
+  }
+
+  /** A new organisation goes on the board and opens in the drawer, with the filters cleared enough to show its card. */
+  function created(o: Org) {
+    setCreating(false)
+    orgs.setData((prev) => place(prev, o))
+    setFind('')
+    drawer.open(o.slug, byOwner([o], owner).length === 0 ? ['owner'] : [])
   }
 
   async function move(org: Org, status: string) {
@@ -87,7 +98,7 @@ export function PipelinePage() {
     <>
       <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={changed} onDeleted={() => orgs.reload()} />
       <OrgForm open={creating} onClose={() => setCreating(false)}
-        onSaved={(o) => { setCreating(false); orgs.setData((prev) => place(prev, o)); drawer.open(o.slug) }} />
+        onSaved={created} />
     </>
   )
 
@@ -118,7 +129,7 @@ export function PipelinePage() {
   }
 
   return (
-    <div className="tn-stack">
+    <div className="tn-stack tn-custom-pipeline">
       {top}
       <div className="tn-board tn-custom-board">
         {meta.lead_statuses.map((s) => (

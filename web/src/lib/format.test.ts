@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
-  ago, day, fromLocalInput, isOverdue, label, money, person, REASON_TEXT, statusLine,
+  ago, day, fromLocalInput, initials, isOverdue, label, money, moneyShort, person, REASON_TEXT, statusLine,
   toLocalInput, todayIso, safeHref, usd,
 } from './format'
 
@@ -76,4 +76,18 @@ test('usd shows cents, a floor for tiny costs, and nothing when unknown', () => 
   expect(usd(0)).toBe('$0.00')
   expect(usd(0.004)).toBe('<$0.01')
   expect(usd(null)).toBe('')
+})
+
+test('moneyShort rounds to thousands and millions in euros', () => {
+  expect(moneyShort(950)).toBe('€950')
+  expect(moneyShort(12000)).toBe('€12k')
+  expect(moneyShort(12500)).toBe('€12.5k')
+  expect(moneyShort(1_200_000)).toBe('€1.2M')
+  expect(moneyShort(null)).toBe('')
+})
+
+test('initials come from the name part of an email', () => {
+  expect(initials('ana.example@example.com')).toBe('AE')
+  expect(initials('rui@example.com')).toBe('R')
+  expect(initials(null)).toBe('')
 })

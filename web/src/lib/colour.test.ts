@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { SESSION } from '../test/render'
 import {
-  columnHead, dueTone, relationshipTone, REASON_TONE, STAGE, stageColour, taskTone, TYPE, typeColour,
+  columnHead, dueTone, relationshipTone, REASON_TONE, sectorColour, STAGE, stageColour, taskTone, TYPE, typeColour,
 } from './colour'
 
 const { meta } = SESSION
@@ -84,4 +84,16 @@ describe('Bench task state', () => {
     expect(taskTone('Cancelled')).toBe('neutral')
     expect(taskTone('Somewhere else')).toBe('neutral')
   })
+})
+
+test('a sector always gets the same chart colour, whatever its case or spacing', () => {
+  expect(sectorColour('Retail')).toEqual(sectorColour(' retail '))
+  expect(sectorColour('Retail').chart).toBeGreaterThanOrEqual(1)
+  expect(sectorColour('Retail').chart).toBeLessThanOrEqual(10)
+  expect(sectorColour('Retail').mark).toBe(`var(--tenon-chart-${sectorColour('Retail').chart})`)
+})
+
+test('different sectors spread across the colours', () => {
+  const names = ['Retail', 'Healthcare', 'Software', 'Logistics', 'Design agency', 'Food & drink', 'Education', 'Finance']
+  expect(new Set(names.map((n) => sectorColour(n).chart)).size).toBeGreaterThanOrEqual(5)
 })

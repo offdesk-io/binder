@@ -13,7 +13,7 @@ Read before changing anything:
 - Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-binder-3-ai.md`
 - Plan 4, Bench link and import (done): `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
 - Plan 5, deploy: `docs/superpowers/plans/2026-11-16-binder-5-deploy.md`
-- Plan 6, UI consistency with Bench: `docs/superpowers/plans/2026-11-18-binder-6-ui-consistency.md`
+- Plan 6, UI consistency with Bench: `docs/superpowers/plans/2026-11-18-binder-6-ui-consistency.md`; follow-up: `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`
 
 ## Where the work stands
 
@@ -26,8 +26,11 @@ There are six plans, each one spec → plan → build → review:
    is a PR for the owner's review.
 5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: built on
    `feature/deploy`.
-6. UI consistency with Bench (header bar, cards, owner chips, the
-   organisation drawer): in progress on `feature/ui-consistency`.
+6. UI consistency with Bench (header bar, cards, the organisation
+   drawer), plus its follow-up after the owner's first try (Pipeline as a
+   list grouped by stage, kind chips and A to Z on the List, Owner
+   dropdown; `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`):
+   in progress on `feature/ui-consistency`.
 
 ## Run and test
 

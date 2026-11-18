@@ -30,7 +30,7 @@ test('options are unique and sorted, after an Any choice', () => {
 })
 
 test('the URL holds the filters', async () => {
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<ListPage />, '/list?kind=client')
   expect(await screen.findByRole('link', { name: 'Bolt' })).toHaveAttribute('href', '/o/bolt')
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
@@ -39,19 +39,67 @@ test('the URL holds the filters', async () => {
 test('changing the sort asks the API again', async () => {
   const user = userEvent.setup()
   const calls = stubFetch({
-    'GET /api/orgs?sort=updated': () => [lead, client],
     'GET /api/orgs?sort=name': () => [lead, client],
+    'GET /api/orgs?sort=updated': () => [lead, client],
   })
   renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   await user.click(screen.getByRole('button', { name: 'Sort' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Name' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Recently updated' }))
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(calls.map((c) => c.key)).toContain('GET /api/orgs?sort=updated')
+})
+
+test('a fresh list asks for name order and shows rows A to Z', async () => {
+  const calls = stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
+  renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   expect(calls.map((c) => c.key)).toContain('GET /api/orgs?sort=name')
+  const names = screen.getAllByRole('row').slice(1).map((r) => within(r).getAllByRole('cell')[0].textContent)
+  expect(names).toEqual(['Acme', 'Bolt'])
+})
+
+test('another sort goes in the address and Name takes it out again', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client], 'GET /api/orgs?sort=updated': () => [lead, client] })
+  renderApp(<><ListPage /><Where /></>, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('button', { name: 'Sort' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Recently updated' }))
+  expect(await screen.findByText('at /list?sort=updated')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Sort' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Name' }))
+  expect(await screen.findByText('at /list')).toBeInTheDocument()
+})
+
+test('the filter box narrows rows by name, sector and next step, and stays out of the address', async () => {
+  const user = userEvent.setup()
+  const rows = [
+    lead,
+    client,
+    org({ id: 3, name: 'Cobalt', slug: 'cobalt', sector: 'Fintech' }),
+    org({ id: 4, name: 'Delta', slug: 'delta', next_step: 'Send proposal' }),
+  ]
+  stubFetch({ 'GET /api/orgs?sort=name': () => rows })
+  renderApp(<><ListPage /><Where /></>, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  const box = screen.getByRole('searchbox', { name: 'Filter organisations' })
+  await user.type(box, 'bol')
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+  await user.clear(box)
+  await user.type(box, 'fintech')
+  expect(screen.getByRole('link', { name: 'Cobalt' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Bolt' })).toBeNull()
+  await user.clear(box)
+  await user.type(box, 'proposal')
+  expect(screen.getByRole('link', { name: 'Delta' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Cobalt' })).toBeNull()
+  expect(screen.getByText('at /list')).toBeInTheDocument()
 })
 
 test('an unknown kind or status in the URL is ignored', async () => {
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<ListPage />, '/list?kind=bogus&status=nope')
   expect(await screen.findByRole('link', { name: 'Acme' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
@@ -59,7 +107,7 @@ test('an unknown kind or status in the URL is ignored', async () => {
 
 test('choosing a kind clears the status in the URL', async () => {
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<><ListPage /><Where /></>, '/list?status=lead')
   await screen.findByRole('link', { name: 'Acme' })
   expect(screen.queryByRole('link', { name: 'Bolt' })).toBeNull()
@@ -71,16 +119,16 @@ test('choosing a kind clears the status in the URL', async () => {
 test('changing the sort keeps the list and the dropdowns on screen', async () => {
   const user = userEvent.setup()
   let release!: (v: Org[]) => void
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   const first = fetch
   vi.stubGlobal('fetch', (url: string, init?: RequestInit) =>
-    url === '/api/orgs?sort=name'
+    url === '/api/orgs?sort=updated'
       ? new Promise<Response>((r) => { release = (v) => r(new Response(JSON.stringify(v), { status: 200 })) })
       : first(url, init))
   renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   await user.click(screen.getByRole('button', { name: 'Sort' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Name' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Recently updated' }))
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument()
   expect(screen.getByRole('group', { name: 'Kind' })).toBeInTheDocument()
@@ -88,7 +136,7 @@ test('changing the sort keeps the list and the dropdowns on screen', async () =>
 })
 
 test('the list has a visually hidden title', async () => {
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
@@ -104,7 +152,7 @@ const drawerRoutes = {
 
 test('a row opens the organisation in the drawer', async () => {
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client], ...drawerRoutes })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client], ...drawerRoutes })
   renderApp(<><ListPage /><Where /></>, '/list')
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
@@ -114,7 +162,7 @@ test('a row opens the organisation in the drawer', async () => {
 test('on a phone, a card opens the drawer too', async () => {
   vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client], ...drawerRoutes })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client], ...drawerRoutes })
   renderApp(<ListPage />, '/list')
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
@@ -129,7 +177,7 @@ async function changeStatus(user: ReturnType<typeof userEvent.setup>, to: string
 test('a change in the drawer updates the row without loading the list again', async () => {
   const user = userEvent.setup()
   const calls = stubFetch({
-    'GET /api/orgs?sort=updated': () => [lead, client],
+    'GET /api/orgs?sort=name': () => [lead, client],
     ...drawerRoutes,
     'PATCH /api/orgs/1': () => ({ ...lead, status: 'contacted' }),
   })
@@ -138,13 +186,13 @@ test('a change in the drawer updates the row without loading the list again', as
   await user.click(screen.getByRole('link', { name: 'Acme' }))
   await changeStatus(user, 'Contacted')
   await vi.waitFor(() => expect(row).toHaveTextContent('Contacted'))
-  expect(calls.filter((c) => c.key === 'GET /api/orgs?sort=updated')).toHaveLength(1)
+  expect(calls.filter((c) => c.key === 'GET /api/orgs?sort=name')).toHaveLength(1)
 })
 
 test('a record that no longer matches the filter leaves the table', async () => {
   const user = userEvent.setup()
   stubFetch({
-    'GET /api/orgs?sort=updated': () => [lead, client],
+    'GET /api/orgs?sort=name': () => [lead, client],
     ...drawerRoutes,
     'PATCH /api/orgs/1': () => ({ ...lead, status: 'contacted' }),
   })
@@ -156,7 +204,7 @@ test('a record that no longer matches the filter leaves the table', async () => 
 
 test('the owner dropdown filters and goes in the address', async () => {
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<><ListPage /><Where /></>, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   await user.click(screen.getByRole('button', { name: 'Owner' }))
@@ -168,7 +216,7 @@ test('the owner dropdown filters and goes in the address', async () => {
 
 test('the kind chips count and filter', async () => {
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client, org({ id: 3, name: 'Cobalt', slug: 'cobalt' })] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client, org({ id: 3, name: 'Cobalt', slug: 'cobalt' })] })
   renderApp(<><ListPage /><Where /></>, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   const kind = within(screen.getByRole('group', { name: 'Kind' }))
@@ -180,7 +228,7 @@ test('the kind chips count and filter', async () => {
 })
 
 test('?kind=client on load presses Clients', async () => {
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<ListPage />, '/list?kind=client')
   await screen.findByRole('link', { name: 'Bolt' })
   expect(screen.getByRole('button', { name: /^Clients/ })).toHaveAttribute('aria-pressed', 'true')
@@ -188,7 +236,7 @@ test('?kind=client on load presses Clients', async () => {
 })
 
 test('the table has a sector column', async () => {
-  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
   renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   expect(screen.getByRole('columnheader', { name: 'Sector' })).toBeInTheDocument()

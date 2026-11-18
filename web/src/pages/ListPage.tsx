@@ -1,4 +1,5 @@
-import { Alert, ColumnEmpty, Dropdown, type DropdownOption } from '@tiagopedras/tenon'
+import { Alert, ColumnEmpty, Dropdown, Input, type DropdownOption } from '@tiagopedras/tenon'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
@@ -10,6 +11,7 @@ import { OrgDrawer } from '../components/OrgDrawer'
 import { SectorLabel } from '../components/SectorLabel'
 import { StatusTag } from '../components/StatusTag'
 import { ago, label, money, person } from '../lib/format'
+import { matchesText } from '../lib/matchesText'
 import { openInPlace } from '../lib/openInPlace'
 import { ownerOptions } from '../lib/ownerFilter'
 import { useApi } from '../lib/useApi'
@@ -39,8 +41,8 @@ export function options(values: (string | null)[], any: string): DropdownOption[
 }
 
 const SORTS: DropdownOption<OrgSort>[] = [
-  { value: 'updated', label: 'Recently updated' },
   { value: 'name', label: 'Name' },
+  { value: 'updated', label: 'Recently updated' },
   { value: 'last_contact', label: 'Last contact' },
   { value: 'value', label: 'Value' },
 ]
@@ -49,6 +51,7 @@ export function ListPage() {
   const { meta, me } = useSession()
   const phone = useIsPhone()
   const [params, setParams] = useSearchParams()
+  const [find, setFind] = useState('')
   // `won` is never stored: a won lead is an active client.
   const leadStatuses = meta.lead_statuses.filter((s) => s !== 'won')
   const kindRaw = params.get('kind') ?? ''
@@ -62,7 +65,7 @@ export function ListPage() {
     tag: params.get('tag') ?? '',
   }
   const raw = params.get('sort')
-  const sort: OrgSort = SORTS.some((s) => s.value === raw) ? (raw as OrgSort) : 'updated'
+  const sort: OrgSort = SORTS.some((s) => s.value === raw) ? (raw as OrgSort) : 'name'
   const orgs = useApi(() => api.orgs({ sort }), [sort], { keep: true })
 
   const put = (key: string, value: string) => {
@@ -83,7 +86,7 @@ export function ListPage() {
   }
 
   const all = orgs.data ?? []
-  const rows = filterOrgs(all, f)
+  const rows = filterOrgs(all, f).filter((o) => matchesText(o, find))
   const kindCounts = filterOrgs(all, { ...f, kind: '' })
 
   return (
@@ -101,6 +104,10 @@ export function ListPage() {
               { value: 'client', label: 'Clients', count: kindCounts.filter((o) => o.kind === 'client').length },
             ]}
           />
+          <div className="tn-custom-filterbar-end">
+            <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
+              value={find} onChange={(e) => setFind(e.target.value)} />
+          </div>
         </div>
       )}
       <div className="tn-toolbar">
@@ -111,7 +118,7 @@ export function ListPage() {
             options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
           <Dropdown className="tn-custom-filter" aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}
             options={options(all.flatMap((o) => o.tags), 'Any tag')} />
-          <Dropdown className="tn-custom-filter" aria-label="Sort" value={sort} onChange={(v) => put('sort', v === 'updated' ? '' : v)} options={SORTS} />
+          <Dropdown className="tn-custom-filter" aria-label="Sort" value={sort} onChange={(v) => put('sort', v === 'name' ? '' : v)} options={SORTS} />
         </div>
       </div>
       {orgs.error ? (

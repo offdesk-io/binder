@@ -6,6 +6,7 @@ import { useSession } from '../app/session'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
 import { OrgForm } from '../components/OrgForm'
+import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
 import { stages } from '../lib/pipeline'
 import { useApi } from '../lib/useApi'
@@ -48,10 +49,7 @@ export function PipelinePage() {
 
   if (orgs.error) return <Alert tone="error">{orgs.error.message}</Alert>
   if (!orgs.data) return <Loading />
-  const needle = find.trim().toLowerCase()
-  const shown = byOwner(orgs.data, owner).filter(
-    (o) => !needle || [o.name, o.sector, o.next_step].some((v) => v?.toLowerCase().includes(needle)),
-  )
+  const shown = byOwner(orgs.data, owner).filter((o) => matchesText(o, find))
   // A won lead is a client and leaves the Pipeline; a status not in meta.lead_statuses isn't shown.
   const groups = stages(shown, meta.lead_statuses.filter((s) => s !== 'won'))
   const columns = phone ? 1 : 6
@@ -87,7 +85,7 @@ export function PipelinePage() {
               </thead>
             )}
             {groups.map((g) => (
-              <StageGroup key={g.status} stage={g} phone={phone} columns={columns} forceOpen={!!needle}
+              <StageGroup key={g.status} stage={g} phone={phone} columns={columns} forceOpen={!!find.trim()}
                 onOpen={(o) => drawer.open(o.slug)} />
             ))}
           </table>

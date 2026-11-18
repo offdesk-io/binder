@@ -39,6 +39,15 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
         app.state.bench_refresher = jobs.Refresher(settings.db_path, app.state.bench, refresh_job)
         if bench is _FROM_SETTINGS:  # tests pass a reader and refresh on demand, with no timer
             app.state.bench_refresher.start_timer()
+
+    @app.middleware("http")
+    async def frame_rules(request, call_next):
+        # Only a page on the same origin (the Offdesk shell) may frame Binder.
+        response = await call_next(request)
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        return response
+
     errors.install(app)
     web.install(app, settings.web_dir)
 

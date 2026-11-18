@@ -29,12 +29,23 @@ SNAPS="${BINDER_SNAPSHOTS:-/var/lib/binder/deploys}"
 HEALTH="${BINDER_HEALTH_URL:-http://127.0.0.1:8770/api/health}"
 LOCK="${BINDER_DEPLOY_LOCK:-/run/binder-deploy.lock}"
 WAIT="${BINDER_HEALTH_WAIT:-20}"
+ENV_FILE="${BINDER_ENV_FILE:-/etc/binder/binder.env}"
 UNIT=binder.service
 
 say() { printf '%s\n' "$*"; }
 die() { say "ABORT: $*" >&2; exit 1; }
 
 [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || die "give one full 40-character commit id"
+
+# BINDER_BASE in the env file (for example /binder) is the path Binder is served under; the build needs it too.
+# Read as text, never sourced. Only a single lower-case path segment is accepted.
+BASE=""
+if [ -f "$ENV_FILE" ]; then
+  BASE="$(grep -E '^BINDER_BASE=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+fi
+if [ -n "$BASE" ] && ! [[ "$BASE" =~ ^/[a-z0-9-]+$ ]]; then
+  die "BINDER_BASE in $ENV_FILE must look like /binder (one path segment, lower case), not '$BASE'"
+fi
 
 BHOME="$(getent passwd binder | cut -d: -f6)"
 [ -n "$BHOME" ] || die "no binder user"
@@ -73,7 +84,7 @@ fi
 build() {
   say "== Build"
   as_binder "$APP/.venv/bin/pip" install --quiet --disable-pip-version-check -e "$APP" 2>&1 | sed 's/^/  /' \
-    && as_binder bash -c "cd '$APP/web' && npm ci --no-audit --no-fund --loglevel=error && npm run build --silent" 2>&1 | sed 's/^/  /'
+    && as_binder env BINDER_BASE="$BASE" bash -c "cd '$APP/web' && npm ci --no-audit --no-fund --loglevel=error && npm run build --silent" 2>&1 | sed 's/^/  /'
 }
 
 health() {

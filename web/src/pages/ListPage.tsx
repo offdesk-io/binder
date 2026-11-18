@@ -1,14 +1,20 @@
 import { Alert, ColumnEmpty, Dropdown, SegmentedControl, type DropdownOption } from '@tiagopedras/tenon'
+import type { CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useSession } from '../app/session'
 import { Loading } from '../components/Loading'
 import { NextStep, OrgCard } from '../components/OrgCard'
+import { OrgDrawer } from '../components/OrgDrawer'
+import { OwnerChips } from '../components/OwnerChips'
 import { StatusTag } from '../components/StatusTag'
+import { sectorColour } from '../lib/colour'
 import { ago, label, money, person } from '../lib/format'
+import { openInPlace } from '../lib/openInPlace'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
+import { useOrgDrawer } from '../lib/useOrgDrawer'
 
 export interface ListFilters {
   kind: string
@@ -22,7 +28,7 @@ export function filterOrgs(orgs: Org[], f: ListFilters): Org[] {
     (o) =>
       (!f.kind || o.kind === f.kind) &&
       (!f.status || o.status === f.status) &&
-      (!f.owner || o.owner_email === f.owner) &&
+      (!f.owner || (f.owner === 'none' ? !o.owner_email : o.owner_email === f.owner)) &&
       (!f.tag || o.tags.includes(f.tag)),
   )
 }
@@ -67,12 +73,21 @@ export function ListPage() {
     setParams(next, { replace: true })
   }
 
+  const drawer = useOrgDrawer()
+  /** A record saved in the drawer replaces its row in place, so the list keeps its place and order. */
+  function changed(saved: Org) {
+    orgs.setData((prev) => (prev ?? []).map((o) => (o.id === saved.id ? saved : o)))
+  }
+
   const all = orgs.data ?? []
   const rows = filterOrgs(all, f)
 
   return (
     <div className="tn-stack">
       <h1 className="tn-custom-sr-only">Organisations</h1>
+      <div className="tn-custom-filterbar">
+        <OwnerChips orgs={filterOrgs(all, { ...f, owner: '' })} value={f.owner} onChange={(v) => put('owner', v)} />
+      </div>
       <div className="tn-toolbar">
         <div className="tn-cluster">
           <SegmentedControl
@@ -83,8 +98,6 @@ export function ListPage() {
           />
           <Dropdown className="tn-custom-filter" aria-label="Status" value={f.status} onChange={(v) => put('status', v)}
             options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
-          <Dropdown className="tn-custom-filter" aria-label="Owner" value={f.owner} onChange={(v) => put('owner', v)}
-            options={options(all.map((o) => o.owner_email), 'Anyone', person)} />
           <Dropdown className="tn-custom-filter" aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}
             options={options(all.flatMap((o) => o.tags), 'Any tag')} />
           <Dropdown className="tn-custom-filter" aria-label="Sort" value={sort} onChange={(v) => put('sort', v === 'updated' ? '' : v)} options={SORTS} />
@@ -97,7 +110,7 @@ export function ListPage() {
       ) : rows.length === 0 ? (
         <ColumnEmpty>Nothing matches these filters.</ColumnEmpty>
       ) : phone ? (
-        <div className="tn-stack">{rows.map((o) => <OrgCard key={o.id} org={o} />)}</div>
+        <div className="tn-stack">{rows.map((o) => <OrgCard key={o.id} org={o} onOpen={(x) => drawer.open(x.slug)} />)}</div>
       ) : (
         <div className="tn-table-wrap">
           <table className="tn-custom-table">
@@ -105,6 +118,7 @@ export function ListPage() {
             <thead>
               <tr>
                 <th scope="col">Name</th>
+                <th scope="col">Sector</th>
                 <th scope="col">Status</th>
                 <th scope="col">Owner</th>
                 <th scope="col">Last contact</th>
@@ -115,7 +129,12 @@ export function ListPage() {
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id}>
-                  <td><Link to={`/o/${o.slug}`}>{o.name}</Link></td>
+                  <td>
+                    <Link to={`/o/${o.slug}`} data-org-open={o.slug} onClick={(e) => openInPlace(e, () => drawer.open(o.slug))}>{o.name}</Link>
+                  </td>
+                  <td>
+                    {o.sector ? <span className="tn-custom-sector" style={{ '--tn-sector': sectorColour(o.sector).mark } as CSSProperties}>{o.sector}</span> : null}
+                  </td>
                   <td><StatusTag status={o.status} /></td>
                   <td>{person(o.owner_email)}</td>
                   <td>{ago(o.last_contact)}</td>
@@ -127,6 +146,7 @@ export function ListPage() {
           </table>
         </div>
       )}
+      <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={changed} onDeleted={() => orgs.reload()} />
     </div>
   )
 }

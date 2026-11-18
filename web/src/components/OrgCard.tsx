@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Org } from '../api/types'
 import { sectorColour, stageColour } from '../lib/colour'
 import { initials, moneyShort, person } from '../lib/format'
+import { openInPlace } from '../lib/openInPlace'
 import { DueDate } from './ColourTag'
 import { StatusTag } from './StatusTag'
 
@@ -34,9 +35,7 @@ interface OrgCardProps extends Omit<CardProps, 'title'> {
 export function OrgCard({ org, showStatus = true, onOpen, ...rest }: OrgCardProps) {
   const sector = org.sector?.trim()
   const open = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!onOpen || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-    e.preventDefault()
-    onOpen(org)
+    if (onOpen) openInPlace(e, () => onOpen(org))
   }
   return (
     <Card

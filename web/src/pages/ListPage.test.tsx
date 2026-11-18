@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import type { Org } from '../api/types'
-import { org } from '../test/fixtures'
+import { AT, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { filterOrgs, ListPage, options } from './ListPage'
 
@@ -82,7 +82,7 @@ test('changing the sort keeps the list and the dropdowns on screen', async () =>
   await user.click(screen.getByRole('button', { name: 'Sort' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Name' }))
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'Owner' })).toBeInTheDocument()
   release([client, lead])
 })
 
@@ -91,4 +91,43 @@ test('the list has a visually hidden title', async () => {
   renderApp(<ListPage />, '/list')
   await screen.findByRole('link', { name: 'Acme' })
   expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})
+
+const drawerRoutes = {
+  'GET /api/orgs/by-slug/acme': () => lead,
+  'GET /api/orgs/1/contacts': () => [],
+  'GET /api/orgs/1/timeline': () => [],
+  'GET /api/orgs/1/research': () => [],
+  'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+}
+
+test('a row opens the organisation in the drawer', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client], ...drawerRoutes })
+  renderApp(<ListPage />, '/list')
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('the owner dropdown is gone; the chips filter instead', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  renderApp(<><ListPage /><Where /></>, '/list')
+  await screen.findByRole('group', { name: 'Owner' })
+  expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: /^bo/ }))
+  expect(await screen.findByText('at /list?owner=bo%40example.com')).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+})
+
+test('the table has a sector column', async () => {
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  renderApp(<ListPage />, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('columnheader', { name: 'Sector' })).toBeInTheDocument()
+})
+
+test('filterOrgs with owner none keeps organisations without an owner', () => {
+  expect(filterOrgs([org({ id: 1, owner_email: null }), org({ id: 2 })], { kind: '', status: '', owner: 'none', tag: '' }).map((o) => o.id)).toEqual([1])
 })

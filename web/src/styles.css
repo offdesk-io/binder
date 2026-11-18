@@ -237,6 +237,12 @@ a:hover { text-decoration: underline; }
 .tn-custom-table th:first-child,
 .tn-custom-table td:first-child { white-space: normal; }
 
+/* The list in Bench's style: an uppercase head row (tn-page.css already draws the hairline rows). */
+.tn-custom-table thead th {
+  font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tenon-text-faint);
+}
+
 @media (max-width: 767px) {
   /* Wordmark and New on one row, search across the next. */
   .tn-custom-appbar-gap { display: none; }
@@ -321,6 +327,7 @@ a:hover { text-decoration: underline; }
 /* The row the chips sit in, with the page's own filter box at its right end. */
 .tn-custom-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .tn-custom-filterbar > :last-child { margin-left: auto; }
+.tn-custom-filterbar > :only-child { margin-left: 0; }
 /* On a phone the filter box takes its own full-width line under the chips. */
 @media (max-width: 640px) {
   .tn-custom-find { width: 100%; }

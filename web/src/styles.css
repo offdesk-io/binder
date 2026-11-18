@@ -233,7 +233,7 @@ a:hover { text-decoration: underline; }
 /* Drawer, in the shape of Bench's task drawer (bench/kanban/board.css, "drawer"). */
 .tn-custom-scrim {
   position: fixed; inset: 0; z-index: 30;
-  background: color-mix(in srgb, var(--tenon-text-default) 28%, transparent);
+  background: var(--tenon-background-overlay);
   animation: tn-custom-fade .15s ease;
 }
 .tn-custom-drawer {
@@ -259,10 +259,11 @@ a:hover { text-decoration: underline; }
 .tn-custom-drawer-actions { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: none; }
 .tn-custom-drawer-body {
   flex: 1 1 auto; overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--tenon-dimension-150) 14px var(--tenon-dimension-400);
   display: flex; flex-direction: column; gap: var(--tenon-dimension-150);
 }
 @keyframes tn-custom-slide { from { transform: translateX(103%); } to { transform: none; } }
 @keyframes tn-custom-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tn-custom-drawer, .tn-custom-scrim { animation: none; } }
-@media (max-width: 640px) { .tn-custom-drawer { width: 100vw; border-left: 0; } }
+@media (max-width: 640px) { .tn-custom-drawer { width: 100%; border-left: 0; } }

@@ -1,5 +1,6 @@
 import { Button } from '@tiagopedras/tenon'
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface DrawerProps {
   open: boolean
@@ -9,6 +10,8 @@ export interface DrawerProps {
   /** Buttons in the head, before Close. */
   actions?: ReactNode
   children: ReactNode
+  /** Where focus goes on close, if not back to what had it on open (for an opener that may be gone). */
+  returnFocus?: () => HTMLElement | null
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
@@ -18,19 +21,30 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * a scrim dims the page, focus moves in and stays in, Escape or the scrim or Close shut it, and focus goes back to
  * whatever had it before. On a phone it is the whole screen. Written to move into Tenon unchanged.
  */
-export function Drawer({ open, title, onClose, actions, children }: DrawerProps) {
+export function Drawer({ open, title, onClose, actions, children, returnFocus }: DrawerProps) {
   const panel = useRef<HTMLDivElement>(null)
   const before = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const close = useRef(onClose)
   close.current = onClose
+  const giveBack = useRef(returnFocus)
+  giveBack.current = returnFocus
 
   useEffect(() => {
     if (!open) return
     before.current = document.activeElement as HTMLElement | null
-    const first = panel.current?.querySelector<HTMLElement>(FOCUSABLE)
-    ;(first ?? panel.current)?.focus()
+    const root = document.documentElement
+    const overflow = root.style.overflow
+    root.style.overflow = 'hidden'
+    panel.current?.focus()
+    // Buttons that can be reached now. jsdom has no layout, so when nothing reports a box the box test is skipped.
+    const reachable = () => {
+      const all = Array.from(panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((el) => !el.closest('[inert]'))
+      const shown = all.filter((el) => el.getClientRects().length > 0)
+      return shown.length > 0 ? shown : all
+    }
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.isComposing) return
       // A Tenon modal opened from inside the drawer (Edit, Log) owns Escape and Tab while it is up.
       if (document.querySelector('.tenon-modal')) return
       if (e.key === 'Escape') {
@@ -39,14 +53,20 @@ export function Drawer({ open, title, onClose, actions, children }: DrawerProps)
         return
       }
       if (e.key !== 'Tab' || !panel.current) return
-      const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE))
-      if (items.length === 0) return
+      const items = reachable()
+      if (items.length === 0) {
+        e.preventDefault()
+        panel.current.focus()
+        return
+      }
       const firstItem = items[0]
       const lastItem = items[items.length - 1]
-      if (e.shiftKey && document.activeElement === firstItem) {
+      const active = document.activeElement
+      const inside = panel.current.contains(active)
+      if (e.shiftKey && (!inside || active === panel.current || active === firstItem)) {
         e.preventDefault()
         lastItem.focus()
-      } else if (!e.shiftKey && document.activeElement === lastItem) {
+      } else if (!e.shiftKey && (!inside || active === lastItem)) {
         e.preventDefault()
         firstItem.focus()
       }
@@ -54,14 +74,16 @@ export function Drawer({ open, title, onClose, actions, children }: DrawerProps)
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
-      before.current?.focus?.()
+      root.style.overflow = overflow
+      const target = giveBack.current?.() ?? before.current
+      if (target?.isConnected) target.focus()
     }
   }, [open])
 
   if (!open) return null
-  return (
+  return createPortal(
     <>
-      <div className="tn-custom-scrim" data-testid="drawer-scrim" onClick={() => onClose()} />
+      <div className="tn-custom-scrim" data-testid="drawer-scrim" aria-hidden="true" onClick={() => onClose()} />
       <div ref={panel} className="tn-custom-drawer" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="tn-custom-drawer-head">
           <h2 id={titleId} className="tn-custom-drawer-title">{title}</h2>
@@ -72,6 +94,7 @@ export function Drawer({ open, title, onClose, actions, children }: DrawerProps)
         </div>
         <div className="tn-custom-drawer-body">{children}</div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

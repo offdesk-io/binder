@@ -8,7 +8,7 @@ import { ago, label, money, moneyShort, person } from '../../lib/format'
 import { openInPlace } from '../../lib/openInPlace'
 import { FOLDED_BY_DEFAULT, type Stage } from '../../lib/pipeline'
 
-const key = (status: string) => `binder.pipeline.${status}`
+const key = (status: string) => `binder.pipeline.fold.${status}`
 
 function readOpen(status: string): boolean {
   try {
@@ -35,6 +35,8 @@ interface StageGroupProps {
   phone: boolean
   /** How many columns the table has, for the heading row to span. */
   columns: number
+  /** Show the rows whatever the fold says, as while the filter box has text; the stored choice is left alone. */
+  forceOpen?: boolean
   onOpen: (org: Org) => void
 }
 
@@ -42,26 +44,27 @@ interface StageGroupProps {
  * One stage of the Pipeline as a table row group: a heading row that folds the stage (kept per device; Lost and
  * Parked start folded), then a row per organisation when it is open.
  */
-export function StageGroup({ stage, phone, columns, onOpen }: StageGroupProps) {
+export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }: StageGroupProps) {
   const { status, orgs, total } = stage
-  const [open, setOpen] = useState(() => readOpen(status))
-  const id = `pipeline-stage-${status}`
+  const [kept, setKept] = useState(() => readOpen(status))
+  const open = forceOpen || kept
   const toggle = () => {
-    setOpen(!open)
-    writeOpen(status, !open)
+    setKept(!kept)
+    writeOpen(status, !kept)
   }
   const count = orgs.length
   const name = (o: Org) => (
     <Link to={`/o/${o.slug}`} data-org-open={o.slug} onClick={(e) => openInPlace(e, () => onOpen(o))}>{o.name}</Link>
   )
   return (
-    <tbody id={id} className="tn-custom-stage">
+    <tbody>
       <tr className="tn-custom-stage-head">
         <th colSpan={columns} scope="rowgroup">
-          <button type="button" className="tn-custom-stage-toggle" aria-expanded={open} aria-controls={id} onClick={toggle}>
+          <button type="button" className="tn-custom-stage-toggle" aria-expanded={open} disabled={forceOpen}
+            onClick={toggle}>
             <span className="tn-custom-stage-chevron" aria-hidden="true" />
             <ColourDot colour={stageColour(status)} />
-            <span>{label(status)}</span>
+            <span className="tn-custom-stage-name">{label(status)}</span>
             <span className="tn-custom-stage-figures" aria-hidden="true">
               {count}{total > 0 && <> · {moneyShort(total)}</>}
             </span>
@@ -79,10 +82,11 @@ export function StageGroup({ stage, phone, columns, onOpen }: StageGroupProps) {
               <div className="tn-custom-stage-line tn-custom-stage-sub">
                 {[
                   o.next_step && <span key="step">{o.next_step}</span>,
-                  o.next_step_due && <DueDate key="due" due={o.next_step_due} />,
+                  // In a plain span, so the separator dot sits outside the Tag's chip.
+                  o.next_step_due && <span key="due"><DueDate due={o.next_step_due} /></span>,
                   o.value_estimate != null && <span key="value">{money(o.value_estimate)}</span>,
                   <span key="owner">{person(o.owner_email)}</span>,
-                ].filter(Boolean).flatMap((part, i) => (i === 0 ? [part] : [<span key={`sep${i}`} aria-hidden="true">·</span>, part]))}
+                ]}
               </div>
             </td>
           </tr>

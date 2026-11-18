@@ -26,7 +26,7 @@ export function byOwner(orgs: Org[], value: OwnerValue): Org[] {
   return orgs.filter((o) => o.owner_email === value)
 }
 
-/** The Owner dropdown's options: Anyone, Me (when I own any), every other owner by name, No owner (when any has none). */
+/** The Owner dropdown's options: Any owner, Me (when I own any), every other owner by name, No owner (when any has none). */
 export function ownerOptions(orgs: Org[], me: string, active?: OwnerValue): DropdownOption[] {
   const owners = new Set(orgs.map((o) => o.owner_email ?? 'none'))
   const others = Array.from(owners)
@@ -34,7 +34,7 @@ export function ownerOptions(orgs: Org[], me: string, active?: OwnerValue): Drop
     .map((k) => ({ value: k, label: person(k) }))
     .sort((a, b) => a.label.localeCompare(b.label))
   const options: DropdownOption[] = [
-    { value: '', label: 'Anyone' },
+    { value: '', label: 'Any owner' },
     ...(owners.has(me) ? [{ value: me, label: 'Me' }] : []),
     ...others,
     ...(owners.has('none') ? [{ value: 'none', label: 'No owner' }] : []),

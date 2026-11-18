@@ -50,9 +50,9 @@ test('a filter in a shared link is applied on load', () => {
   expect(screen.getByText('shown 1')).toBeInTheDocument()
 })
 
-test('options: Anyone, Me, other owners by name, No owner', () => {
+test('options: Any owner, Me, other owners by name, No owner', () => {
   expect(ownerOptions(orgs, 'ana@example.com')).toEqual([
-    { value: '', label: 'Anyone' },
+    { value: '', label: 'Any owner' },
     { value: 'ana@example.com', label: 'Me' },
     { value: 'rui@example.com', label: 'rui' },
     { value: 'none', label: 'No owner' },
@@ -60,12 +60,12 @@ test('options: Anyone, Me, other owners by name, No owner', () => {
 })
 
 test('options leave out Me when I own none, and No owner when every one has an owner', () => {
-  expect(ownerOptions([orgs[2]], 'ana@example.com').map((o) => o.label)).toEqual(['Anyone', 'rui'])
+  expect(ownerOptions([orgs[2]], 'ana@example.com').map((o) => o.label)).toEqual(['Any owner', 'rui'])
 })
 
 test('other owners are sorted by name', () => {
   const many = [org({ id: 1, owner_email: 'zed@example.com' }), org({ id: 2, owner_email: 'bo@example.com' })]
-  expect(ownerOptions(many, 'me@example.com').map((o) => o.label)).toEqual(['Anyone', 'bo', 'zed'])
+  expect(ownerOptions(many, 'me@example.com').map((o) => o.label)).toEqual(['Any owner', 'bo', 'zed'])
 })
 
 test('an active owner nobody matches is still listed', () => {

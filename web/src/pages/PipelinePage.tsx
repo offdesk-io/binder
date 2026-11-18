@@ -13,7 +13,7 @@ import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
 import { StageGroup } from './pipeline/StageGroup'
 
-/** A changed lead goes to the front, where the API's newest-first order puts it. */
+/** A saved lead replaces its old copy; one that is no longer a lead leaves. */
 function place(prev: Org[] | undefined, org: Org): Org[] {
   const rest = (prev ?? []).filter((o) => o.id !== org.id)
   return org.kind === 'lead' ? [org, ...rest] : rest
@@ -87,7 +87,8 @@ export function PipelinePage() {
               </thead>
             )}
             {groups.map((g) => (
-              <StageGroup key={g.status} stage={g} phone={phone} columns={columns} onOpen={(o) => drawer.open(o.slug)} />
+              <StageGroup key={g.status} stage={g} phone={phone} columns={columns} forceOpen={!!needle}
+                onOpen={(o) => drawer.open(o.slug)} />
             ))}
           </table>
         </div>

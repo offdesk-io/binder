@@ -150,6 +150,8 @@ a:hover { text-decoration: underline; }
 .tn-custom-pipeline-table td.tn-custom-stage-item { white-space: normal; }
 .tn-custom-stage-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .tn-custom-stage-sub { gap: 2px 6px; margin-top: 2px; font-size: var(--tenon-typography-size-xs); color: var(--tenon-text-subtle); align-items: center; }
+/* A dot before every part but the first, so a wrapped line never ends on a dot alone. */
+.tn-custom-stage-sub > * + *::before { content: '·'; margin-right: 6px; color: var(--tenon-text-faint); }
 @media (prefers-reduced-motion: reduce) { .tn-custom-stage-chevron { transition: none; } }
 
 /* Two grid columns, the first wider, with their tops aligned. */

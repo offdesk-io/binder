@@ -33,21 +33,13 @@ test('stages appear in pipeline order with their count and total, and Won is not
   stubFetch(routes)
   renderApp(<PipelinePage />)
   await screen.findByRole('link', { name: 'Acme' })
-  const heads = screen.getAllByRole('rowheader').map((h) => h.textContent ?? '')
-  expect(heads.map((t) => t.split(/[,\d]/)[0])).toEqual(['Lead', 'Contacted', 'In conversation', 'Proposal sent', 'Lost', 'Parked'])
+  const heads = screen.getAllByRole('rowheader').map((h) => h.querySelector('.tn-custom-stage-name')?.textContent)
+  expect(heads).toEqual(['Lead', 'Contacted', 'In conversation', 'Proposal sent', 'Lost', 'Parked'])
   const lead = screen.getByRole('button', { name: /^Lead/ })
   expect(lead).toHaveAccessibleName(expect.stringContaining('2 organisations, €12.5k'))
   expect(lead).toHaveTextContent('2 · €12.5k')
   expect(screen.queryByRole('button', { name: /^Won/ })).toBeNull()
   expect(within(stage(/^Contacted/)).getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
-})
-
-test('the heading names the rows it folds', async () => {
-  stubFetch(routes)
-  renderApp(<PipelinePage />)
-  await screen.findByRole('link', { name: 'Acme' })
-  const lead = screen.getByRole('button', { name: /^Lead/ })
-  expect(lead).toHaveAttribute('aria-controls', lead.closest('tbody')!.id)
 })
 
 test('Lost and Parked start folded', async () => {
@@ -67,7 +59,7 @@ test('a heading folds and unfolds its stage, and the choice is remembered', asyn
   await screen.findByRole('link', { name: 'Acme' })
   await user.click(screen.getByRole('button', { name: /^Lead/ }))
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
-  expect(localStorage.getItem('binder.pipeline.lead')).toBe('closed')
+  expect(localStorage.getItem('binder.pipeline.fold.lead')).toBe('closed')
   await user.click(screen.getByRole('button', { name: /^Lost/ }))
   expect(screen.getByRole('link', { name: 'Gone' })).toBeInTheDocument()
   first.unmount()
@@ -79,11 +71,36 @@ test('a heading folds and unfolds its stage, and the choice is remembered', asyn
 })
 
 test('a remembered open overrides a stage that starts folded', async () => {
-  localStorage.setItem('binder.pipeline.parked', 'open')
+  localStorage.setItem('binder.pipeline.fold.parked', 'open')
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [org({ id: 6, name: 'Paused Co', slug: 'paused', status: 'parked' })] })
   renderApp(<PipelinePage />)
   expect(await screen.findByRole('link', { name: 'Paused Co' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Parked/ })).toHaveAttribute('aria-expanded', 'true')
+})
+
+test('a heading counts only the rows the filters leave', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAccessibleName(expect.stringContaining('2 organisations'))
+  await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'zin')
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAccessibleName(expect.stringContaining('1 organisation, €500'))
+})
+
+test('while the filter box has text every stage shows, and the folds are kept for later', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  const box = screen.getByRole('searchbox', { name: 'Filter organisations' })
+  await user.type(box, 'gon')
+  expect(screen.getByRole('link', { name: 'Gone' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveAttribute('aria-expanded', 'true')
+  expect(localStorage.getItem('binder.pipeline.fold.lost')).toBeNull()
+  await user.clear(box)
+  expect(screen.queryByRole('link', { name: 'Gone' })).toBeNull()
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveAttribute('aria-expanded', 'false')
 })
 
 test('rows within a stage run by due date, overdue first, then undated by name', async () => {
@@ -92,12 +109,14 @@ test('rows within a stage run by due date, overdue first, then undated by name',
     org({ id: 12, name: 'beta', slug: 'beta' }),
     org({ id: 13, name: 'Overdue', slug: 'overdue', next_step_due: '2020-01-01' }),
     org({ id: 14, name: 'Alpha', slug: 'alpha' }),
+    org({ id: 15, name: 'Earlier name', slug: 'earlier-name', next_step_due: '2099-01-01' }),
   ]
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => rows })
   renderApp(<PipelinePage />)
   await screen.findByRole('link', { name: 'Alpha' })
   const names = within(stage(/^Lead/)).getAllByRole('link').map((l) => l.textContent)
-  expect(names).toEqual(['Overdue', 'Later', 'Alpha', 'beta'])
+  // Two on the same day go by name.
+  expect(names).toEqual(['Overdue', 'Earlier name', 'Later', 'Alpha', 'beta'])
 })
 
 test('a row shows sector, next step with its due date, value, owner and last contact', async () => {
@@ -212,7 +231,7 @@ test('on a phone, rows are two-line items under the same stages, with no stage s
   expect(cells).toHaveLength(1)
   expect(cells[0].children).toHaveLength(2)
   expect(cells[0].children[0]).toHaveTextContent('Acme Retail')
-  expect(cells[0].children[1]).toHaveTextContent(/^Send the proposal\s*·\s*€12,000\s*·\s*rui$/)
+  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'rui'])
   expect(screen.queryAllByRole('columnheader')).toHaveLength(0)
   expect(screen.getByRole('button', { name: /^Lead/ })).toBeInTheDocument()
   expect(screen.queryByRole('radiogroup')).toBeNull()

@@ -82,10 +82,11 @@ export function ListPage() {
     orgs.setData((prev) => (prev ?? []).map((o) => (o.id === saved.id ? saved : o)))
   }
 
-  /** A new organisation gets its row at the top, whatever would hide it is cleared, and it opens in the drawer. As with
-   * a saved row it keeps that place until the next load. Before the list has loaded the load in flight brings it. */
+  /** A new organisation gets its row, whatever would hide it is cleared, and it opens in the drawer. The row is added
+   * at once so focus has somewhere to return, and the list is asked for again so the server's order puts it in place. */
   function created(o: Org) {
     if (orgs.data) orgs.setData((prev) => [o, ...(prev ?? []).filter((x) => x.id !== o.id)])
+    orgs.reload()
     setFind('')
     drawer.open(o.slug, filterOrgs([o], f).length === 0 ? ['kind', 'status', 'owner', 'tag'] : [])
   }

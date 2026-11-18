@@ -259,11 +259,12 @@ test('the kind chip counts follow the filter box', async () => {
 
 test('New in the header adds the row, clears what would hide it, and closing the drawer focuses the row', async () => {
   const user = userEvent.setup()
-  const fresh = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
+  const fresh = org({ id: 3, name: 'Mmm', slug: 'mmm', status: 'lead', owner_email: 'rui@example.com' })
+  let posted = false
   stubFetch({
-    'GET /api/orgs?sort=name': () => [lead, client],
-    'POST /api/orgs': () => fresh,
-    'GET /api/orgs/by-slug/cobalt': () => fresh,
+    'GET /api/orgs?sort=name': () => (posted ? [lead, client, fresh] : [lead, client]),
+    'POST /api/orgs': () => ((posted = true), fresh),
+    'GET /api/orgs/by-slug/mmm': () => fresh,
     'GET /api/orgs/3/contacts': () => [],
     'GET /api/orgs/3/timeline': () => [],
     'GET /api/orgs/3/research': () => [],
@@ -280,11 +281,44 @@ test('New in the header adds the row, clears what would hide it, and closing the
   await screen.findByRole('link', { name: 'Bolt' })
   await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'bol')
   await user.click(screen.getByRole('button', { name: 'New' }))
-  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.type(screen.getByLabelText(/^Name/), 'Mmm')
   await user.click(screen.getByRole('button', { name: 'Save' }))
-  const drawer = await screen.findByRole('dialog', { name: 'Cobalt' })
-  expect(screen.getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+  const drawer = await screen.findByRole('dialog', { name: 'Mmm' })
+  expect(screen.getByRole('link', { name: 'Mmm', hidden: true })).toBeInTheDocument()
   await user.click(within(drawer).getByRole('button', { name: /close/i }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(screen.getByRole('link', { name: 'Cobalt' })).toHaveFocus()
+  expect(screen.getByRole('link', { name: 'Mmm' })).toHaveFocus()
+})
+
+test('a new organisation lands in A to Z order, not at the top', async () => {
+  const user = userEvent.setup()
+  const zed = org({ id: 4, name: 'Zed', slug: 'zed' })
+  const fresh = org({ id: 3, name: 'Mmm', slug: 'mmm', status: 'lead' })
+  let posted = false
+  stubFetch({
+    'GET /api/orgs?sort=name': () => (posted ? [lead, fresh, zed] : [lead, zed]),
+    'POST /api/orgs': () => ((posted = true), fresh),
+    'GET /api/orgs/by-slug/mmm': () => fresh,
+    'GET /api/orgs/3/contacts': () => [],
+    'GET /api/orgs/3/timeline': () => [],
+    'GET /api/orgs/3/research': () => [],
+    'GET /api/orgs/3/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+  })
+  renderApp(
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/list" element={<ListPage />} />
+      </Route>
+    </Routes>,
+    '/list',
+  )
+  await screen.findByRole('link', { name: 'Zed' })
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Mmm')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await screen.findByRole('dialog', { name: 'Mmm' })
+  await waitFor(() =>
+    expect(screen.getAllByRole('link', { hidden: true }).map((l) => l.textContent).filter((n) => ['Acme', 'Mmm', 'Zed'].includes(n!)))
+      .toEqual(['Acme', 'Mmm', 'Zed']),
+  )
 })

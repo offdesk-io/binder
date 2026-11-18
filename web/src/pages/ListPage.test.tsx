@@ -85,3 +85,10 @@ test('changing the sort keeps the list and the dropdowns on screen', async () =>
   expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument()
   release([client, lead])
 })
+
+test('the list has a visually hidden title', async () => {
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  renderApp(<ListPage />, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})

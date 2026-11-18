@@ -11,7 +11,7 @@ import { QuickLog } from '../components/QuickLog'
 import { ResearchSection } from '../components/ResearchSection'
 import { StatusPicker } from '../components/StatusPicker'
 import { useSession } from '../app/session'
-import { lastContactTone, stageColour } from '../lib/colour'
+import { stageColour } from '../lib/colour'
 import { ago, label, money, person, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
@@ -108,8 +108,8 @@ function OrgView({ org, setOrg, reloadOrg, refreshError }: ViewProps) {
       </header>
 
       <div className="tn-cluster">
-        {org.value_estimate != null && <Stat eyebrow="Value" tone="accent" value={money(org.value_estimate)} />}
-        <Stat eyebrow="Last contact" tone={lastContactTone(org.last_contact)} value={ago(org.last_contact)} />
+        {org.value_estimate != null && <Stat eyebrow="Value" value={money(org.value_estimate)} />}
+        <Stat eyebrow="Last contact" value={ago(org.last_contact)} />
       </div>
 
       <div className="tn-grid tn-custom-split">

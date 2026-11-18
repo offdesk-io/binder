@@ -72,8 +72,8 @@ export function ListPage() {
 
   return (
     <div className="tn-stack">
+      <h1 className="tn-custom-sr-only">Organisations</h1>
       <div className="tn-toolbar">
-        <h1 className="tenon-heading-3">Organisations</h1>
         <div className="tn-cluster">
           <SegmentedControl
             aria-label="Kind"

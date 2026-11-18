@@ -38,23 +38,20 @@ export function HomePage() {
   const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
     <div className="tn-stack">
-      <div className="tn-toolbar">
-        <h1 className="tenon-heading-3">Home</h1>
-      </div>
+      <h1 className="tn-custom-sr-only">Home</h1>
       {orgs.error ? (
         <Alert tone="error">{orgs.error.message}</Alert>
       ) : !figures ? (
         <Loading />
       ) : (
         <div className="tn-stat-strip">
-          <Stat eyebrow="Open pipeline" tone="accent" value={money(figures.pipeline)} caption={`${figures.openLeads} open leads`} />
+          <Stat eyebrow="Open pipeline" value={money(figures.pipeline)} caption={`${figures.openLeads} open leads`} />
           <Stat
             eyebrow="Needs attention"
-            tone={figures.overdue > 0 ? 'error' : figures.attention > 0 ? 'warning' : 'success'}
             value={String(figures.attention)}
             caption={`${figures.overdue} with a missed next step`}
           />
-          <Stat eyebrow="Active clients" tone="success" value={String(figures.active)} caption={`${figures.paused} paused`} />
+          <Stat eyebrow="Active clients" value={String(figures.active)} caption={`${figures.paused} paused`} />
         </div>
       )}
       <div className="tn-grid tn-custom-split">

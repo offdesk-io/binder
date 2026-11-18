@@ -37,3 +37,14 @@ test('says so when nothing needs attention', async () => {
   expect(await screen.findByText('Nothing needs you today.')).toBeInTheDocument()
   expect(await screen.findByText('Nothing has happened yet.')).toBeInTheDocument()
 })
+
+test('Home has a visually hidden title: the tab says where you are', async () => {
+  stubFetch({
+    'GET /api/orgs': () => [org()],
+    'GET /api/attention': () => [],
+    'GET /api/activity?limit=30': () => [],
+  })
+  renderApp(<HomePage />)
+  await screen.findByText('Open pipeline')
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})

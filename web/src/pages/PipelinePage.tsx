@@ -61,9 +61,7 @@ export function PipelinePage() {
   if (phone) {
     return (
       <div className="tn-stack">
-        <div className="tn-toolbar">
-          <h1 className="tenon-heading-3">Pipeline</h1>
-        </div>
+        <h1 className="tn-custom-sr-only">Pipeline</h1>
         {note}
         <div className="tn-custom-scroll">
           <SegmentedControl
@@ -89,9 +87,7 @@ export function PipelinePage() {
 
   return (
     <div className="tn-stack">
-      <div className="tn-toolbar">
-        <h1 className="tenon-heading-3">Pipeline</h1>
-      </div>
+      <h1 className="tn-custom-sr-only">Pipeline</h1>
       {note}
       <div className="tn-board tn-custom-board">
         {meta.lead_statuses.map((s) => (

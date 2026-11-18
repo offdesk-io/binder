@@ -95,3 +95,18 @@ test('a stale move shows the current record without reloading the list', async (
   expect(await screen.findByRole('link', { name: 'Acme Ltd' })).toBeInTheDocument()
   expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(1)
 })
+
+test('the pipeline has a visually hidden title', async () => {
+  stubFetch({ 'GET /api/orgs?kind=lead': () => [a, b] })
+  renderApp(<PipelinePage />)
+  await screen.findByTestId('stage-lead')
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})
+
+test('the phone pipeline has a visually hidden title too', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
+  stubFetch({ 'GET /api/orgs?kind=lead': () => [a, b] })
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})

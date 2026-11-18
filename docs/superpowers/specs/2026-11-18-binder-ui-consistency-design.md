@@ -1,7 +1,7 @@
 # Binder UI consistency with Bench — design
 
 Date: 2026-11-18
-Status: approved in brainstorm, awaiting spec review
+Status: approved; revised 2026-11-18 after the owner tried the build (see "Revision" at the end)
 
 ## Why
 
@@ -18,7 +18,7 @@ screen.
 | Which differences | All six: header bar, full width and density, columns and cards, filter chips, side drawer, calmer colour. |
 | One organisation open | A drawer over Pipeline and List, like Bench's task drawer. The full page `/o/<slug>` stays for links and search. |
 | Where the code lives | In Binder, on Tenon's existing components. What Tenon lacks (`AppHeader`, `Drawer`) is written as self-contained components ready to move into Tenon, then proposed there in an issue. Bench is not touched. |
-| Filter chips | By owner. |
+| Filter chips | By kind on the List (All, Leads, Clients). Owner is a dropdown. (Revised: owner chips were Bench's buckets, which don't fit a CRM.) |
 | Card label | Sector. |
 | Wordmark and icons | The `binder.` wordmark and mark from the Offdesk brand folder (`logos/binder/`). |
 
@@ -154,3 +154,36 @@ One branch, one PR, in steps that each leave the tests green:
 
 What Binder stores and its API. The only new things in the address are
 `?org=` and `?owner=`, read by the front end only.
+
+## Revision (2026-11-18, after the owner tried the first build)
+
+The owner tried the finished branch and asked for three changes. These replace the
+matching parts above.
+
+- **Owner chips go.** Bench's buckets are areas of one person's work; a CRM is split
+  by kind and stage. The List gets chips by kind: `All · Leads · Clients` with
+  counts (`?kind=`), replacing its Leads/Clients switch. Owner is a dropdown
+  (`?owner=`, `none` for no owner) on both Pipeline and List.
+- **The Pipeline is a list grouped by stage, not a board.** The team expects many
+  leads, and a board's columns grow unevenly. One table, a heading row per lead
+  stage in pipeline order (`LEAD · 12 · €240k`: count and total value), each
+  heading folds its stage away (remembered per device); Lost and Parked start
+  folded. Rows: name, sector, next step with its due date, value, owner, last
+  contact. Within a stage, rows sort by next-step due date, overdue first, then
+  undated by name. A row opens the drawer, where status changes. No drag. Above
+  the table: the Owner dropdown, the filter box, and `+ Add organisation`. On a
+  phone the same groups, each row on two lines; the stage switcher goes.
+- **The List sorts by name, A to Z, by default.** It also gets the filter box.
+
+Fixes from the final branch review, in the same round:
+
+- App icons with an opaque background, as Bench's (`bench/kanban/brand/`), a
+  favicon that follows dark mode, and 32px PNG favicons for light and dark.
+- One breakpoint, 768px, for everything (the drawer and the filter bar had 640px).
+- The drawer's stage picker and Log / Edit / Open page sit in its top bar
+  (Drawer's `actions`), so they don't scroll away. Open page navigates in the app.
+- New opens the drawer when used on Pipeline or List.
+- The organisation page's header buttons are small, as everywhere else.
+- Search results refresh after a change in the drawer.
+- The phone tab bar is restyled in the header's pill style.
+- Leftover code removed.

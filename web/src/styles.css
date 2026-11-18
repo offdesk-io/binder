@@ -83,11 +83,13 @@ a:hover { text-decoration: underline; }
   padding-left: var(--tenon-dimension-150);
 }
 
-/* The drawer's row of tools above an organisation's sections. */
+/* The drawer's tools: in its head (the slot), or in a row of the body when there is no drawer around. */
 .tn-custom-drawer-tools { gap: var(--tenon-dimension-075); }
-.tn-custom-drawer-tools .tn-custom-status { min-width: 10rem; }
+.tn-custom-drawer-tools .tn-custom-status,
+.tn-custom-drawer-tools-slot .tn-custom-status { min-width: 10rem; }
 @media (max-width: 767px) {
-  .tn-custom-drawer-tools .tn-custom-status { min-width: 0; }
+  .tn-custom-drawer-tools .tn-custom-status,
+  .tn-custom-drawer-tools-slot .tn-custom-status { min-width: 0; }
 }
 
 /* The page under the header: full width, Bench's 16px gutters. */
@@ -95,6 +97,8 @@ a:hover { text-decoration: underline; }
   flex: 1; min-width: 0; scroll-margin-top: 64px;
   padding: var(--tenon-dimension-200) var(--tenon-dimension-200) var(--tenon-dimension-600);
 }
+/* The header wraps to two rows on a phone (10px padding, a 32px row, a gap, a 34px row, 10px padding), about 6rem. */
+@media (max-width: 767px) { .tn-custom-main { scroll-margin-top: 6rem; } }
 
 /* Text colour. Tenon's text styles set size and weight only. */
 .tn-custom-faint { color: var(--tenon-text-faint); }
@@ -223,22 +227,28 @@ a:hover { text-decoration: underline; }
   display: flex; flex-direction: column; gap: var(--tenon-dimension-100);
 }
 
-/* Bottom tab bar on a phone. The links take Tenon's nav styles, and this only lays them out across the bar. */
+/* Bottom tab bar on a phone, in the header's pill style: the links read like .tn-custom-pill-tab, the current one on
+   a neutral pill, each at least 44px tall to touch. */
 .tn-custom-tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  height: 56px;
+  min-height: 56px;
   background: var(--tenon-background-raised);
   border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tn-custom-tab-list {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  height: 100%;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px;
+  list-style: none; margin: 0; padding: 6px 8px;
 }
 .tn-custom-tab-list a {
-  height: 100%;
+  min-height: 44px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 0;
+  border-radius: var(--tenon-radius-md);
+  font-size: var(--tenon-typography-size-sm); font-weight: 560;
+  color: var(--tenon-text-subtle); text-decoration: none;
+}
+.tn-custom-tab-list a[aria-current="page"] {
+  background: var(--tenon-background-neutral); color: var(--tenon-text-default);
 }
 
 /* Organisation tables: names and dates stay on one line, the first column may wrap. */
@@ -302,7 +312,7 @@ a:hover { text-decoration: underline; }
   outline: none;
 }
 .tn-custom-drawer-head {
-  display: flex; align-items: center; gap: var(--tenon-dimension-100);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--tenon-dimension-100);
   padding: 12px 14px;
   border-bottom: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
 }
@@ -311,6 +321,8 @@ a:hover { text-decoration: underline; }
   font-size: var(--tenon-typography-size-md); font-weight: 650;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.tn-custom-drawer-tools-slot { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: 0 1 auto; flex-wrap: wrap; }
+.tn-custom-drawer-tools-slot:empty { display: none; }
 .tn-custom-drawer-actions { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: none; }
 .tn-custom-drawer-body {
   flex: 1 1 auto; overflow-y: auto;
@@ -321,7 +333,11 @@ a:hover { text-decoration: underline; }
 @keyframes tn-custom-slide { from { transform: translateX(103%); } to { transform: none; } }
 @keyframes tn-custom-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tn-custom-drawer, .tn-custom-scrim { animation: none; } }
-@media (max-width: 640px) { .tn-custom-drawer { width: 100%; border-left: 0; } }
+@media (max-width: 767px) {
+  .tn-custom-drawer { width: 100%; border-left: 0; }
+  /* Title and Close on the first row, the tools on a second. */
+  .tn-custom-drawer-tools-slot { order: 3; flex: 1 1 100%; }
+}
 
 /* Filter chips: the header's pill, with a count per chip, as Bench's bucket strip. */
 .tn-custom-chips { flex-wrap: wrap; }
@@ -340,7 +356,7 @@ a:hover { text-decoration: underline; }
 .tn-custom-filterbar > :only-child { margin-left: 0; }
 .tn-custom-filterbar-end { display: flex; align-items: center; gap: 6px 10px; }
 /* On a phone the filter box takes its own full-width line under the chips. */
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .tn-custom-find { width: 100%; }
   .tn-custom-filterbar > :last-child { margin-left: 0; }
   .tn-custom-filterbar-end { flex: 1 1 100%; }

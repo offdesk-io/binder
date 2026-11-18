@@ -2,7 +2,8 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { expect, test } from 'vitest'
-import { renderApp } from '../test/render'
+import { org } from '../test/fixtures'
+import { renderApp, stubFetch } from '../test/render'
 import { Layout } from './Layout'
 
 function Where() {
@@ -113,9 +114,35 @@ test('slash does nothing while a drawer is open', async () => {
   const user = userEvent.setup()
   app()
   const panel = document.createElement('div')
-  panel.className = 'tn-custom-drawer'
+  panel.setAttribute('data-drawer', '')
   document.body.appendChild(panel)
   await user.keyboard('/')
   expect(screen.getByRole('searchbox', { name: 'Search' })).not.toHaveFocus()
   panel.remove()
+})
+
+async function addOrganisation(path: string) {
+  const user = userEvent.setup()
+  stubFetch({ 'POST /api/orgs': (b) => org({ name: (b as { name: string }).name, slug: 'newco' }) })
+  app(path)
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Newco')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+}
+
+test.each(['/pipeline', '/list'])('a new organisation saved from %s opens in the drawer', async (path) => {
+  await addOrganisation(path)
+  expect(await screen.findByText(`at ${path}?org=newco`)).toBeInTheDocument()
+})
+
+test('a new organisation saved from anywhere else opens its page', async () => {
+  await addOrganisation('/')
+  expect(await screen.findByText('at /o/newco')).toBeInTheDocument()
+})
+
+test('a pending search keeps the organisation open in the drawer', async () => {
+  const user = userEvent.setup()
+  app('/search?q=one&org=acme')
+  await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'x')
+  expect(await screen.findByText('at /search?q=onex&org=acme')).toBeInTheDocument()
 })

@@ -40,7 +40,8 @@ interface SectionProps extends Pick<ColumnProps, 'count' | 'titleAfter'> {
  */
 export function Section({ id, title, action, count, titleAfter, children }: SectionProps) {
   const frame = useFrame()
-  const [open, setOpen] = useState(() => readOpen(id))
+  // Only the drawer folds, so only the drawer touches storage.
+  const [open, setOpen] = useState(() => frame === 'drawer' ? readOpen(id) : true)
   // Column spreads unknown props onto its <details>; its types are HTMLAttributes, which in React 18 lack onToggle.
   const onToggle: Pick<DetailsHTMLAttributes<HTMLDetailsElement>, 'onToggle'> = {
     onToggle: (e) => {

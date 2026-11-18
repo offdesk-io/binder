@@ -19,7 +19,7 @@
 - `web/src/styles.css` reads `var(--tenon-…)` tokens only: no hex colours, no font names. The one exception is the wordmark's brand colours, which live in `src/app/Wordmark.tsx` (Task 2).
 - Page-only classes are named `tn-custom-*`, as the file already does.
 - Run from `web/`: `npm run check` (types), `npm test` (Vitest), and for tasks that say so `npx playwright test` (builds first via `npm run e2e`). The repo root's Python suite is not affected by this plan; leave it alone.
-- Commit after each task with a plain message saying what changed. **No `Co-Authored-By`, no "Generated with", no mention of Claude anywhere** (code, comments, commits).
+- Commit after each task with a plain message saying what changed. **No `Co-Authored-By`, no "Generated with", never mention AI tools anywhere** (code, comments, commits).
 - No real names or emails in code, tests or fixtures: use `@example.com`.
 - Do not touch the Bench checkout (`../../bench`). It is read-only reference.
 

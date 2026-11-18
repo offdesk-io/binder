@@ -12,7 +12,7 @@
 
 ## Ground rules
 
-Plan 6's ground rules apply unchanged: work in `web/`, read before changing, tokens-only `styles.css` (the Wordmark is the one hex exception), `tn-custom-*` class names, `npm run check` and `npm test` green after every task, a plain commit per task with **no Co-Authored-By, no "Generated with", no session links, no mention of Claude or AI tools anywhere**, `@example.com` for any email, never touch the Bench checkout except to read it, stop every server you start.
+Plan 6's ground rules apply unchanged: work in `web/`, read before changing, tokens-only `styles.css` (the Wordmark is the one hex exception), `tn-custom-*` class names, `npm run check` and `npm test` green after every task, a plain commit per task with **no Co-Authored-By, no "Generated with", no session links, never mention AI tools anywhere**, `@example.com` for any email, never touch the Bench checkout except to read it, stop every server you start.
 
 ## What exists now (end of plan 6)
 

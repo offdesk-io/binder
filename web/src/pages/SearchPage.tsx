@@ -72,7 +72,7 @@ export function SearchPage() {
           </Column>
         )
       })}
-      <OrgDrawer slug={drawer.slug} onClose={drawer.close} onDeleted={() => hits.reload()} />
+      <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={() => hits.reload()} onDeleted={() => hits.reload()} />
     </div>
   )
 }

@@ -1,3 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<g id="icon"><path d="M144 124h224v32h-224zM120 176h272v32h-272zM96 228h320v160h-320zM128 260v96h96v-96zM248 276v20h136v-20zM248 320v20h96v-20z" fill="#141414" fill-rule="evenodd"/><rect x="128" y="260" width="96" height="96" fill="#e2481c"/></g>
+<style>.bg{display:none}.m{fill:#141414}@media (prefers-color-scheme:dark){.bg{display:inline}.m{fill:#e7e5e0}}</style>
+<rect class="bg" width="512" height="512" fill="#141414"/>
+<g id="icon"><path class="m" d="M144 124h224v32h-224zM120 176h272v32h-272zM96 228h320v160h-320zM128 260v96h96v-96zM248 276v20h136v-20zM248 320v20h96v-20z" fill-rule="evenodd"/><rect x="128" y="260" width="96" height="96" fill="#e2481c"/></g>
 </svg>

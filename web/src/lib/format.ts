@@ -64,10 +64,6 @@ export function ago(iso: string | null | undefined, now: Date = new Date()): str
   return day(iso)
 }
 
-export function isOverdue(due: string | null | undefined, now: Date = new Date()): boolean {
-  return !!due && due < todayIso(now)
-}
-
 /** Offdesk works in euros. en-IE writes €12,000, as an English page expects. */
 const EUR = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 

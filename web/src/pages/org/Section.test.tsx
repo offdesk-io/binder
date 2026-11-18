@@ -39,3 +39,13 @@ test("a button in a drawer section's head does not fold the section", async () =
   expect(onAdd).toHaveBeenCalled()
   expect(document.querySelector('details')!.open).toBe(true)
 })
+
+test('on the page a section never touches storage', () => {
+  const read = vi.spyOn(Storage.prototype, 'getItem')
+  const write = vi.spyOn(Storage.prototype, 'setItem')
+  render(<Section id="people" title="People"><p>body</p></Section>)
+  expect(read).not.toHaveBeenCalled()
+  expect(write).not.toHaveBeenCalled()
+  read.mockRestore()
+  write.mockRestore()
+})

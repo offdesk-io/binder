@@ -1,7 +1,8 @@
 import { Button } from '@tiagopedras/tenon'
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
+import { useOrgDrawer } from '../lib/useOrgDrawer'
 import { useIsPhone } from '../lib/useIsPhone'
 import { AppHeader } from './AppHeader'
 import { SearchBox } from './SearchBox'
@@ -31,6 +32,8 @@ export function Layout() {
   const { me } = useSession()
   const phone = useIsPhone()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const drawer = useOrgDrawer()
   const [creating, setCreating] = useState(false)
   return (
     <div className="tn-custom-app">
@@ -59,7 +62,9 @@ export function Layout() {
         onClose={() => setCreating(false)}
         onSaved={(o) => {
           setCreating(false)
-          navigate(`/o/${o.slug}`)
+          // Where an organisation opens in the drawer, the new one does too; elsewhere it gets its page.
+          if (pathname === '/pipeline' || pathname === '/list') drawer.open(o.slug)
+          else navigate(`/o/${o.slug}`)
         }}
       />
     </div>

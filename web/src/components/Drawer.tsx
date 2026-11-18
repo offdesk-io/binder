@@ -1,5 +1,5 @@
 import { Button } from '@tiagopedras/tenon'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface DrawerProps {
@@ -14,6 +14,13 @@ export interface DrawerProps {
   returnFocus?: () => HTMLElement | null
 }
 
+/**
+ * The element in the drawer's head that content inside the drawer can portal its tools into, so they stay put while
+ * the body scrolls. Undefined outside a drawer; null while the drawer has not yet attached the element.
+ */
+const ToolsSlot = createContext<HTMLElement | null | undefined>(undefined)
+export const useDrawerTools = () => useContext(ToolsSlot)
+
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
 /**
@@ -25,6 +32,7 @@ export function Drawer({ open, title, onClose, actions, children, returnFocus }:
   const panel = useRef<HTMLDivElement>(null)
   const before = useRef<HTMLElement | null>(null)
   const titleId = useId()
+  const [tools, setTools] = useState<HTMLElement | null>(null)
   const close = useRef(onClose)
   close.current = onClose
   const giveBack = useRef(returnFocus)
@@ -85,15 +93,18 @@ export function Drawer({ open, title, onClose, actions, children, returnFocus }:
   return createPortal(
     <>
       <div className="tn-custom-scrim" data-testid="drawer-scrim" aria-hidden="true" onClick={() => onClose()} />
-      <div ref={panel} className="tn-custom-drawer" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+      <div ref={panel} className="tn-custom-drawer" data-drawer role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="tn-custom-drawer-head">
           <h2 id={titleId} className="tn-custom-drawer-title">{title}</h2>
+          <div className="tn-custom-drawer-tools-slot" ref={setTools} />
           <div className="tn-custom-drawer-actions">
             {actions}
             <Button size="sm" variant="ghost" onClick={() => onClose()}>Close</Button>
           </div>
         </div>
-        <div className="tn-custom-drawer-body">{children}</div>
+        <ToolsSlot.Provider value={tools}>
+          <div className="tn-custom-drawer-body">{children}</div>
+        </ToolsSlot.Provider>
       </div>
     </>,
     document.body,

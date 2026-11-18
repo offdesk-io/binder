@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
@@ -27,6 +27,30 @@ test('a slug loads the organisation into a drawer named after it', async () => {
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
   expect(await screen.findByRole('link', { name: 'Open page' })).toHaveAttribute('href', '/o/acme')
   expect(screen.getByText('Retail')).toBeInTheDocument()
+})
+
+test('the stage picker, Log, Edit and Open page sit in the drawer head, not its body', async () => {
+  stubFetch(routes)
+  renderApp(<OrgDrawer slug="acme" onClose={() => {}} />)
+  const dialog = await screen.findByRole('dialog', { name: 'Acme' })
+  const head = dialog.querySelector('.tn-custom-drawer-head') as HTMLElement
+  const body = dialog.querySelector('.tn-custom-drawer-body') as HTMLElement
+  const open = await within(head).findByRole('link', { name: 'Open page' })
+  expect(open).toHaveAttribute('href', '/o/acme')
+  expect(open).toHaveClass('tenon-button')
+  for (const name of ['Status', 'Log', 'Edit']) {
+    expect(within(head).getByRole('button', { name })).toBeInTheDocument()
+    expect(within(body).queryByRole('button', { name })).toBeNull()
+  }
+  expect(within(body).queryByRole('link', { name: 'Open page' })).toBeNull()
+})
+
+test('Log in the head opens the log form owned by the detail', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<OrgDrawer slug="acme" onClose={() => {}} />)
+  await user.click(await screen.findByRole('button', { name: 'Log' }))
+  expect(await screen.findByLabelText(/What happened/)).toBeInTheDocument()
 })
 
 test('a status change in the drawer is reported to the page behind', async () => {

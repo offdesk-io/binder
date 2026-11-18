@@ -1,10 +1,12 @@
 import { Alert, Button, ColumnEmpty, LinkButton, Tag } from '@tiagopedras/tenon'
+import { createPortal } from 'react-dom'
 import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { api } from '../../api/endpoints'
 import type { Org, TimelineInteraction } from '../../api/types'
 import { useSession } from '../../app/session'
+import { useDrawerTools } from '../../components/Drawer'
 import { NextStep } from '../../components/OrgCard'
 import { OrgForm } from '../../components/OrgForm'
 import { QuickLog } from '../../components/QuickLog'
@@ -52,6 +54,7 @@ interface Props {
 /** One organisation: its header and sections, drawn for its own page or for the drawer. */
 export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChanged, onDeleted }: Props) {
   const phone = useIsPhone()
+  const toolsSlot = useDrawerTools()
   const navigate = useNavigate()
   const { meta } = useSession()
   const contacts = useApi(() => api.contacts(org.id), [org.id])
@@ -139,15 +142,25 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
   )
 
   if (frame === 'drawer') {
+    // The tools go up into the drawer's head so they stay put while the body scrolls. They are still this
+    // component's own elements (a portal keeps their state, handlers and context here); outside a Drawer there is
+    // no slot, and they stay in the body.
+    const tools = (
+      <>
+        <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
+        <Button size="sm" variant="primary" onClick={() => setLog('new')}>Log</Button>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+        <Link className="tenon-button tenon-button--ghost tenon-button--sm" to={`/o/${org.slug}`}>Open page</Link>
+      </>
+    )
     return (
       <FrameContext.Provider value="drawer">
         <div className="tn-stack">
-          <div className="tn-cluster tn-custom-drawer-tools">
-            <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
-            <Button size="sm" variant="primary" onClick={() => setLog('new')}>Log</Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
-            <LinkButton size="sm" variant="ghost" href={`/o/${org.slug}`}>Open page</LinkButton>
-          </div>
+          {toolsSlot === undefined ? (
+            <div className="tn-cluster tn-custom-drawer-tools">{tools}</div>
+          ) : (
+            toolsSlot && createPortal(tools, toolsSlot)
+          )}
           {caption}
           {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh: ${refreshError}`}</Alert>}
           {overview}
@@ -171,11 +184,11 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
               <StatusPicker org={org} aria="Status" onChange={(s) => void changeStatus(s)} disabled={busy} />
             </div>
             <div className="tn-cluster">
-              {!phone && <Button variant="primary" onClick={() => setLog('new')}>Log</Button>}
-              <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
-              {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
-              {!phone && primary?.phone && <LinkButton variant="ghost" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
-              {primary?.email && <LinkButton variant="ghost" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
+              {!phone && <Button size="sm" variant="primary" onClick={() => setLog('new')}>Log</Button>}
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+              {meta.ai && <LinkButton size="sm" variant="ghost" href="#research">Research</LinkButton>}
+              {!phone && primary?.phone && <LinkButton size="sm" variant="ghost" href={`tel:${primary.phone}`}>Call {primary.name}</LinkButton>}
+              {primary?.email && <LinkButton size="sm" variant="ghost" href={`mailto:${primary.email}`}>Email {primary.name}</LinkButton>}
             </div>
           </div>
           {caption}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
-  ago, day, fromLocalInput, initials, isOverdue, label, money, moneyShort, person, REASON_TEXT, statusLine,
+  ago, day, fromLocalInput, initials, label, money, moneyShort, person, REASON_TEXT, statusLine,
   toLocalInput, todayIso, safeHref, usd,
 } from './format'
 
@@ -33,12 +33,8 @@ describe('format', () => {
     expect(ago(null, now)).toBe('never')
   })
 
-  test('a due date is overdue only after its day', () => {
-    const now = new Date(2026, 10, 12, 9, 0)
-    expect(todayIso(now)).toBe('2026-11-12')
-    expect(isOverdue('2026-11-11', now)).toBe(true)
-    expect(isOverdue('2026-11-12', now)).toBe(false)
-    expect(isOverdue(null, now)).toBe(false)
+  test('today is the local date', () => {
+    expect(todayIso(new Date(2026, 10, 12, 9, 0))).toBe('2026-11-12')
   })
 
   test('money is whole pounds', () => {

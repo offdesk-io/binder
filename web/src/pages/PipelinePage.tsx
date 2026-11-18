@@ -1,4 +1,4 @@
-import { Alert, Column, ColumnEmpty, Input, SegmentedControl } from '@tiagopedras/tenon'
+import { Alert, Column, ColumnEmpty, Dropdown, Input, SegmentedControl } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
@@ -9,10 +9,10 @@ import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
 import { OrgForm } from '../components/OrgForm'
-import { byOwner, OwnerChips, useOwnerFilter } from '../components/OwnerChips'
 import { columnHead, stageColour } from '../lib/colour'
 import { label } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
+import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
@@ -33,7 +33,7 @@ function place(prev: Org[] | undefined, org: Org): Org[] {
 }
 
 export function PipelinePage() {
-  const { meta } = useSession()
+  const { meta, me } = useSession()
   const phone = useIsPhone()
   const orgs = useApi(() => api.orgs({ kind: 'lead' }), [])
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string }>()
@@ -87,7 +87,8 @@ export function PipelinePage() {
     <>
       <h1 className="tn-custom-sr-only">Pipeline</h1>
       <div className="tn-custom-filterbar">
-        <OwnerChips orgs={orgs.data} value={owner} onChange={setOwner} />
+        <Dropdown className="tn-custom-filter" aria-label="Owner" value={owner} onChange={setOwner}
+          options={ownerOptions(orgs.data, me.email, owner)} />
         <Input type="search" className="tn-custom-find" aria-label="Filter cards" placeholder="Filter cards…"
           value={find} onChange={(e) => setFind(e.target.value)} />
       </div>

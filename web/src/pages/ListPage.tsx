@@ -1,17 +1,18 @@
-import { Alert, ColumnEmpty, Dropdown, SegmentedControl, type DropdownOption } from '@tiagopedras/tenon'
+import { Alert, ColumnEmpty, Dropdown, type DropdownOption } from '@tiagopedras/tenon'
 import type { CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useSession } from '../app/session'
+import { FilterChips } from '../components/FilterChips'
 import { Loading } from '../components/Loading'
 import { NextStep, OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
-import { OwnerChips } from '../components/OwnerChips'
 import { StatusTag } from '../components/StatusTag'
 import { sectorColour } from '../lib/colour'
 import { ago, label, money, person } from '../lib/format'
 import { openInPlace } from '../lib/openInPlace'
+import { ownerOptions } from '../lib/ownerFilter'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
@@ -33,9 +34,9 @@ export function filterOrgs(orgs: Org[], f: ListFilters): Org[] {
   )
 }
 
-export function options(values: (string | null)[], any: string, show: (v: string) => string = (v) => v): DropdownOption[] {
+export function options(values: (string | null)[], any: string): DropdownOption[] {
   const unique = Array.from(new Set(values.filter((v): v is string => !!v))).sort()
-  return [{ value: '', label: any }, ...unique.map((v) => ({ value: v, label: show(v) }))]
+  return [{ value: '', label: any }, ...unique.map((v) => ({ value: v, label: v }))]
 }
 
 const SORTS: DropdownOption<OrgSort>[] = [
@@ -46,7 +47,7 @@ const SORTS: DropdownOption<OrgSort>[] = [
 ]
 
 export function ListPage() {
-  const { meta } = useSession()
+  const { meta, me } = useSession()
   const phone = useIsPhone()
   const [params, setParams] = useSearchParams()
   // `won` is never stored: a won lead is an active client.
@@ -84,23 +85,29 @@ export function ListPage() {
 
   const all = orgs.data ?? []
   const rows = filterOrgs(all, f)
+  const kindCounts = filterOrgs(all, { ...f, kind: '' })
 
   return (
     <div className="tn-stack">
       <h1 className="tn-custom-sr-only">Organisations</h1>
       {orgs.data && (
         <div className="tn-custom-filterbar">
-          <OwnerChips orgs={filterOrgs(all, { ...f, owner: '' })} value={f.owner} onChange={(v) => put('owner', v)} />
+          <FilterChips
+            label="Kind"
+            value={f.kind}
+            onChange={(v) => put('kind', v)}
+            chips={[
+              { value: '', label: 'All', count: kindCounts.length },
+              { value: 'lead', label: 'Leads', count: kindCounts.filter((o) => o.kind === 'lead').length },
+              { value: 'client', label: 'Clients', count: kindCounts.filter((o) => o.kind === 'client').length },
+            ]}
+          />
         </div>
       )}
       <div className="tn-toolbar">
         <div className="tn-cluster">
-          <SegmentedControl
-            aria-label="Kind"
-            value={f.kind}
-            onChange={(v) => put('kind', v)}
-            options={[{ value: '', label: 'All' }, { value: 'lead', label: 'Leads' }, { value: 'client', label: 'Clients' }]}
-          />
+          <Dropdown className="tn-custom-filter" aria-label="Owner" value={f.owner} onChange={(v) => put('owner', v)}
+            options={ownerOptions(all, me.email, f.owner)} />
           <Dropdown className="tn-custom-filter" aria-label="Status" value={f.status} onChange={(v) => put('status', v)}
             options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
           <Dropdown className="tn-custom-filter" aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}

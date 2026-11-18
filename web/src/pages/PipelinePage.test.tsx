@@ -134,12 +134,13 @@ test('on a phone, a card also opens in the drawer', async () => {
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
 })
 
-test('the owner chips filter the board', async () => {
+test('the owner dropdown filters the board', async () => {
   const user = userEvent.setup()
   const c = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [a, b, c] })
   renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: /^Me/ }))
+  await user.click(await screen.findByRole('button', { name: 'Owner' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Me' }))
   expect(screen.queryByRole('link', { name: 'Cobalt' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
 })

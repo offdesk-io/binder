@@ -63,7 +63,7 @@ test('choosing a kind clears the status in the URL', async () => {
   renderApp(<><ListPage /><Where /></>, '/list?status=lead')
   await screen.findByRole('link', { name: 'Acme' })
   expect(screen.queryByRole('link', { name: 'Bolt' })).toBeNull()
-  await user.click(screen.getByRole('radio', { name: 'Clients' }))
+  await user.click(screen.getByRole('button', { name: /^Clients/ }))
   expect(await screen.findByText('at /list?kind=client')).toBeInTheDocument()
   expect(await screen.findByRole('link', { name: 'Bolt' })).toBeInTheDocument()
 })
@@ -82,7 +82,8 @@ test('changing the sort keeps the list and the dropdowns on screen', async () =>
   await user.click(screen.getByRole('button', { name: 'Sort' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Name' }))
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
-  expect(screen.getByRole('group', { name: 'Owner' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'Kind' })).toBeInTheDocument()
   release([client, lead])
 })
 
@@ -153,16 +154,37 @@ test('a record that no longer matches the filter leaves the table', async () => 
   await vi.waitFor(() => expect(screen.queryByRole('cell', { name: 'Acme' })).toBeNull())
 })
 
-test('the owner dropdown is gone; the chips filter instead', async () => {
+test('the owner dropdown filters and goes in the address', async () => {
   const user = userEvent.setup()
   stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
   renderApp(<><ListPage /><Where /></>, '/list')
-  await screen.findByRole('group', { name: 'Owner' })
-  expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull()
-  await user.click(screen.getByRole('button', { name: /^bo\s?1$/ }))
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('button', { name: 'Owner' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'bo' }))
   expect(await screen.findByText('at /list?owner=bo%40example.com')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+})
+
+test('the kind chips count and filter', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client, org({ id: 3, name: 'Cobalt', slug: 'cobalt' })] })
+  renderApp(<><ListPage /><Where /></>, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  const kind = within(screen.getByRole('group', { name: 'Kind' }))
+  expect(kind.getAllByRole('button').map((b) => b.textContent)).toEqual(['All3', 'Leads2', 'Clients1'])
+  await user.click(kind.getByRole('button', { name: /^Leads/ }))
+  expect(await screen.findByText('at /list?kind=lead')).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Bolt' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Cobalt' })).toBeInTheDocument()
+})
+
+test('?kind=client on load presses Clients', async () => {
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client] })
+  renderApp(<ListPage />, '/list?kind=client')
+  await screen.findByRole('link', { name: 'Bolt' })
+  expect(screen.getByRole('button', { name: /^Clients/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: /^All/ })).toHaveAttribute('aria-pressed', 'false')
 })
 
 test('the table has a sector column', async () => {

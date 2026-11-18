@@ -313,7 +313,7 @@ a:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) { .tn-custom-drawer, .tn-custom-scrim { animation: none; } }
 @media (max-width: 640px) { .tn-custom-drawer { width: 100%; border-left: 0; } }
 
-/* Owner chips: the header's pill, with a count per chip, as Bench's bucket strip. */
+/* Filter chips: the header's pill, with a count per chip, as Bench's bucket strip. */
 .tn-custom-chips { flex-wrap: wrap; }
 .tn-custom-chips .tn-custom-pill-tab { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: var(--tenon-typography-size-sm); font-weight: 560; }
 .tn-custom-chips .tn-custom-pill-tab[aria-pressed="true"] { background: var(--tenon-background-raised); color: var(--tenon-text-default); }
@@ -324,7 +324,7 @@ a:hover { text-decoration: underline; }
 }
 .tn-custom-pill-tab[aria-pressed="true"] .tn-custom-chip-count { background: var(--tenon-background-neutral); }
 
-/* The row the chips sit in, with the page's own filter box at its right end. */
+/* The row the chips (or the Owner dropdown) sit in, with the page's own filter box at its right end. */
 .tn-custom-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .tn-custom-filterbar > :last-child { margin-left: auto; }
 .tn-custom-filterbar > :only-child { margin-left: 0; }

@@ -1,10 +1,11 @@
 import { Button } from '@tiagopedras/tenon'
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
-import { useOrgDrawer } from '../lib/useOrgDrawer'
 import { useIsPhone } from '../lib/useIsPhone'
+import type { Org } from '../api/types'
 import { AppHeader } from './AppHeader'
+import type { NewOrgContext } from './newOrg'
 import { SearchBox } from './SearchBox'
 import { useSession } from './session'
 import { Wordmark } from './Wordmark'
@@ -32,9 +33,10 @@ export function Layout() {
   const { me } = useSession()
   const phone = useIsPhone()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
-  const drawer = useOrgDrawer()
   const [creating, setCreating] = useState(false)
+  // A page that lists organisations registers here what to do with a new one; with none, it gets its own page.
+  const created = useRef<((org: Org) => void) | null>(null)
+  const context: NewOrgContext = { open: () => setCreating(true), created }
   return (
     <div className="tn-custom-app">
       <a className="tn-skip-link" href="#main">Skip to content</a>
@@ -54,7 +56,7 @@ export function Layout() {
         }
       />
       <main id="main" tabIndex={-1} className="tn-custom-main">
-        <Outlet />
+        <Outlet context={context} />
       </main>
       {phone && <Nav />}
       <OrgForm
@@ -62,8 +64,7 @@ export function Layout() {
         onClose={() => setCreating(false)}
         onSaved={(o) => {
           setCreating(false)
-          // Where an organisation opens in the drawer, the new one does too; elsewhere it gets its page.
-          if (pathname === '/pipeline' || pathname === '/list') drawer.open(o.slug)
+          if (created.current) created.current(o)
           else navigate(`/o/${o.slug}`)
         }}
       />

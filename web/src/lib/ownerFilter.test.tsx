@@ -68,6 +68,11 @@ test('other owners are sorted by name', () => {
   expect(ownerOptions(many, 'me@example.com').map((o) => o.label)).toEqual(['Any owner', 'bo', 'zed'])
 })
 
+test('a stale ?owner=none is labelled No owner', () => {
+  const owned = [orgs[0]]
+  expect(ownerOptions(owned, 'ana@example.com', 'none')[2]).toEqual({ value: 'none', label: 'No owner' })
+})
+
 test('an active owner nobody matches is still listed', () => {
   expect(ownerOptions(orgs, 'ana@example.com', 'gone@example.com')[4]).toEqual({ value: 'gone@example.com', label: 'gone' })
   expect(ownerOptions(orgs, 'ana@example.com', 'rui@example.com')).toHaveLength(4)

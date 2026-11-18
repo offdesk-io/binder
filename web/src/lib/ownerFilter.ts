@@ -40,6 +40,6 @@ export function ownerOptions(orgs: Org[], me: string, active?: OwnerValue): Drop
     ...(owners.has('none') ? [{ value: 'none', label: 'No owner' }] : []),
   ]
   // An active owner nobody matches (an old link) is still listed, so the filter shows.
-  if (active && !options.some((o) => o.value === active)) options.push({ value: active, label: person(active) })
+  if (active && !options.some((o) => o.value === active)) options.push({ value: active, label: active === 'none' ? 'No owner' : person(active) })
   return options
 }

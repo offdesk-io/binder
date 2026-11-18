@@ -5,6 +5,7 @@
 /* Links underline on hover only: dense lists would otherwise be all rule. */
 a { text-decoration: none; }
 a:hover { text-decoration: underline; }
+a.tenon-button:hover { text-decoration: none; }
 
 /* The app frame: full window width, the header on top. Bench has no centred column, and neither does Binder. */
 .tn-custom-app { min-height: 100vh; display: flex; flex-direction: column; }

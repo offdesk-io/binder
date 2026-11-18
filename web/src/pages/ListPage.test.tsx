@@ -1,9 +1,10 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useLocation } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import type { Org } from '../api/types'
 import { AT, org } from '../test/fixtures'
+import { Layout } from '../app/Layout'
 import { renderApp, stubFetch } from '../test/render'
 import { filterOrgs, ListPage, options } from './ListPage'
 
@@ -244,4 +245,46 @@ test('the table has a sector column', async () => {
 
 test('filterOrgs with owner none keeps organisations without an owner', () => {
   expect(filterOrgs([org({ id: 1, owner_email: null }), org({ id: 2 })], { kind: '', status: '', owner: 'none', tag: '' }).map((o) => o.id)).toEqual([1])
+})
+
+test('the kind chip counts follow the filter box', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client] })
+  renderApp(<ListPage />, '/list')
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'bolt')
+  const kind = within(screen.getByRole('group', { name: 'Kind' }))
+  expect(kind.getAllByRole('button').map((b) => b.textContent)).toEqual(['All1', 'Leads0', 'Clients1'])
+})
+
+test('New in the header adds the row, clears what would hide it, and closing the drawer focuses the row', async () => {
+  const user = userEvent.setup()
+  const fresh = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
+  stubFetch({
+    'GET /api/orgs?sort=name': () => [lead, client],
+    'POST /api/orgs': () => fresh,
+    'GET /api/orgs/by-slug/cobalt': () => fresh,
+    'GET /api/orgs/3/contacts': () => [],
+    'GET /api/orgs/3/timeline': () => [],
+    'GET /api/orgs/3/research': () => [],
+    'GET /api/orgs/3/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+  })
+  renderApp(
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/list" element={<ListPage />} />
+      </Route>
+    </Routes>,
+    '/list?kind=client',
+  )
+  await screen.findByRole('link', { name: 'Bolt' })
+  await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'bol')
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Cobalt' })
+  expect(screen.getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+  await user.click(within(drawer).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('link', { name: 'Cobalt' })).toHaveFocus()
 })

@@ -181,7 +181,7 @@ Fixes from the final branch review, in the same round:
   favicon that follows dark mode, and 32px PNG favicons for light and dark.
 - One breakpoint, 768px, for everything (the drawer and the filter bar had 640px).
 - The drawer's stage picker and Log / Edit / Open page sit in its top bar
-  (Drawer's `actions`), so they don't scroll away. Open page navigates in the app.
+  (rendered there from the organisation view), so they don't scroll away. Open page navigates in the app.
 - New opens the drawer when used on Pipeline or List.
 - The organisation page's header buttons are small, as everywhere else.
 - Search results refresh after a change in the drawer.

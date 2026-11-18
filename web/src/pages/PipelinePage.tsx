@@ -2,10 +2,10 @@ import { Alert, Button, ColumnEmpty, Dropdown, Input } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
+import { useNewOrg } from '../app/newOrg'
 import { useSession } from '../app/session'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
-import { OrgForm } from '../components/OrgForm'
 import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
 import { stages } from '../lib/pipeline'
@@ -28,7 +28,6 @@ export function PipelinePage() {
   const [owner, setOwner] = useOwnerFilter()
   const [find, setFind] = useState('')
   const drawer = useOrgDrawer()
-  const [creating, setCreating] = useState(false)
 
   /** A record saved in the drawer goes to its stage. A lead that has just become a client leaves the Pipeline with a
    * notice; later saves of that client (or of one opened by its link) say nothing. */
@@ -41,18 +40,24 @@ export function PipelinePage() {
 
   /** A new organisation goes under its stage and opens in the drawer, with the filters cleared enough to show its row. */
   function created(o: Org) {
-    setCreating(false)
     orgs.setData((prev) => place(prev, o))
     setFind('')
     drawer.open(o.slug, byOwner([o], owner).length === 0 ? ['owner'] : [])
   }
+
+  const addOrganisation = useNewOrg(created)
 
   if (orgs.error) return <Alert tone="error">{orgs.error.message}</Alert>
   if (!orgs.data) return <Loading />
   const shown = byOwner(orgs.data, owner).filter((o) => matchesText(o, find))
   // A won lead is a client and leaves the Pipeline; a status not in meta.lead_statuses isn't shown.
   const groups = stages(shown, meta.lead_statuses.filter((s) => s !== 'won'))
-  const columns = phone ? 1 : 6
+  const heads = [
+    { name: 'Name' }, { name: 'Sector' }, { name: 'Next step' }, { name: 'Value', numeric: true }, { name: 'Owner' },
+    { name: 'Last contact' },
+  ]
+  const columns = phone ? 1 : heads.length
+  const filtering = owner !== '' || find.trim() !== ''
 
   return (
     <div className="tn-stack">
@@ -63,24 +68,21 @@ export function PipelinePage() {
         <div className="tn-custom-filterbar-end">
           <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
             value={find} onChange={(e) => setFind(e.target.value)} />
-          <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>+ Add organisation</Button>
+          <Button size="sm" variant="secondary" onClick={addOrganisation}>+ Add organisation</Button>
         </div>
       </div>
       {notice && <Alert tone="success">{notice}</Alert>}
       {groups.every((g) => g.orgs.length === 0) ? (
-        <ColumnEmpty>{orgs.data.length === 0 ? 'No leads yet.' : 'Nothing matches these filters.'}</ColumnEmpty>
+        <ColumnEmpty>{filtering ? 'Nothing matches these filters.' : 'No leads yet.'}</ColumnEmpty>
       ) : (
         <div className="tn-table-wrap">
           <table className="tn-custom-table tn-custom-pipeline-table" aria-label="Leads by stage">
             {!phone && (
               <thead>
                 <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Sector</th>
-                  <th scope="col">Next step</th>
-                  <th scope="col" data-numeric>Value</th>
-                  <th scope="col">Owner</th>
-                  <th scope="col">Last contact</th>
+                  {heads.map((h) => (
+                    <th key={h.name} scope="col" data-numeric={h.numeric ? true : undefined}>{h.name}</th>
+                  ))}
                 </tr>
               </thead>
             )}
@@ -92,7 +94,6 @@ export function PipelinePage() {
         </div>
       )}
       <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={changed} onDeleted={() => orgs.reload()} />
-      <OrgForm open={creating} onClose={() => setCreating(false)} onSaved={created} />
     </div>
   )
 }

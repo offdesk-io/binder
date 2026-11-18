@@ -49,6 +49,8 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
   const [kept, setKept] = useState(() => readOpen(status))
   const open = forceOpen || kept
   const toggle = () => {
+    // While filtering every stage is shown; the click does nothing and the stored choice is left alone.
+    if (forceOpen) return
     setKept(!kept)
     writeOpen(status, !kept)
   }
@@ -60,8 +62,8 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
     <tbody>
       <tr className="tn-custom-stage-head">
         <th colSpan={columns} scope="rowgroup">
-          <button type="button" className="tn-custom-stage-toggle" aria-expanded={open} disabled={forceOpen}
-            onClick={toggle}>
+          <button type="button" className="tn-custom-stage-toggle" aria-expanded={open}
+            aria-disabled={forceOpen ? 'true' : undefined} data-org-stage={status} onClick={toggle}>
             <span className="tn-custom-stage-chevron" aria-hidden="true" />
             <ColourDot colour={stageColour(status)} />
             <span className="tn-custom-stage-name">{label(status)}</span>
@@ -70,6 +72,7 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
             </span>
             <span className="tn-custom-sr-only">
               , {count === 1 ? '1 organisation' : `${count} organisations`}{total > 0 && `, ${moneyShort(total)}`}
+              {forceOpen && ' (showing all while filtering)'}
             </span>
           </button>
         </th>

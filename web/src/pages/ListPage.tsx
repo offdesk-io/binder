@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
+import { useNewOrg } from '../app/newOrg'
 import { useSession } from '../app/session'
 import { FilterChips } from '../components/FilterChips'
 import { Loading } from '../components/Loading'
@@ -13,7 +14,7 @@ import { StatusTag } from '../components/StatusTag'
 import { ago, label, money, person } from '../lib/format'
 import { matchesText } from '../lib/matchesText'
 import { openInPlace } from '../lib/openInPlace'
-import { ownerOptions } from '../lib/ownerFilter'
+import { byOwner, ownerOptions } from '../lib/ownerFilter'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
@@ -26,12 +27,8 @@ export interface ListFilters {
 }
 
 export function filterOrgs(orgs: Org[], f: ListFilters): Org[] {
-  return orgs.filter(
-    (o) =>
-      (!f.kind || o.kind === f.kind) &&
-      (!f.status || o.status === f.status) &&
-      (!f.owner || (f.owner === 'none' ? !o.owner_email : o.owner_email === f.owner)) &&
-      (!f.tag || o.tags.includes(f.tag)),
+  return byOwner(orgs, f.owner).filter(
+    (o) => (!f.kind || o.kind === f.kind) && (!f.status || o.status === f.status) && (!f.tag || o.tags.includes(f.tag)),
   )
 }
 
@@ -85,9 +82,18 @@ export function ListPage() {
     orgs.setData((prev) => (prev ?? []).map((o) => (o.id === saved.id ? saved : o)))
   }
 
+  /** A new organisation gets its row at the top, whatever would hide it is cleared, and it opens in the drawer. As with
+   * a saved row it keeps that place until the next load. Before the list has loaded the load in flight brings it. */
+  function created(o: Org) {
+    if (orgs.data) orgs.setData((prev) => [o, ...(prev ?? []).filter((x) => x.id !== o.id)])
+    setFind('')
+    drawer.open(o.slug, filterOrgs([o], f).length === 0 ? ['kind', 'status', 'owner', 'tag'] : [])
+  }
+  useNewOrg(created)
+
   const all = orgs.data ?? []
   const rows = filterOrgs(all, f).filter((o) => matchesText(o, find))
-  const kindCounts = filterOrgs(all, { ...f, kind: '' })
+  const kindCounts = filterOrgs(all, { ...f, kind: '' }).filter((o) => matchesText(o, find))
 
   return (
     <div className="tn-stack">

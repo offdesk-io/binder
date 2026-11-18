@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
+import { Layout } from '../app/Layout'
 import { AT, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { PipelinePage } from './PipelinePage'
@@ -20,6 +22,28 @@ const routes = {
 }
 
 afterEach(() => localStorage.clear())
+
+/** The Pipeline inside the app shell, as the header's New needs. */
+function inLayout(path = '/pipeline') {
+  return renderApp(
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/pipeline" element={<PipelinePage />} />
+      </Route>
+    </Routes>,
+    path,
+  )
+}
+
+const cobalt = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
+const cobaltRoutes = {
+  'POST /api/orgs': () => cobalt,
+  'GET /api/orgs/by-slug/cobalt': () => cobalt,
+  'GET /api/orgs/3/contacts': () => [],
+  'GET /api/orgs/3/timeline': () => [],
+  'GET /api/orgs/3/research': () => [],
+  'GET /api/orgs/3/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+}
 
 const phone = () =>
   vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
@@ -272,17 +296,8 @@ test('the filter box narrows the rows, and says so when nothing is left', async 
 
 test('+ Add organisation saves a lead, opens it in the drawer and shows its row under Lead', async () => {
   const user = userEvent.setup()
-  const cobalt = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
-  stubFetch({
-    ...routes,
-    'POST /api/orgs': () => cobalt,
-    'GET /api/orgs/by-slug/cobalt': () => cobalt,
-    'GET /api/orgs/3/contacts': () => [],
-    'GET /api/orgs/3/timeline': () => [],
-    'GET /api/orgs/3/research': () => [],
-    'GET /api/orgs/3/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
-  })
-  renderApp(<PipelinePage />, '/pipeline?owner=ana%40example.com')
+  stubFetch({ ...routes, ...cobaltRoutes })
+  inLayout('/pipeline?owner=ana%40example.com')
   await user.type(await screen.findByRole('searchbox', { name: 'Filter organisations' }), 'zzz')
   await user.click(screen.getByRole('button', { name: '+ Add organisation' }))
   await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
@@ -291,4 +306,64 @@ test('+ Add organisation saves a lead, opens it in the drawer and shows its row 
   // The filters that would hide it are cleared, so its row is in the list behind the drawer.
   expect(screen.getByRole('searchbox', { name: 'Filter organisations', hidden: true })).toHaveValue('')
   expect(within(stage(/^Lead/)).getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+})
+
+test('New in the header shows the new lead under Lead, and closing the drawer focuses its row', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, ...cobaltRoutes })
+  inLayout()
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Cobalt' })
+  expect(within(stage(/^Lead/)).getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+  await user.click(within(drawer).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('link', { name: 'Cobalt' })).toHaveFocus()
+})
+
+test('closing the drawer returns focus to the row that opened it', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('link', { name: 'Acme' })).toHaveFocus()
+})
+
+test('moving a row to a folded stage and closing the drawer focuses that stage heading', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': () => org({ ...a, status: 'lost' }) })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Lost' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: /^Lost.*2 organisations/, hidden: true })).toBeInTheDocument())
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveFocus()
+})
+
+test('the fold buttons stay enabled while filtering, say so, and do nothing', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await user.type(await screen.findByRole('searchbox', { name: 'Filter organisations' }), 'a')
+  const lead = screen.getByRole('button', { name: /^Lead/ })
+  expect(lead).toBeEnabled()
+  expect(lead).toHaveAttribute('aria-disabled', 'true')
+  expect(lead).toHaveAccessibleName(expect.stringContaining('(showing all while filtering)'))
+  await user.click(lead)
+  expect(lead).toHaveAttribute('aria-expanded', 'true')
+  expect(localStorage.getItem('binder.pipeline.fold.lead')).toBeNull()
+})
+
+test('an empty Pipeline says there are no leads, whatever the owner filter does not hide', async () => {
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [] })
+  renderApp(<PipelinePage />)
+  expect(await screen.findByText('No leads yet.')).toBeInTheDocument()
 })

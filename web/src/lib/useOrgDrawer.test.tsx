@@ -14,6 +14,7 @@ function Probe() {
       <p>slug {d.slug ?? '-'}</p>
       <button onClick={() => d.open('acme')}>open</button>
       <button onClick={() => d.open('beta')}>open beta</button>
+      <button onClick={() => d.open('acme', ['owner'])}>open clearing owner</button>
       <button onClick={() => { d.close(); d.close() }}>close twice</button>
       <button onClick={d.close}>close</button>
       <button onClick={() => back(-1)}>back</button>
@@ -97,4 +98,13 @@ test('close keeps the other params', async () => {
   await user.click(screen.getByRole('button', { name: 'open' }))
   await user.click(screen.getByRole('button', { name: 'close' }))
   expect(screen.getByText('at /pipeline?owner=ana%40example.com')).toBeInTheDocument()
+})
+
+test('opening with params to drop leaves them dropped after close', async () => {
+  const user = userEvent.setup()
+  app('/pipeline?owner=none&kind=lead')
+  await user.click(screen.getByRole('button', { name: 'open clearing owner' }))
+  expect(screen.getByText('at /pipeline?kind=lead&org=acme')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'close' }))
+  expect(screen.getByText('at /pipeline?kind=lead')).toBeInTheDocument()
 })

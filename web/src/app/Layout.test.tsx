@@ -1,10 +1,12 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { expect, test } from 'vitest'
 import { org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { Layout } from './Layout'
+import { useNewOrg } from './newOrg'
 
 function Where() {
   const l = useLocation()
@@ -130,9 +132,27 @@ async function addOrganisation(path: string) {
   await user.click(screen.getByRole('button', { name: 'Save' }))
 }
 
-test.each(['/pipeline', '/list'])('a new organisation saved from %s opens in the drawer', async (path) => {
-  await addOrganisation(path)
-  expect(await screen.findByText(`at ${path}?org=newco`)).toBeInTheDocument()
+function Lists() {
+  const [seen, setSeen] = useState('nothing')
+  useNewOrg((o) => setSeen(o.slug))
+  return <p>page got {seen}</p>
+}
+
+test('a new organisation is handed to the page that registered for it, and does not leave the page', async () => {
+  const user = userEvent.setup()
+  stubFetch({ 'POST /api/orgs': (b) => org({ name: (b as { name: string }).name, slug: 'newco' }) })
+  renderApp(
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/pipeline" element={<Lists />} />
+      </Route>
+    </Routes>,
+    '/pipeline',
+  )
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Newco')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(await screen.findByText('page got newco')).toBeInTheDocument()
 })
 
 test('a new organisation saved from anywhere else opens its page', async () => {

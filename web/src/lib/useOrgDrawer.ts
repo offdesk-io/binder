@@ -24,9 +24,11 @@ export function useOrgDrawer() {
       const p = new URLSearchParams(params)
       for (const k of drop) p.delete(k)
       p.set('org', next)
-      // Opening over an open drawer swaps the slug in the same entry, keeping that entry's own state.
-      const replace = slug !== undefined
-      setParams(p, { replace, state: replace ? location.state : { drawer: true } })
+      // Opening over an open drawer swaps the slug in the same entry, keeping that entry's own state. Dropping params
+      // replaces the entry too, with no drawer state: going Back on close would bring the dropped filter back and hide
+      // the row again, so that drawer closes in place instead.
+      const replace = slug !== undefined || drop.length > 0
+      setParams(p, { replace, state: slug !== undefined ? location.state : replace ? null : { drawer: true } })
     },
     [location.state, params, setParams, slug],
   )

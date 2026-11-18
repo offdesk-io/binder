@@ -123,7 +123,12 @@ test('a fresh list is A to Z', async ({ page, request }) => {
   await page.goto('/list')
   await expect(page).not.toHaveURL(/sort=/)
   const names = await page.locator('a[data-org-open]').allTextContents()
-  const sorted = [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  const sorted = [...names].sort((a, b) => {
+    // The server orders with COLLATE NOCASE: a plain case-folded comparison.
+    const x = a.toLowerCase()
+    const y = b.toLowerCase()
+    return x < y ? -1 : x > y ? 1 : 0
+  })
   expect(names).toEqual(sorted)
   expect(names.findIndex((n) => n.startsWith('Alpha'))).toBeLessThan(names.findIndex((n) => n.startsWith('Zed')))
 })

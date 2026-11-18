@@ -54,3 +54,9 @@ test('a filter in a shared link is applied on load', () => {
   expect(screen.getByRole('button', { name: /^rui/ })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByText('shown 1')).toBeInTheDocument()
 })
+
+test('an active owner nobody matches still shows, pressed, with a count of 0', () => {
+  app('/pipeline?owner=gone@example.com')
+  expect(screen.getByRole('button', { name: /^gone/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: /^gone/ })).toHaveTextContent('gone0')
+})

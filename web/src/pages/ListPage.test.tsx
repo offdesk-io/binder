@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
@@ -104,9 +104,53 @@ const drawerRoutes = {
 test('a row opens the organisation in the drawer', async () => {
   const user = userEvent.setup()
   stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client], ...drawerRoutes })
+  renderApp(<><ListPage /><Where /></>, '/list')
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+  expect(screen.getByText('at /list?org=acme')).toBeInTheDocument()
+})
+
+test('on a phone, a card opens the drawer too', async () => {
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
+  const user = userEvent.setup()
+  stubFetch({ 'GET /api/orgs?sort=updated': () => [lead, client], ...drawerRoutes })
   renderApp(<ListPage />, '/list')
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})
+
+async function changeStatus(user: ReturnType<typeof userEvent.setup>, to: string) {
+  const drawer = within(await screen.findByRole('dialog', { name: 'Acme' }))
+  await user.click(await drawer.findByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: to }))
+}
+
+test('a change in the drawer updates the row without loading the list again', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    'GET /api/orgs?sort=updated': () => [lead, client],
+    ...drawerRoutes,
+    'PATCH /api/orgs/1': () => ({ ...lead, status: 'contacted' }),
+  })
+  renderApp(<ListPage />, '/list')
+  const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
+  await user.click(screen.getByRole('link', { name: 'Acme' }))
+  await changeStatus(user, 'Contacted')
+  await vi.waitFor(() => expect(row).toHaveTextContent('Contacted'))
+  expect(calls.filter((c) => c.key === 'GET /api/orgs?sort=updated')).toHaveLength(1)
+})
+
+test('a record that no longer matches the filter leaves the table', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    'GET /api/orgs?sort=updated': () => [lead, client],
+    ...drawerRoutes,
+    'PATCH /api/orgs/1': () => ({ ...lead, status: 'contacted' }),
+  })
+  renderApp(<ListPage />, '/list?status=lead')
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  await changeStatus(user, 'Contacted')
+  await vi.waitFor(() => expect(screen.queryByRole('cell', { name: 'Acme' })).toBeNull())
 })
 
 test('the owner dropdown is gone; the chips filter instead', async () => {
@@ -115,7 +159,7 @@ test('the owner dropdown is gone; the chips filter instead', async () => {
   renderApp(<><ListPage /><Where /></>, '/list')
   await screen.findByRole('group', { name: 'Owner' })
   expect(screen.queryByRole('button', { name: 'Owner' })).toBeNull()
-  await user.click(screen.getByRole('button', { name: /^bo/ }))
+  await user.click(screen.getByRole('button', { name: /^bo\s?1$/ }))
   expect(await screen.findByText('at /list?owner=bo%40example.com')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()

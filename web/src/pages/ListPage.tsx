@@ -74,8 +74,11 @@ export function ListPage() {
   }
 
   const drawer = useOrgDrawer()
-  /** A record saved in the drawer replaces its row in place, so the list keeps its place and order. */
+  /** A record saved in the drawer replaces its row in place, without asking the API for the list again. An edited row
+   * keeps its position until the next load, even if the sort or filters would now put it elsewhere. Before the list
+   * has loaded there is no row to replace, and the load in flight will bring the saved record. */
   function changed(saved: Org) {
+    if (!orgs.data) return
     orgs.setData((prev) => (prev ?? []).map((o) => (o.id === saved.id ? saved : o)))
   }
 
@@ -85,9 +88,11 @@ export function ListPage() {
   return (
     <div className="tn-stack">
       <h1 className="tn-custom-sr-only">Organisations</h1>
-      <div className="tn-custom-filterbar">
-        <OwnerChips orgs={filterOrgs(all, { ...f, owner: '' })} value={f.owner} onChange={(v) => put('owner', v)} />
-      </div>
+      {orgs.data && (
+        <div className="tn-custom-filterbar">
+          <OwnerChips orgs={filterOrgs(all, { ...f, owner: '' })} value={f.owner} onChange={(v) => put('owner', v)} />
+        </div>
+      )}
       <div className="tn-toolbar">
         <div className="tn-cluster">
           <SegmentedControl

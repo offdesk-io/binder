@@ -41,9 +41,18 @@ test('a modified click still follows the link, so it can open in a new tab', asy
   const user = userEvent.setup()
   const onOpen = vi.fn()
   renderApp(<OrgCard org={acme} onOpen={onOpen} />)
+  // The card must leave the click alone so the browser follows the link; stop it there, as jsdom cannot navigate.
+  let followed = false
+  const follow = (e: MouseEvent) => {
+    followed = !e.defaultPrevented
+    e.preventDefault()
+  }
+  document.addEventListener('click', follow)
   await user.keyboard('{Meta>}')
   await user.click(screen.getByRole('link', { name: 'Acme' }))
   await user.keyboard('{/Meta}')
+  document.removeEventListener('click', follow)
+  expect(followed).toBe(true)
   expect(onOpen).not.toHaveBeenCalled()
 })
 

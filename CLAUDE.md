@@ -13,10 +13,11 @@ Read before changing anything:
 - Plan 3, AI (done): `docs/superpowers/plans/2026-11-11-binder-3-ai.md`
 - Plan 4, Bench link and import (done): `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
 - Plan 5, deploy: `docs/superpowers/plans/2026-11-16-binder-5-deploy.md`
+- Plan 6, UI consistency with Bench: `docs/superpowers/plans/2026-11-18-binder-6-ui-consistency.md`
 
 ## Where the work stands
 
-There are five plans, each one spec → plan → build → review:
+There are six plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
@@ -25,6 +26,8 @@ There are five plans, each one spec → plan → build → review:
    is a PR for the owner's review.
 5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: built on
    `feature/deploy`.
+6. UI consistency with Bench (header bar, cards, owner chips, the
+   organisation drawer): in progress on `feature/ui-consistency`.
 
 ## Run and test
 
@@ -88,7 +91,9 @@ services and never run in CI.
 - The app lives in `web/`. FastAPI serves its build (`binder/web.py`), with
   `index.html` for any path not under `/api`, so `/o/<slug>` links work.
 - Use a Tenon component before writing one. CSS in `web/src/styles.css` reads
-  `var(--tenon-…)` tokens only: no hex colours, no font names.
+  `var(--tenon-…)` tokens only: no hex colours, no font names. The one
+  exception is the wordmark's brand colours, in `web/src/app/Wordmark.tsx`,
+  as Bench does with its own.
 - `web/src/api/types.ts` and the README's API section describe the same
   shapes. Change them together.
 - Every fetch goes through `web/src/api/client.ts`, which adds `X-Binder: 1`

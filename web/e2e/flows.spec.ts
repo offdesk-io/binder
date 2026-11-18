@@ -5,11 +5,14 @@ test('search finds an organisation and opens it', async ({ page, request }) => {
   const name = unique('Searchable Studio')
   const org = await newOrg(request, name)
   await page.goto('/')
+  // The box must be on the page before `/` can reach it; Home links the new organisation too.
+  await expect(page.getByRole('searchbox', { name: 'Search' })).toBeVisible()
   await page.keyboard.press('/')
   await page.keyboard.type(name.split(' ').pop()!)
+  await expect(page).toHaveURL(/\/search\?q=/)
   await page.getByRole('link', { name }).click()
-  await expect(page).toHaveURL(new RegExp(`/o/${org.slug}$`))
-  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`org=${org.slug}`))
 })
 
 test('the list opens an organisation', async ({ page, request }) => {
@@ -17,7 +20,8 @@ test('the list opens an organisation', async ({ page, request }) => {
   await newOrg(request, name)
   await page.goto('/list')
   await page.getByRole('link', { name }).click()
-  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(/\?org=/)
 })
 
 test('quick log adds to the timeline', async ({ page, request }) => {
@@ -49,11 +53,15 @@ test('the pipeline moves a lead to the next stage', async ({ page, request }, in
   if (info.project.name === 'desktop') {
     const card = page.locator('.tenon-card', { hasText: name })
     const target = page.getByTestId('stage-contacted')
-    await card.dragTo(target)
+    // Near the column's head: the columns stretch to the longest, so the centre can be below the fold.
+    await card.dragTo(target, { targetPosition: { x: 150, y: 60 } })
     await expect(target.getByRole('link', { name })).toBeVisible()
   } else {
-    await page.getByRole('button', { name: `Status of ${name}` }).click()
+    await page.getByRole('link', { name }).click()
+    const drawer = page.getByRole('dialog', { name })
+    await drawer.getByRole('button', { name: 'Status', exact: true }).click()
     await page.getByRole('menuitemradio', { name: 'Contacted' }).click()
+    await drawer.getByRole('button', { name: 'Close' }).click()
     await page.getByRole('radio', { name: /^Contacted/ }).click()
     await expect(page.getByRole('link', { name })).toBeVisible()
   }
@@ -61,14 +69,29 @@ test('the pipeline moves a lead to the next stage', async ({ page, request }, in
   expect(saved.status).toBe('contacted')
 })
 
-test('a card status menu on the pipeline is not cut off by the board', async ({ page, request }, info) => {
-  test.skip(info.project.name !== 'desktop', 'the phone shows one stage at a time')
-  const name = unique('Menu Room')
+test('the drawer opens from the pipeline, Back closes it, and the link reopens it', async ({ page, request }) => {
+  const name = unique('Drawer Works')
+  const org = await newOrg(request, name)
+  await page.goto('/pipeline')
+  await page.getByRole('link', { name }).click()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`org=${org.slug}`))
+  await page.goBack()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await page.goto(`/pipeline?org=${org.slug}`)
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page).not.toHaveURL(/org=/)
+})
+
+test('owner chips filter the pipeline and stay in the address', async ({ page, request }) => {
+  const name = unique('Chip Owned')
   await newOrg(request, name)
   await page.goto('/pipeline')
-  await page.getByRole('button', { name: `Status of ${name}` }).click()
-  await expect(page.getByRole('menuitemradio', { name: 'Parked' })).toBeVisible()
-  // The board scrolls sideways; it must not need an inner vertical scroll to show the menu.
-  const clipped = await page.locator('.tn-custom-board').evaluate((el) => el.scrollHeight > el.clientHeight + 1)
-  expect(clipped).toBe(false)
+  await page.getByRole('button', { name: /^Me/ }).click()
+  await expect(page).toHaveURL(/owner=/)
+  await expect(page.getByRole('link', { name })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: /^Me/ })).toHaveAttribute('aria-pressed', 'true')
 })

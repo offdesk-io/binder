@@ -30,6 +30,10 @@ test('shows the header, quick actions and overview', async () => {
   expect(screen.getByRole('link', { name: 'acme.example.com' })).toHaveAttribute('href', 'https://acme.example.com')
   expect(screen.getByText('Design studio in Leeds')).toBeInTheDocument()
   expect(screen.getByText('€5,000')).toBeInTheDocument()
+  const facts = screen.getByText('Value').closest('dl')!
+  expect(within(facts).getByText('Value').tagName).toBe('DT')
+  expect(within(facts).getByText('€5,000').tagName).toBe('DD')
+  expect(within(facts).getByText('Last contact').tagName).toBe('DT')
   expect(await screen.findByRole('link', { name: 'Call Bo' })).toHaveAttribute('href', 'tel:+44 20 0000 0000')
   expect(screen.getByRole('link', { name: 'Email Bo' })).toHaveAttribute('href', 'mailto:bo@example.com')
 })

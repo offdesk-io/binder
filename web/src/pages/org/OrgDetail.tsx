@@ -1,5 +1,5 @@
 import { Alert, Button, ColumnEmpty, LinkButton, Tag } from '@tiagopedras/tenon'
-import { Fragment, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { api } from '../../api/endpoints'
@@ -42,9 +42,10 @@ interface Props {
   setOrg: (o: Org) => void
   reloadOrg: () => void
   refreshError?: string
-  /** Told whenever the record changes here (status, edit, a log moving last contact), so a list behind can update. */
+  /** Told whenever a new record arrives after the first (a status change, an edit, a conflict's current version, a
+   * reload after a log or a failed save), so a list behind can update. */
   onChanged?: (org: Org) => void
-  /** In the drawer, what happens once the organisation is deleted. The page goes to the list. */
+  /** In the drawer, what happens once the organisation is deleted. Without it, and on the page, it goes to the list. */
   onDeleted?: () => void
 }
 
@@ -68,21 +69,27 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
   const siteLink = siteHref ? <a href={siteHref} target="_blank" rel="noreferrer">{org.website}</a> : org.website
   const primary = contacts.data?.find((c) => c.is_primary)
 
-  const update = (o: Org) => {
-    setOrg(o)
-    onChanged?.(o)
-  }
+  // Every new record reaches onChanged, whichever path brought it. The ref keeps the effect off the caller's
+  // callback identity; `seen` skips the first record, and a StrictMode re-run with the same one.
+  const onChangedRef = useRef(onChanged)
+  onChangedRef.current = onChanged
+  const seen = useRef(org)
+  useEffect(() => {
+    if (seen.current === org) return
+    seen.current = org
+    onChangedRef.current?.(org)
+  }, [org])
 
   async function changeStatus(status: string) {
     if (status === org.status || busy) return
     setBusy(true)
     setNotice(undefined)
     try {
-      update(await api.patchOrg(org.id, { updated_at: org.updated_at, status }))
+      setOrg(await api.patchOrg(org.id, { updated_at: org.updated_at, status }))
       timeline.reload()
     } catch (e) {
       setNotice(saveErrorText(e))
-      if (e instanceof ApiError && e.status === 409 && e.current) update(e.current as Org)
+      if (e instanceof ApiError && e.status === 409 && e.current) setOrg(e.current as Org)
       else reloadOrg()
     } finally {
       setBusy(false)
@@ -115,10 +122,10 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
         onClose={() => setEditing(false)}
         onSaved={(o) => {
           setEditing(false)
-          update(o)
+          setOrg(o)
           timeline.reload()
         }}
-        onDeleted={() => (frame === 'drawer' ? onDeleted?.() : navigate('/list'))}
+        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/list'))}
       />
       <QuickLog
         open={log !== undefined}

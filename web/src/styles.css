@@ -86,6 +86,9 @@ a:hover { text-decoration: underline; }
 /* The drawer's row of tools above an organisation's sections. */
 .tn-custom-drawer-tools { gap: var(--tenon-dimension-075); }
 .tn-custom-drawer-tools .tn-custom-status { min-width: 10rem; }
+@media (max-width: 767px) {
+  .tn-custom-drawer-tools .tn-custom-status { min-width: 0; }
+}
 
 /* The page under the header: full width, Bench's 16px gutters. */
 .tn-custom-main {

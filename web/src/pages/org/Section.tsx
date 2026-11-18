@@ -60,7 +60,8 @@ export function Section({ id, title, action, count, titleAfter, children }: Sect
       count={count}
       titleAfter={titleAfter}
       // A click in the summary folds the section, so a button there would too. Cancelling the click on this wrapper
-      // stops the summary's toggle; the button's own onClick has already run.
+      // stops the summary's toggle; the button's own onClick has already run. It also cancels the default of anything
+      // inside it (a link would not follow, a submit would not submit), so head actions must be plain onClick buttons.
       action={action && <span onClick={(e) => e.preventDefault()}>{action}</span>}
       collapsible
       open={open}

@@ -141,6 +141,7 @@ test('an opener removed while open does not throw, and returnFocus is honoured',
   await user.click(screen.getByRole('button', { name: 'Drop' }))
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).toBeNull()
+  expect(document.body).toHaveFocus()
   unmount()
 
   render(<H give={() => screen.getByRole('button', { name: 'Elsewhere' })} />)

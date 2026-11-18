@@ -75,8 +75,9 @@ export function Drawer({ open, title, onClose, actions, children, returnFocus }:
     return () => {
       document.removeEventListener('keydown', onKey)
       root.style.overflow = overflow
-      const target = giveBack.current?.() ?? before.current
-      if (target?.isConnected) target.focus()
+      // The preferred element first; if it is gone (or not given), what had focus on open; else nothing.
+      const target = [giveBack.current?.(), before.current].find((el) => el?.isConnected)
+      target?.focus()
     }
   }, [open])
 

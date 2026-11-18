@@ -131,7 +131,7 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
         <>
           {base && onDeleted && <ConfirmDelete what="person" onConfirm={() => void remove()} />}
           <span className="tn-custom-grow" />
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" form="contact-form" disabled={busy}>Save</Button>
         </>
       }

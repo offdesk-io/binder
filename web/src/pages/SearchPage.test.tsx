@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import type { SearchHit } from '../api/types'
+import { AT, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
@@ -51,4 +53,23 @@ test('research hits have their own group', async () => {
   renderApp(<SearchPage />, '/search?q=kilns')
   expect(await screen.findByRole('heading', { name: 'Research' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Research brief' })).toHaveAttribute('href', '/o/acme#research')
+})
+
+test('an organisation hit opens its drawer; contact and anchored hits stay links', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    'GET /api/search?q=acme': () => [
+      hit({}),
+      hit({ kind: 'research', id: 3, title: 'Research brief', snippet: 'about \u0002Acme\u0003' }),
+    ],
+    'GET /api/orgs/by-slug/acme': () => org({ id: 1, slug: 'acme', name: 'Acme' }),
+    'GET /api/orgs/1/contacts': () => [],
+    'GET /api/orgs/1/timeline': () => [],
+    'GET /api/orgs/1/research': () => [],
+    'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+  })
+  renderApp(<SearchPage />, '/search?q=acme')
+  expect(await screen.findByRole('link', { name: 'Research brief' })).not.toHaveAttribute('data-org-open')
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
 })

@@ -1,4 +1,4 @@
-import { Alert, Button, Column, ColumnEmpty, Tag } from '@tiagopedras/tenon'
+import { Alert, Button, ColumnEmpty, Tag } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
@@ -7,6 +7,7 @@ import { Loading } from '../../components/Loading'
 import { relationshipTone } from '../../lib/colour'
 import { label } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
+import { Section } from './Section'
 
 export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; contacts: Loaded<Contact[]>; onChanged?: () => void }) {
   const [editing, setEditing] = useState<Contact | 'new'>()
@@ -17,8 +18,8 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
   }
   return (
     <>
-      <Column
-        titleAs="h2"
+      <Section
+        id="people"
         title="People"
         action={<Button size="sm" variant="secondary" onClick={() => setEditing('new')}>Add person</Button>}
       >
@@ -43,7 +44,7 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
             ))}
           </ul>
         )}
-      </Column>
+      </Section>
       <ContactForm
         open={editing !== undefined}
         orgId={orgId}

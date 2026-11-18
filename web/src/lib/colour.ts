@@ -1,5 +1,5 @@
 import type { TagChart, TagTone } from '@tiagopedras/tenon'
-import { daysSince, todayIso } from './format'
+import { todayIso } from './format'
 
 /**
  * What colour means in Binder, in one place. Every colour is a Tenon prop or a Tenon semantic token:
@@ -89,12 +89,6 @@ export const TASK_TONE: Record<string, TagTone> = {
 
 export function taskTone(state: string): TagTone {
   return TASK_TONE[state] ?? 'neutral'
-}
-
-/** Last contact: a contact within the last fortnight is success, and a stale one, or none yet, is warning. */
-export function lastContactTone(iso: string | null | undefined, now: Date = new Date()): 'success' | 'warning' {
-  const days = daysSince(iso, now)
-  return days !== null && days < 14 ? 'success' : 'warning'
 }
 
 /** A pipeline column's head: won is success, lost is error, and parked is quieter than the rest. */

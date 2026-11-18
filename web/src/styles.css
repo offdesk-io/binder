@@ -83,6 +83,10 @@ a:hover { text-decoration: underline; }
   padding-left: var(--tenon-dimension-150);
 }
 
+/* The drawer's row of tools above an organisation's sections. */
+.tn-custom-drawer-tools { gap: var(--tenon-dimension-075); }
+.tn-custom-drawer-tools .tn-custom-status { min-width: 10rem; }
+
 /* The page under the header: full width, Bench's 16px gutters. */
 .tn-custom-main {
   flex: 1; min-width: 0; scroll-margin-top: 64px;

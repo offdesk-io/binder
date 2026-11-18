@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { SESSION } from '../test/render'
 import {
-  columnHead, dueTone, lastContactTone, relationshipTone, REASON_TONE, STAGE, stageColour, taskTone, TYPE, typeColour,
+  columnHead, dueTone, relationshipTone, REASON_TONE, STAGE, stageColour, taskTone, TYPE, typeColour,
 } from './colour'
 
 const { meta } = SESSION
@@ -73,13 +73,6 @@ describe('relationship, due date and attention', () => {
 
   test('a missed next step is urgent, and going quiet or stuck is a warning', () => {
     expect(REASON_TONE).toEqual({ overdue: 'urgent', quiet: 'warning', stuck: 'warning' })
-  })
-
-  test('last contact is success within the fortnight, and warning when stale or never', () => {
-    const now = new Date(2026, 10, 16, 9, 0)
-    expect(lastContactTone(new Date(2026, 10, 3, 9).toISOString(), now)).toBe('success')
-    expect(lastContactTone(new Date(2026, 9, 30, 9).toISOString(), now)).toBe('warning')
-    expect(lastContactTone(null, now)).toBe('warning')
   })
 })
 

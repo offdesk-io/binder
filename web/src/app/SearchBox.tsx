@@ -24,6 +24,7 @@ export function SearchBox() {
         if ((e.target as HTMLElement).isContentEditable) return
       }
       if (document.querySelector('.tenon-modal')) return
+      if (document.querySelector('.tn-custom-drawer')) return
       e.preventDefault()
       input.current?.focus()
     }

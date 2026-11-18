@@ -108,3 +108,14 @@ test('slash is ignored while a modal is open', async () => {
   await user.keyboard('/')
   expect(screen.getByRole('searchbox', { name: 'Search' })).not.toHaveFocus()
 })
+
+test('slash does nothing while a drawer is open', async () => {
+  const user = userEvent.setup()
+  app()
+  const panel = document.createElement('div')
+  panel.className = 'tn-custom-drawer'
+  document.body.appendChild(panel)
+  await user.keyboard('/')
+  expect(screen.getByRole('searchbox', { name: 'Search' })).not.toHaveFocus()
+  panel.remove()
+})

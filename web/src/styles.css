@@ -229,3 +229,40 @@ a:hover { text-decoration: underline; }
   font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--tenon-text-subtle);
 }
+
+/* Drawer, in the shape of Bench's task drawer (bench/kanban/board.css, "drawer"). */
+.tn-custom-scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: color-mix(in srgb, var(--tenon-text-default) 28%, transparent);
+  animation: tn-custom-fade .15s ease;
+}
+.tn-custom-drawer {
+  position: fixed; top: 0; right: 0; z-index: 31;
+  height: 100%; width: 440px; max-width: 100vw;
+  display: flex; flex-direction: column;
+  background: var(--tenon-background-raised);
+  border-left: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+  box-shadow: var(--tenon-elevation-overlay);
+  animation: tn-custom-slide .18s ease;
+  outline: none;
+}
+.tn-custom-drawer-head {
+  display: flex; align-items: center; gap: var(--tenon-dimension-100);
+  padding: 12px 14px;
+  border-bottom: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+}
+.tn-custom-drawer-title {
+  flex: 1 1 auto; min-width: 0; margin: 0;
+  font-size: var(--tenon-typography-size-md); font-weight: 650;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tn-custom-drawer-actions { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: none; }
+.tn-custom-drawer-body {
+  flex: 1 1 auto; overflow-y: auto;
+  padding: var(--tenon-dimension-150) 14px var(--tenon-dimension-400);
+  display: flex; flex-direction: column; gap: var(--tenon-dimension-150);
+}
+@keyframes tn-custom-slide { from { transform: translateX(103%); } to { transform: none; } }
+@keyframes tn-custom-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tn-custom-drawer, .tn-custom-scrim { animation: none; } }
+@media (max-width: 640px) { .tn-custom-drawer { width: 100vw; border-left: 0; } }

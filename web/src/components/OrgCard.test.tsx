@@ -64,8 +64,3 @@ test('Enter on the focused name opens it too', async () => {
   await user.keyboard('{Enter}')
   expect(onOpen).toHaveBeenCalledWith(acme)
 })
-
-test('on a draggable card the name link does not drag on its own', () => {
-  renderApp(<OrgCard org={acme} draggable />)
-  expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('draggable', 'false')
-})

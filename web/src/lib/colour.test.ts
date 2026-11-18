@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { SESSION } from '../test/render'
 import {
-  columnHead, dueTone, relationshipTone, REASON_TONE, sectorColour, STAGE, stageColour, taskTone, TYPE, typeColour,
+  dueTone, relationshipTone, REASON_TONE, sectorColour, STAGE, stageColour, taskTone, TYPE, typeColour,
 } from './colour'
 
 const { meta } = SESSION
@@ -36,13 +36,6 @@ describe('stage colour', () => {
       expect(c.mark).toMatch(/^var\(--tenon-(chart|text)-[a-z0-9-]+\)$/)
       expect(c.mark).not.toMatch(/color-/)
     }
-  })
-
-  test('a pipeline column is success for won, error for lost, and quiet for parked', () => {
-    expect(columnHead('won')).toEqual({ tone: 'success', muted: false })
-    expect(columnHead('lost')).toEqual({ tone: 'error', muted: false })
-    expect(columnHead('parked')).toEqual({ tone: 'default', muted: true })
-    expect(columnHead('contacted')).toEqual({ tone: 'default', muted: false })
   })
 })
 

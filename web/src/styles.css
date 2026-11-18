@@ -103,27 +103,12 @@ a:hover { text-decoration: underline; }
 
 .tn-custom-grow { flex: 1; }
 .tn-custom-loading { display: flex; justify-content: center; padding: var(--tenon-dimension-400); }
-.tn-custom-scroll { max-width: 100%; overflow-x: auto; white-space: nowrap; }
 
-/* Pipeline. tn-board is a grid that flows into columns and scrolls sideways; here each stage is a fixed 300px, so the
- * board scrolls when the stages don't fit. The page fills main, and the board fills what the chips leave, so the
- * columns run to the foot of the window. */
-.tn-custom-main:has(> .tn-custom-pipeline) { display: flex; flex-direction: column; }
-.tn-custom-pipeline { flex: 1; }
-.tn-custom-board { flex: 1; min-width: 0; grid-auto-columns: 300px; align-items: stretch; }
-/* The board's own filter box, Bench's "Search tasks…": Tenon's Input, narrower and at the chip row's height. */
+/* A page's own filter box, Bench's "Search tasks…": Tenon's Input, narrower and at the chip row's height. */
 .tn-custom-find {
   width: 200px; max-width: 100%; min-height: 0; padding: 6px 10px;
   border-radius: var(--tenon-radius-default); font-size: var(--tenon-typography-size-sm);
 }
-/* Bench's dashed "+ Add task", at the foot of the Lead column. */
-.tn-custom-add {
-  width: 100%; padding: 8px; border: var(--tenon-dimension-012) dashed var(--tenon-stroke-default);
-  border-radius: var(--tenon-radius-md); background: transparent;
-  color: var(--tenon-text-subtle); font: inherit; font-size: var(--tenon-typography-size-sm); cursor: pointer;
-}
-.tn-custom-add:hover { color: var(--tenon-text-default); border-color: var(--tenon-text-faint); }
-
 /* A card's sector label: Bench's bucket name, small, bold, uppercase, in the sector's chart colour. */
 .tn-custom-sector {
   font-size: var(--tenon-typography-size-xs); font-weight: 700;
@@ -142,7 +127,30 @@ a:hover { text-decoration: underline; }
   background: var(--tenon-background-neutral); color: var(--tenon-text-subtle);
   font-size: var(--tenon-typography-size-xs); font-weight: 650;
 }
-.tn-custom-drop { outline: var(--tenon-dimension-025) solid var(--tenon-stroke-accent); outline-offset: calc(-1 * var(--tenon-dimension-025)); }
+
+/* The Pipeline: one table, a folding heading row per stage in Bench's head type, then the stage's rows. */
+.tn-custom-stage-head th { padding: 0; background: var(--tenon-background-neutral); }
+.tn-custom-stage-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 9px 12px; border: 0; background: transparent; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--tenon-typography-size-sm); font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; color: var(--tenon-text-default);
+}
+.tn-custom-stage-chevron {
+  width: .45em; height: .45em; flex: none;
+  border-right: .13em solid currentColor; border-bottom: .13em solid currentColor;
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+.tn-custom-stage-toggle[aria-expanded="true"] .tn-custom-stage-chevron { transform: rotate(45deg); }
+/* Figures keep their case: €12.5k, not €12.5K. */
+.tn-custom-stage-figures { font-weight: 600; color: var(--tenon-text-faint); text-transform: none; }
+.tn-custom-pipeline-table .tn-custom-stage-step { white-space: normal; }
+.tn-custom-stage-step .tenon-tag { margin-left: var(--tenon-dimension-050); }
+/* On a phone each organisation is one cell on two lines: name and sector, then the rest small and muted. */
+.tn-custom-pipeline-table td.tn-custom-stage-item { white-space: normal; }
+.tn-custom-stage-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.tn-custom-stage-sub { gap: 2px 6px; margin-top: 2px; font-size: var(--tenon-typography-size-xs); color: var(--tenon-text-subtle); align-items: center; }
+@media (prefers-reduced-motion: reduce) { .tn-custom-stage-chevron { transition: none; } }
 
 /* Two grid columns, the first wider, with their tops aligned. */
 .tn-custom-split { align-items: start; }
@@ -328,10 +336,13 @@ a:hover { text-decoration: underline; }
 .tn-custom-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .tn-custom-filterbar > :last-child { margin-left: auto; }
 .tn-custom-filterbar > :only-child { margin-left: 0; }
+.tn-custom-filterbar-end { display: flex; align-items: center; gap: 6px 10px; }
 /* On a phone the filter box takes its own full-width line under the chips. */
 @media (max-width: 640px) {
   .tn-custom-find { width: 100%; }
   .tn-custom-filterbar > :last-child { margin-left: 0; }
+  .tn-custom-filterbar-end { flex: 1 1 100%; }
+  .tn-custom-filterbar-end .tn-custom-find { flex: 1; width: auto; }
 }
 
 /* Home's figures: one raised panel, three of Bench's COMPLETED boxes side by side. */

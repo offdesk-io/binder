@@ -1,5 +1,4 @@
 import { Alert, ColumnEmpty, Dropdown, type DropdownOption } from '@tiagopedras/tenon'
-import type { CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
@@ -8,8 +7,8 @@ import { FilterChips } from '../components/FilterChips'
 import { Loading } from '../components/Loading'
 import { NextStep, OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { SectorLabel } from '../components/SectorLabel'
 import { StatusTag } from '../components/StatusTag'
-import { sectorColour } from '../lib/colour'
 import { ago, label, money, person } from '../lib/format'
 import { openInPlace } from '../lib/openInPlace'
 import { ownerOptions } from '../lib/ownerFilter'
@@ -145,7 +144,7 @@ export function ListPage() {
                     <Link to={`/o/${o.slug}`} data-org-open={o.slug} onClick={(e) => openInPlace(e, () => drawer.open(o.slug))}>{o.name}</Link>
                   </td>
                   <td>
-                    {o.sector ? <span className="tn-custom-sector" style={{ '--tn-sector': sectorColour(o.sector).mark } as CSSProperties}>{o.sector}</span> : null}
+                    <SectorLabel sector={o.sector} />
                   </td>
                   <td><StatusTag status={o.status} /></td>
                   <td>{person(o.owner_email)}</td>

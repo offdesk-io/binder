@@ -92,7 +92,7 @@ export function taskTone(state: string): TagTone {
 }
 
 /**
- * A sector's colour, for the label at the top of a card, the way Bench colours a bucket. The sector is free text, so
+ * A sector's colour, for the label at the top of a card. The sector is free text, so
  * its name is hashed to one of Tenon's ten chart colours: the same name always lands on the same colour. Drawn as
  * text on a raised card, where each chart colour reaches AA in both themes (see .tn-custom-chart in styles.css).
  */

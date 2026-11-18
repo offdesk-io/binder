@@ -20,7 +20,7 @@ export interface AppHeaderProps {
 }
 
 /**
- * An app's top bar, in the shape Bench's header has: sticky, full width on the raised surface, the brand and the
+ * An app's top bar: sticky, full width on the raised surface, the brand and the
  * view tabs on the left, search and actions on the right. Written to move into Tenon unchanged: it knows nothing
  * about Binder beyond its props, and its classes are its own.
  */

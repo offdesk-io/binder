@@ -1,6 +1,6 @@
 /**
  * The `binder.` wordmark from the Offdesk brand folder (logos/binder/binder-wordmark_default.svg), inline so the
- * letters can follow the theme. Brand colours, not Tenon tokens, as Bench's `bench.` wordmark is: ink on light,
+ * letters can follow the theme. Brand colours, not Tenon tokens: ink on light,
  * paper on dark, and the orange dot keeps its fill. This file is the one place Binder writes hex colours.
  */
 const LETTERS = [

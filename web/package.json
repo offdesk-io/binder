@@ -8,11 +8,10 @@
     "build": "tsc --noEmit && vite build",
     "check": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "e2e": "vite build && playwright test",
-    "icons": "node scripts/icons.mjs"
+    "e2e": "vite build && playwright test"
   },
   "dependencies": {
-    "@tiagopedras/tenon": "github:tiagopedras/tenon#v0.17.0",
+    "@tiagopedras/tenon": "github:tiagopedras/tenon#v0.18.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.30.6",

@@ -1,5 +1,5 @@
 import type { TagChart, TagTone } from '@tiagopedras/tenon'
-import { daysSince, todayIso } from './format'
+import { todayIso } from './format'
 
 /**
  * What colour means in Binder, in one place. Every colour is a Tenon prop or a Tenon semantic token:
@@ -91,15 +91,14 @@ export function taskTone(state: string): TagTone {
   return TASK_TONE[state] ?? 'neutral'
 }
 
-/** Last contact: a contact within the last fortnight is success, and a stale one, or none yet, is warning. */
-export function lastContactTone(iso: string | null | undefined, now: Date = new Date()): 'success' | 'warning' {
-  const days = daysSince(iso, now)
-  return days !== null && days < 14 ? 'success' : 'warning'
-}
-
-/** A pipeline column's head: won is success, lost is error, and parked is quieter than the rest. */
-export function columnHead(status: string): { tone: 'default' | 'success' | 'error'; muted: boolean } {
-  if (status === 'won') return { tone: 'success', muted: false }
-  if (status === 'lost') return { tone: 'error', muted: false }
-  return { tone: 'default', muted: status === 'parked' }
+/**
+ * A sector's colour, for the label at the top of a card, the way Bench colours a bucket. The sector is free text, so
+ * its name is hashed to one of Tenon's ten chart colours: the same name always lands on the same colour. Drawn as
+ * text on a raised card, where each chart colour reaches AA in both themes (see .tn-custom-chart in styles.css).
+ */
+export function sectorColour(sector: string): Colour {
+  const name = sector.trim().toLowerCase()
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return chart(((h % 10) + 1) as TagChart)
 }

@@ -1,4 +1,4 @@
-import { Alert, Column, ColumnEmpty, Spinner, Tag } from '@tiagopedras/tenon'
+import { Alert, ColumnEmpty, Spinner, Tag } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { api } from '../../api/endpoints'
 import type { BenchTask } from '../../api/types'
@@ -6,6 +6,7 @@ import { Loading } from '../../components/Loading'
 import { taskTone } from '../../lib/colour'
 import { clock, day, safeHref } from '../../lib/format'
 import { useApi } from '../../lib/useApi'
+import { Section } from './Section'
 
 /** While a refresh runs, the page asks again this often... */
 export const WORK_RELOAD_MS = 3000
@@ -67,7 +68,7 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
   const readAt = work.data?.fetched_at
 
   return (
-    <Column titleAs="h2" title="Work">
+    <Section id="work" title="Work">
       {work.error && !work.data ? (
         <Alert tone="error">{work.error.message}</Alert>
       ) : !work.data ? (
@@ -106,6 +107,6 @@ export function WorkSection({ orgId, slug, reloadMs = WORK_RELOAD_MS, stopMs = W
           )}
         </div>
       )}
-    </Column>
+    </Section>
   )
 }

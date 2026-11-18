@@ -5,15 +5,50 @@
 /* Links underline on hover only: dense lists would otherwise be all rule. */
 a { text-decoration: none; }
 a:hover { text-decoration: underline; }
+a.tenon-button:hover { text-decoration: none; }
 
-/* Header placement: the identity and nav on the left, search in the middle, actions on the right. */
-.tn-custom-brand {
-  display: flex; align-items: center; gap: var(--tenon-dimension-300);
-  min-width: 0;
+/* The app frame: full window width, the header on top. Bench has no centred column, and neither does Binder. */
+.tn-custom-app { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* AppHeader, in Bench's header's shape (bench/kanban/board.css, "header"). */
+.tn-custom-appbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 10px var(--tenon-dimension-200);
+  background: var(--tenon-background-raised);
+  border-bottom: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
 }
-.tn-custom-tools { order: 3; min-width: 0; }
-.tn-custom-search { order: 2; flex: 1 1 14rem; max-width: 24rem; min-width: 0; margin-left: auto; }
-.tn-custom-me { white-space: nowrap; }
+.tn-custom-appbar-brand { display: flex; align-items: center; }
+.tn-custom-appbar-brand a { display: flex; }
+.tn-custom-wordmark { display: block; height: 1.15rem; width: auto; overflow: visible; }
+.tn-custom-appbar-gap { flex: 1 1 auto; }
+.tn-custom-appbar-search { flex: 0 1 200px; min-width: 0; }
+.tn-custom-appbar-search .tn-custom-search { width: 100%; }
+.tn-custom-appbar-actions { display: flex; align-items: center; gap: var(--tenon-dimension-100); margin-left: auto; }
+
+/* Above the sticky bar (z-index 20) so the focused skip link is seen; below the modal layer. */
+.tn-skip-link { z-index: 30; }
+.tn-custom-me { white-space: nowrap; color: var(--tenon-text-subtle); }
+
+/* One pill holding the view tabs, Bench's .tabs and .tab. */
+.tn-custom-pill {
+  list-style: none; margin: 0;
+  display: inline-flex; gap: 3px; padding: 3px;
+  background: var(--tenon-background-neutral);
+  border-radius: var(--tenon-radius-md);
+}
+.tn-custom-pill-tab {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 5px 11px;
+  border-radius: var(--tenon-radius-default);
+  font-size: var(--tenon-typography-size-sm); font-weight: 560;
+  color: var(--tenon-text-subtle);
+}
+.tn-custom-pill-tab:hover { color: var(--tenon-text-default); text-decoration: none; }
+.tn-custom-pill-tab[aria-current="page"] {
+  background: var(--tenon-background-raised); color: var(--tenon-text-default);
+  box-shadow: var(--tenon-elevation-raised);
+}
 
 /* A view's title and the controls that belong to it, wrapping together. */
 .tn-custom-title { min-width: 0; overflow-wrap: anywhere; }
@@ -26,9 +61,6 @@ a:hover { text-decoration: underline; }
 /* The page sits on Tenon's recessed surface, so the raised cards read as cards: a tint in light, black in dark.
  * :root raises the rule's specificity above the body's own tn-shell background. */
 :root body { background: var(--tenon-background-sunken); }
-
-/* The wordmark in the accent colour, which is also the active nav item's colour. */
-.tn-custom-wordmark { color: var(--tenon-text-accent); }
 
 /* A categorical Tag. Tenon draws a chart colour as text on the neutral chip, and in light mode six of the ten
  * fail AA there. On the raised surface each reaches AA in both themes, so the chip sits on the raised surface
@@ -52,11 +84,22 @@ a:hover { text-decoration: underline; }
   padding-left: var(--tenon-dimension-150);
 }
 
-/* Main column, with room for the fixed bars on a phone. */
-.tn-custom-main {
-  min-width: 0;
-  padding-block: var(--tenon-dimension-300) var(--tenon-dimension-600);
+/* The drawer's tools: in its head (the slot), or in a row of the body when there is no drawer around. */
+.tn-custom-drawer-tools { gap: var(--tenon-dimension-075); }
+.tn-custom-drawer-tools .tn-custom-status,
+.tn-custom-drawer-tools-slot .tn-custom-status { min-width: 10rem; }
+@media (max-width: 767px) {
+  .tn-custom-drawer-tools .tn-custom-status,
+  .tn-custom-drawer-tools-slot .tn-custom-status { min-width: 0; }
 }
+
+/* The page under the header: full width, Bench's 16px gutters. */
+.tn-custom-main {
+  flex: 1; min-width: 0; scroll-margin-top: 64px;
+  padding: var(--tenon-dimension-200) var(--tenon-dimension-200) var(--tenon-dimension-600);
+}
+/* The header wraps to two rows on a phone (10px padding, a 32px row, a gap, a 34px row, 10px padding), about 6rem. */
+@media (max-width: 767px) { .tn-custom-main { scroll-margin-top: 6rem; } }
 
 /* Text colour. Tenon's text styles set size and weight only. */
 .tn-custom-faint { color: var(--tenon-text-faint); }
@@ -65,14 +108,56 @@ a:hover { text-decoration: underline; }
 
 .tn-custom-grow { flex: 1; }
 .tn-custom-loading { display: flex; justify-content: center; padding: var(--tenon-dimension-400); }
-.tn-custom-scroll { max-width: 100%; overflow-x: auto; white-space: nowrap; }
 
-/* Pipeline. tn-board scrolls sideways, which also clips vertically, and Tenon's Dropdown panel (up to 240px,
- * 6px below its button) is absolutely positioned inside it. While a card's status menu is open, give the board
- * room below for the panel. */
-.tn-custom-board { min-width: 0; }
-.tn-custom-board:has(button[aria-expanded="true"]) { padding-bottom: 256px; }
-.tn-custom-drop { outline: var(--tenon-dimension-025) solid var(--tenon-stroke-accent); outline-offset: calc(-1 * var(--tenon-dimension-025)); }
+/* A page's own filter box, Bench's "Search tasks…": Tenon's Input, narrower and at the chip row's height. */
+.tn-custom-find {
+  width: 200px; max-width: 100%; min-height: 0; padding: 6px 10px;
+  border-radius: var(--tenon-radius-default); font-size: var(--tenon-typography-size-sm);
+}
+/* A card's sector label: Bench's bucket name, small, bold, uppercase, in the sector's chart colour. */
+.tn-custom-sector {
+  font-size: var(--tenon-typography-size-xs); font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase;
+  color: var(--tn-sector);
+}
+/* Bench's card title: bold, in ink rather than link blue (the global a:hover still underlines it). These rules are
+ * deliberately global: OrgCard is the only Card in the app. Then the chip row under the title. */
+.tenon-card .tenon-card__title { font-weight: 650; }
+.tenon-card__title a, .tenon-card__title a:hover { color: var(--tenon-text-default); }
+.tn-custom-chiprow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tenon-dimension-050); }
+.tn-custom-avatar {
+  display: inline-grid; place-items: center;
+  min-width: 1.6rem; height: 1.6rem; padding: 0 4px; box-sizing: border-box;
+  border-radius: var(--tenon-radius-full);
+  background: var(--tenon-background-neutral); color: var(--tenon-text-subtle);
+  font-size: var(--tenon-typography-size-xs); font-weight: 650;
+}
+
+/* The Pipeline: one table, a folding heading row per stage in Bench's head type, then the stage's rows. */
+.tn-custom-stage-head th { padding: 0; background: var(--tenon-background-neutral); }
+.tn-custom-stage-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 9px 12px; border: 0; background: transparent; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--tenon-typography-size-sm); font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; color: var(--tenon-text-default);
+}
+.tn-custom-stage-chevron {
+  width: .45em; height: .45em; flex: none;
+  border-right: .13em solid currentColor; border-bottom: .13em solid currentColor;
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+.tn-custom-stage-toggle[aria-expanded="true"] .tn-custom-stage-chevron { transform: rotate(45deg); }
+/* Figures keep their case: €12.5k, not €12.5K. */
+.tn-custom-stage-figures { font-weight: 600; color: var(--tenon-text-faint); text-transform: none; }
+.tn-custom-pipeline-table .tn-custom-stage-step { white-space: normal; }
+.tn-custom-stage-step .tenon-tag { margin-left: var(--tenon-dimension-050); }
+/* On a phone each organisation is one cell on two lines: name and sector, then the rest small and muted. */
+.tn-custom-pipeline-table td.tn-custom-stage-item { white-space: normal; }
+.tn-custom-stage-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.tn-custom-stage-sub { gap: 2px 6px; margin-top: 2px; font-size: var(--tenon-typography-size-xs); color: var(--tenon-text-subtle); align-items: center; }
+/* A dot before every part but the first, so a wrapped line never ends on a dot alone. */
+.tn-custom-stage-sub > * + *::before { content: '·'; margin-right: 6px; color: var(--tenon-text-faint); }
+@media (prefers-reduced-motion: reduce) { .tn-custom-stage-chevron { transition: none; } }
 
 /* Two grid columns, the first wider, with their tops aligned. */
 .tn-custom-split { align-items: start; }
@@ -143,22 +228,28 @@ a:hover { text-decoration: underline; }
   display: flex; flex-direction: column; gap: var(--tenon-dimension-100);
 }
 
-/* Bottom tab bar on a phone. The links take Tenon's nav styles, and this only lays them out across the bar. */
+/* Bottom tab bar on a phone, in the header's pill style: the links read like .tn-custom-pill-tab, the current one on
+   a neutral pill, each at least 44px tall to touch. */
 .tn-custom-tabs {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  height: 56px;
+  min-height: 56px;
   background: var(--tenon-background-raised);
   border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tn-custom-tab-list {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  height: 100%;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px;
+  list-style: none; margin: 0; padding: 6px 8px;
 }
 .tn-custom-tab-list a {
-  height: 100%;
+  min-height: 44px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 0;
+  border-radius: var(--tenon-radius-md);
+  font-size: var(--tenon-typography-size-sm); font-weight: 560;
+  color: var(--tenon-text-subtle); text-decoration: none;
+}
+.tn-custom-tab-list a[aria-current="page"] {
+  background: var(--tenon-background-neutral); color: var(--tenon-text-default);
 }
 
 /* Organisation tables: names and dates stay on one line, the first column may wrap. */
@@ -167,12 +258,122 @@ a:hover { text-decoration: underline; }
 .tn-custom-table th:first-child,
 .tn-custom-table td:first-child { white-space: normal; }
 
+/* The list in Bench's style: an uppercase head row (tn-page.css already draws the hairline rows). */
+.tn-custom-table thead th {
+  font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tenon-text-faint);
+}
+
 @media (max-width: 767px) {
-  /* One row for the identity and the buttons, the search on a row of its own. */
-  .tn-custom-brand { order: 1; flex: 1 1 auto; }
-  .tn-custom-tools { order: 2; margin-left: auto; }
-  .tn-custom-search { order: 3; flex: 1 1 100%; max-width: none; margin-left: 0; }
-  .tn-custom-main { padding-block: var(--tenon-dimension-200) calc(56px + var(--tenon-dimension-500)); }
+  /* Wordmark and New on one row, search across the next. */
+  .tn-custom-appbar-gap { display: none; }
+  .tn-custom-appbar-actions { margin-left: auto; }
+  .tn-custom-appbar-search { order: 3; flex: 1 1 100%; }
+  .tn-custom-main { padding: var(--tenon-dimension-200) var(--tenon-dimension-200) calc(56px + var(--tenon-dimension-500)); }
   .tn-custom-main:has(.tn-custom-bar) { padding-bottom: calc(112px + var(--tenon-dimension-400)); }
   .tn-custom-status { min-width: 0; flex: 1 1 100%; }
+}
+
+/* Visually hidden, still read by screen readers: the page's own h1. */
+.tn-custom-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Column and section heads in Bench's style: small, bold, uppercase, tracked (bench/kanban/board.css, .tenon-column__head). */
+.tenon-column__head {
+  padding: 11px 13px 9px; min-height: 41px; gap: 8px;
+  font-size: var(--tenon-typography-size-sm); font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.tenon-column__title { font: inherit; letter-spacing: inherit; margin: 0; }
+.tenon-column__count { font-weight: 600; color: var(--tenon-text-faint); }
+
+/* A Stat's figure in ink, its label small and uppercase, as Bench's COMPLETED box. */
+.tenon-stat { color: var(--tenon-text-default); }
+.tenon-stat__eyebrow {
+  font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--tenon-text-subtle);
+}
+
+/* Drawer, in the shape of Bench's task drawer (bench/kanban/board.css, "drawer"). */
+.tn-custom-scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: var(--tenon-background-overlay);
+  animation: tn-custom-fade .15s ease;
+}
+.tn-custom-drawer {
+  position: fixed; top: 0; right: 0; z-index: 31;
+  height: 100%; width: 440px; max-width: 100vw;
+  display: flex; flex-direction: column;
+  background: var(--tenon-background-raised);
+  border-left: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+  box-shadow: var(--tenon-elevation-overlay);
+  animation: tn-custom-slide .18s ease;
+  outline: none;
+}
+.tn-custom-drawer-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--tenon-dimension-100);
+  padding: 12px 14px;
+  border-bottom: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+}
+.tn-custom-drawer-title {
+  flex: 1 1 auto; min-width: 0; margin: 0;
+  font-size: var(--tenon-typography-size-md); font-weight: 650;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tn-custom-drawer-tools-slot { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: 0 1 auto; flex-wrap: wrap; }
+.tn-custom-drawer-tools-slot:empty { display: none; }
+.tn-custom-drawer-actions { display: flex; align-items: center; gap: var(--tenon-dimension-075); flex: none; }
+.tn-custom-drawer-body {
+  flex: 1 1 auto; overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--tenon-dimension-150) 14px var(--tenon-dimension-400);
+  display: flex; flex-direction: column; gap: var(--tenon-dimension-150);
+}
+@keyframes tn-custom-slide { from { transform: translateX(103%); } to { transform: none; } }
+@keyframes tn-custom-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tn-custom-drawer, .tn-custom-scrim { animation: none; } }
+@media (max-width: 767px) {
+  .tn-custom-drawer { width: 100%; border-left: 0; }
+  /* Title and Close on the first row, the tools on a second. */
+  .tn-custom-drawer-tools-slot { order: 3; flex: 1 1 100%; }
+}
+
+/* Filter chips: the header's pill, with a count per chip, as Bench's bucket strip. */
+.tn-custom-chips { flex-wrap: wrap; }
+.tn-custom-chips .tn-custom-pill-tab { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: var(--tenon-typography-size-sm); font-weight: 560; }
+.tn-custom-chips .tn-custom-pill-tab[aria-pressed="true"] { background: var(--tenon-background-raised); color: var(--tenon-text-default); }
+.tn-custom-chip-count {
+  min-width: 1.4em; padding: 0 5px; border-radius: var(--tenon-radius-full);
+  background: var(--tenon-background-raised); color: var(--tenon-text-subtle);
+  font-size: var(--tenon-typography-size-xs); font-weight: 650; text-align: center;
+}
+.tn-custom-pill-tab[aria-pressed="true"] .tn-custom-chip-count { background: var(--tenon-background-neutral); }
+
+/* The row the chips (or the Owner dropdown) sit in, with the page's own filter box at its right end. */
+.tn-custom-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tn-custom-filterbar > :last-child { margin-left: auto; }
+.tn-custom-filterbar > :only-child { margin-left: 0; }
+.tn-custom-filterbar-end { display: flex; align-items: center; gap: 6px 10px; }
+/* On a phone the filter box takes its own full-width line under the chips. */
+@media (max-width: 767px) {
+  .tn-custom-find { width: 100%; }
+  .tn-custom-filterbar > :last-child { margin-left: 0; }
+  .tn-custom-filterbar-end { flex: 1 1 100%; }
+  .tn-custom-filterbar-end .tn-custom-find { flex: 1; width: auto; }
+}
+
+/* Home's figures: one raised panel, three of Bench's COMPLETED boxes side by side. */
+.tn-custom-figures {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--tenon-background-raised);
+  border: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+  border-radius: var(--tenon-radius-md);
+}
+.tn-custom-figures > .tenon-stat { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.tn-custom-figures > .tenon-stat + .tenon-stat { border-left: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
+@media (max-width: 767px) {
+  .tn-custom-figures { grid-template-columns: minmax(0, 1fr); }
+  .tn-custom-figures > .tenon-stat + .tenon-stat { border-left: 0; border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
 }

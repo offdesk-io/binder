@@ -5,11 +5,14 @@ test('search finds an organisation and opens it', async ({ page, request }) => {
   const name = unique('Searchable Studio')
   const org = await newOrg(request, name)
   await page.goto('/')
+  // The box must be on the page before `/` can reach it; Home links the new organisation too.
+  await expect(page.getByRole('searchbox', { name: 'Search' })).toBeVisible()
   await page.keyboard.press('/')
   await page.keyboard.type(name.split(' ').pop()!)
+  await expect(page).toHaveURL(/\/search\?q=/)
   await page.getByRole('link', { name }).click()
-  await expect(page).toHaveURL(new RegExp(`/o/${org.slug}$`))
-  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`org=${org.slug}`))
 })
 
 test('the list opens an organisation', async ({ page, request }) => {
@@ -17,7 +20,8 @@ test('the list opens an organisation', async ({ page, request }) => {
   await newOrg(request, name)
   await page.goto('/list')
   await page.getByRole('link', { name }).click()
-  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(/\?org=/)
 })
 
 test('quick log adds to the timeline', async ({ page, request }) => {
@@ -42,33 +46,89 @@ test('status changes on the organisation page', async ({ page, request }) => {
   expect(saved.status).toBe('contacted')
 })
 
-test('the pipeline moves a lead to the next stage', async ({ page, request }, info) => {
+test('the pipeline moves a lead to the next stage', async ({ page, request }) => {
   const name = unique('Pipeline Partners')
   const org = await newOrg(request, name)
   await page.goto('/pipeline')
-  if (info.project.name === 'desktop') {
-    const card = page.locator('.tenon-card', { hasText: name })
-    const target = page.getByTestId('stage-contacted')
-    await card.dragTo(target)
-    await expect(target.getByRole('link', { name })).toBeVisible()
-  } else {
-    await page.getByRole('button', { name: `Status of ${name}` }).click()
-    await page.getByRole('menuitemradio', { name: 'Contacted' }).click()
-    await page.getByRole('radio', { name: /^Contacted/ }).click()
-    await expect(page.getByRole('link', { name })).toBeVisible()
-  }
+  const stage = (label: string) => page.locator('tbody', { has: page.getByRole('button', { name: new RegExp(`^${label}`) }) })
+  await expect(stage('Lead').getByRole('link', { name })).toBeVisible()
+  await page.getByRole('link', { name }).click()
+  const drawer = page.getByRole('dialog', { name })
+  await drawer.getByRole('button', { name: 'Status', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Contacted' }).click()
+  await drawer.getByRole('button', { name: 'Close' }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(stage('Contacted').getByRole('link', { name })).toBeVisible()
+  await expect(stage('Lead').getByRole('link', { name })).toHaveCount(0)
   const saved = await (await request.get(`/api/orgs/${org.id}`)).json()
   expect(saved.status).toBe('contacted')
 })
 
-test('a card status menu on the pipeline is not cut off by the board', async ({ page, request }, info) => {
-  test.skip(info.project.name !== 'desktop', 'the phone shows one stage at a time')
-  const name = unique('Menu Room')
-  await newOrg(request, name)
+test('the drawer opens from the pipeline, Back closes it, and the link reopens it', async ({ page, request }) => {
+  const name = unique('Drawer Works')
+  const org = await newOrg(request, name)
   await page.goto('/pipeline')
-  await page.getByRole('button', { name: `Status of ${name}` }).click()
-  await expect(page.getByRole('menuitemradio', { name: 'Parked' })).toBeVisible()
-  // The board scrolls sideways; it must not need an inner vertical scroll to show the menu.
-  const clipped = await page.locator('.tn-custom-board').evaluate((el) => el.scrollHeight > el.clientHeight + 1)
-  expect(clipped).toBe(false)
+  await page.getByRole('link', { name }).click()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`org=${org.slug}`))
+  await page.goBack()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await page.goto(`/pipeline?org=${org.slug}`)
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await expect(page).not.toHaveURL(/org=/)
+})
+
+test('the owner dropdown filters the pipeline and stays in the address', async ({ page, request }) => {
+  const mine = unique('Dropdown Mine')
+  const theirs = unique('Dropdown Theirs')
+  await newOrg(request, mine)
+  const r = await request.post('/api/orgs', { data: { name: theirs, owner_email: 'ana.silva@example.com' } })
+  expect(r.ok()).toBeTruthy()
+  await page.goto('/pipeline')
+  await expect(page.getByRole('link', { name: theirs })).toBeVisible()
+  await page.getByRole('button', { name: 'Owner' }).click()
+  await page.getByRole('menuitemradio', { name: 'Me' }).click()
+  await expect(page).toHaveURL(/owner=/)
+  await expect(page.getByRole('link', { name: mine })).toBeVisible()
+  await expect(page.getByRole('link', { name: theirs })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Owner' })).toContainText('Me')
+  await expect(page.getByRole('link', { name: theirs })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Owner' }).click()
+  await page.getByRole('menuitemradio', { name: 'Any owner' }).click()
+  await expect(page).not.toHaveURL(/owner=/)
+  await expect(page.getByRole('link', { name: theirs })).toBeVisible()
+})
+
+test('the list kind chips filter and stay in the address', async ({ page, request }) => {
+  const name = unique('Kind Lead')
+  await newOrg(request, name)
+  await page.goto('/list')
+  await expect(page.getByRole('link', { name })).toBeVisible()
+  await page.getByRole('button', { name: /^Clients/ }).click()
+  await expect(page).toHaveURL(/kind=client/)
+  await expect(page.getByRole('link', { name })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('button', { name: /^Clients/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: /^Leads/ }).click()
+  await expect(page).toHaveURL(/kind=lead/)
+  await expect(page.getByRole('link', { name })).toBeVisible()
+})
+
+test('a fresh list is A to Z', async ({ page, request }) => {
+  const stamp = Date.now().toString(36)
+  for (const n of [`Zed ${stamp}`, `Alpha ${stamp}`, `Mid ${stamp}`]) await newOrg(request, n)
+  await page.goto('/list')
+  await expect(page).not.toHaveURL(/sort=/)
+  const names = await page.locator('a[data-org-open]').allTextContents()
+  const sorted = [...names].sort((a, b) => {
+    // The server orders with COLLATE NOCASE: a plain case-folded comparison.
+    const x = a.toLowerCase()
+    const y = b.toLowerCase()
+    return x < y ? -1 : x > y ? 1 : 0
+  })
+  expect(names).toEqual(sorted)
+  expect(names.findIndex((n) => n.startsWith('Alpha'))).toBeLessThan(names.findIndex((n) => n.startsWith('Zed')))
 })

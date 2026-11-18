@@ -50,11 +50,11 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
             <h1 className="tenon-heading-3">{c.name}</h1>
           </div>
           <div className="tn-cluster">
-            <Button variant="primary" onClick={() => setLogging(true)}>Log</Button>
-            <Button variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
-            {meta.ai && <LinkButton variant="ghost" href="#research">Research</LinkButton>}
-            {c.phone && <LinkButton variant="ghost" href={`tel:${c.phone}`}>Call</LinkButton>}
-            {c.email && <LinkButton variant="ghost" href={`mailto:${c.email}`}>Email</LinkButton>}
+            <Button variant="primary" size="sm" onClick={() => setLogging(true)}>Log</Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit</Button>
+            {meta.ai && <LinkButton variant="ghost" size="sm" href="#research">Research</LinkButton>}
+            {c.phone && <LinkButton variant="ghost" size="sm" href={`tel:${c.phone}`}>Call</LinkButton>}
+            {c.email && <LinkButton variant="ghost" size="sm" href={`mailto:${c.email}`}>Email</LinkButton>}
           </div>
         </div>
         <p className="tenon-caption tn-custom-faint">

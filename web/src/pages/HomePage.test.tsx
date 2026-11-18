@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { activity, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
@@ -36,4 +37,45 @@ test('says so when nothing needs attention', async () => {
   renderApp(<HomePage />)
   expect(await screen.findByText('Nothing needs you today.')).toBeInTheDocument()
   expect(await screen.findByText('Nothing has happened yet.')).toBeInTheDocument()
+})
+
+test('Home has a visually hidden title: the tab says where you are', async () => {
+  stubFetch({
+    'GET /api/orgs': () => [org()],
+    'GET /api/attention': () => [],
+    'GET /api/activity?limit=30': () => [],
+  })
+  renderApp(<HomePage />)
+  await screen.findByText('Open pipeline')
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})
+
+test('the three figures sit in one panel', async () => {
+  stubFetch({
+    'GET /api/orgs': () => [org()],
+    'GET /api/attention': () => [],
+    'GET /api/activity?limit=30': () => [],
+  })
+  renderApp(<HomePage />)
+  const panel = await screen.findByTestId('figures')
+  expect(within(panel).getByText('Open pipeline')).toBeInTheDocument()
+  expect(within(panel).getByText('Needs attention')).toBeInTheDocument()
+  expect(within(panel).getByText('Active clients')).toBeInTheDocument()
+})
+
+test('a card under Needs attention opens the drawer', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    'GET /api/orgs': () => [org()],
+    'GET /api/attention': () => [{ org: org({ next_step: 'Send the deck', next_step_due: '2000-01-01' }), reasons: ['overdue'] }],
+    'GET /api/activity?limit=30': () => [],
+    'GET /api/orgs/by-slug/acme': () => org(),
+    'GET /api/orgs/1/contacts': () => [],
+    'GET /api/orgs/1/timeline': () => [],
+    'GET /api/orgs/1/research': () => [],
+    'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: '2026-01-01T00:00:00Z', error: null, refreshing: false }),
+  })
+  renderApp(<HomePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  expect(await screen.findByRole('dialog')).toBeInTheDocument()
 })

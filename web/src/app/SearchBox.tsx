@@ -10,6 +10,9 @@ export function SearchBox() {
   const onSearch = pathname === '/search'
   const urlQ = onSearch ? params.get('q') ?? '' : ''
   const [text, setText] = useState(urlQ)
+  // The address as it is when the pause ends, so a change made meanwhile (the drawer's ?org=) is not undone.
+  const current = useRef(params)
+  current.current = params
   const input = useRef<HTMLInputElement>(null)
   // The last query this box put in the URL or took from it, so the URL and the
   // text can tell their own changes from the other side's.
@@ -24,6 +27,7 @@ export function SearchBox() {
         if ((e.target as HTMLElement).isContentEditable) return
       }
       if (document.querySelector('.tenon-modal')) return
+      if (document.querySelector('[data-drawer]')) return
       e.preventDefault()
       input.current?.focus()
     }
@@ -52,7 +56,15 @@ export function SearchBox() {
     if (q === lastQ.current || (!onSearch && !q)) return
     const t = setTimeout(() => {
       lastQ.current = q
-      navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search', { replace: onSearch })
+      if (onSearch) {
+        const next = new URLSearchParams(current.current)
+        if (q) next.set('q', q)
+        else next.delete('q')
+        const search = next.toString()
+        navigate({ pathname: '/search', search: search ? `?${search}` : '' }, { replace: true })
+      } else {
+        navigate(`/search?q=${encodeURIComponent(q)}`)
+      }
     }, 200)
     return () => clearTimeout(t)
   }, [text, pathname])

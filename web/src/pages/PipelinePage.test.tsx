@@ -1,97 +1,369 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test, vi } from 'vitest'
-import { org } from '../test/fixtures'
+import { Route, Routes } from 'react-router-dom'
+import { afterEach, expect, test, vi } from 'vitest'
+import { Layout } from '../app/Layout'
+import { AT, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
-import { byStatus, PipelinePage } from './PipelinePage'
+import { PipelinePage } from './PipelinePage'
 
-const a = org({ id: 1, name: 'Acme', slug: 'acme', status: 'lead' })
+const a = org({ id: 1, name: 'Acme', slug: 'acme', status: 'lead', value_estimate: 12000 })
 const b = org({ id: 2, name: 'Bolt', slug: 'bolt', status: 'contacted' })
+const z = org({ id: 4, name: 'Zinc', slug: 'zinc', status: 'lead', value_estimate: 500 })
+const gone = org({ id: 5, name: 'Gone', slug: 'gone', status: 'lost' })
 
-test('byStatus gives every stage a list, even an empty one', () => {
-  const g = byStatus([a, b], ['lead', 'contacted', 'won'])
-  expect(g.lead).toEqual([a])
-  expect(g.contacted).toEqual([b])
-  expect(g.won).toEqual([])
-})
+const routes = {
+  'GET /api/orgs?kind=lead': () => [a, b, z, gone],
+  'GET /api/orgs/by-slug/acme': () => a,
+  'GET /api/orgs/1/contacts': () => [],
+  'GET /api/orgs/1/timeline': () => [],
+  'GET /api/orgs/1/research': () => [],
+  'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+}
 
-test('desktop draws a column per lead status', async () => {
-  stubFetch({ 'GET /api/orgs?kind=lead': () => [a, b] })
-  renderApp(<PipelinePage />)
-  const lead = await screen.findByTestId('stage-lead')
-  expect(within(lead).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
-  expect(within(screen.getByTestId('stage-contacted')).getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
-  expect(within(screen.getByTestId('stage-won')).getByText('Drop a lead here when it is won.')).toBeInTheDocument()
-})
+afterEach(() => localStorage.clear())
 
-test('on a phone, a card moves with its status picker, and Won says it became a client', async () => {
+/** The Pipeline inside the app shell, as the header's New needs. */
+function inLayout(path = '/pipeline') {
+  return renderApp(
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/pipeline" element={<PipelinePage />} />
+      </Route>
+    </Routes>,
+    path,
+  )
+}
+
+const cobalt = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
+const cobaltRoutes = {
+  'POST /api/orgs': () => cobalt,
+  'GET /api/orgs/by-slug/cobalt': () => cobalt,
+  'GET /api/orgs/3/contacts': () => [],
+  'GET /api/orgs/3/timeline': () => [],
+  'GET /api/orgs/3/research': () => [],
+  'GET /api/orgs/3/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+}
+
+const phone = () =>
   vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
-  const user = userEvent.setup()
-  const calls = stubFetch({
-    'GET /api/orgs?kind=lead': () => [a, b],
-    'PATCH /api/orgs/1': () => org({ ...a, kind: 'client', status: 'active' }),
-  })
+
+/** A stage's row group, found from its heading's fold button. */
+function stage(name: RegExp) {
+  return screen.getByRole('button', { name, hidden: true }).closest('tbody')!
+}
+
+test('stages appear in pipeline order with their count and total, and Won is not one', async () => {
+  stubFetch(routes)
   renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
+  await screen.findByRole('link', { name: 'Acme' })
+  const heads = screen.getAllByRole('rowheader').map((h) => h.querySelector('.tn-custom-stage-name')?.textContent)
+  expect(heads).toEqual(['Lead', 'Contacted', 'In conversation', 'Proposal sent', 'Lost', 'Parked'])
+  const lead = screen.getByRole('button', { name: /^Lead/ })
+  expect(lead).toHaveAccessibleName(expect.stringContaining('2 organisations, €12.5k'))
+  expect(lead).toHaveTextContent('2 · €12.5k')
+  expect(screen.queryByRole('button', { name: /^Won/ })).toBeNull()
+  expect(within(stage(/^Contacted/)).getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+})
+
+test('Lost and Parked start folded', async () => {
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: /^Parked/ })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.queryByRole('link', { name: 'Gone' })).toBeNull()
+})
+
+test('a heading folds and unfolds its stage, and the choice is remembered', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  const first = renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('button', { name: /^Lead/ }))
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  expect(localStorage.getItem('binder.pipeline.fold.lead')).toBe('closed')
+  await user.click(screen.getByRole('button', { name: /^Lost/ }))
+  expect(screen.getByRole('link', { name: 'Gone' })).toBeInTheDocument()
+  first.unmount()
+
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Gone' })
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+})
+
+test('a remembered open overrides a stage that starts folded', async () => {
+  localStorage.setItem('binder.pipeline.fold.parked', 'open')
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [org({ id: 6, name: 'Paused Co', slug: 'paused', status: 'parked' })] })
+  renderApp(<PipelinePage />)
+  expect(await screen.findByRole('link', { name: 'Paused Co' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^Parked/ })).toHaveAttribute('aria-expanded', 'true')
+})
+
+test('a heading counts only the rows the filters leave', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAccessibleName(expect.stringContaining('2 organisations'))
+  await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'zin')
+  expect(screen.getByRole('button', { name: /^Lead/ })).toHaveAccessibleName(expect.stringContaining('1 organisation, €500'))
+})
+
+test('while the filter box has text every stage shows, and the folds are kept for later', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  const box = screen.getByRole('searchbox', { name: 'Filter organisations' })
+  await user.type(box, 'gon')
+  expect(screen.getByRole('link', { name: 'Gone' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveAttribute('aria-expanded', 'true')
+  expect(localStorage.getItem('binder.pipeline.fold.lost')).toBeNull()
+  await user.clear(box)
+  expect(screen.queryByRole('link', { name: 'Gone' })).toBeNull()
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('rows within a stage run by due date, overdue first, then undated by name', async () => {
+  const rows = [
+    org({ id: 11, name: 'Later', slug: 'later', next_step_due: '2099-01-01' }),
+    org({ id: 12, name: 'beta', slug: 'beta' }),
+    org({ id: 13, name: 'Overdue', slug: 'overdue', next_step_due: '2020-01-01' }),
+    org({ id: 14, name: 'Alpha', slug: 'alpha' }),
+    org({ id: 15, name: 'Earlier name', slug: 'earlier-name', next_step_due: '2099-01-01' }),
+  ]
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => rows })
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Alpha' })
+  const names = within(stage(/^Lead/)).getAllByRole('link').map((l) => l.textContent)
+  // Two on the same day go by name.
+  expect(names).toEqual(['Overdue', 'Earlier name', 'Later', 'Alpha', 'beta'])
+})
+
+test('a row shows sector, next step with its due date, value, owner and last contact', async () => {
+  const full = org({
+    id: 1, name: 'Acme', slug: 'acme', sector: 'Retail', next_step: 'Send the proposal', next_step_due: '2099-01-01',
+    value_estimate: 12000, owner_email: 'rui@example.com', last_contact: null,
+  })
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [full] })
+  renderApp(<PipelinePage />)
+  const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
+  const cells = within(row).getAllByRole('cell').map((c) => c.textContent)
+  expect(cells[1]).toBe('Retail')
+  expect(cells[2]).toContain('Send the proposal')
+  expect(cells[3]).toBe('€12,000')
+  expect(cells[4]).toBe('rui')
+  expect(cells[5]).toBe('never')
+  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'Sector', 'Next step', 'Value', 'Owner', 'Last contact'])
+})
+
+test('the pipeline has a visually hidden title', async () => {
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})
+
+test('the phone pipeline has a visually hidden title too', async () => {
+  phone()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('heading', { level: 1 })).toHaveClass('tn-custom-sr-only')
+})
+
+test('rows carry no status picker', async () => {
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.queryByRole('button', { name: /Status/ })).toBeNull()
+})
+
+test('clicking a name opens it in the drawer, and a move there takes the row to its new stage', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': () => org({ ...a, status: 'contacted' }) })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
+  await waitFor(() =>
+    expect(within(stage(/^Contacted/)).getByRole('link', { name: 'Acme', hidden: true })).toBeInTheDocument(),
+  )
+  expect(within(stage(/^Lead/)).queryByRole('link', { name: 'Acme', hidden: true })).toBeNull()
+})
+
+test('Won from the drawer says it became a client and takes it off the Pipeline', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': () => org({ ...a, kind: 'client', status: 'active' }) })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Status' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Won' }))
   expect(await screen.findByText('Acme is now a client.')).toBeInTheDocument()
-  expect(calls[1].body).toEqual({ updated_at: a.updated_at, status: 'won' })
-  await waitFor(() => expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull())
+  await waitFor(() => expect(within(stage(/^Lead/)).queryByRole('link', { name: 'Acme', hidden: true })).toBeNull())
 })
 
-test('desktop cards also carry a status picker, and a failed move shows a notice and reloads', async () => {
+test('after Won, a later save of the same client does not announce it again', async () => {
   const user = userEvent.setup()
-  const calls = stubFetch({
-    'GET /api/orgs?kind=lead': () => [a, b],
-    'PATCH /api/orgs/1': () =>
-      new Response(JSON.stringify({ detail: 'Server error' }), { status: 500 }),
-  })
-  renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
-  expect(await screen.findByText('Server error')).toBeInTheDocument()
-  await waitFor(() => expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(2))
-})
-
-test('two quick moves do not undo each other', async () => {
-  const user = userEvent.setup()
+  const won = org({ ...a, kind: 'client', status: 'active' })
   stubFetch({
-    'GET /api/orgs?kind=lead': () => [a, b],
-    'PATCH /api/orgs/1': () => org({ ...a, status: 'contacted' }),
-    'PATCH /api/orgs/2': () => org({ ...b, status: 'parked' }),
+    ...routes,
+    'PATCH /api/orgs/1': (body) => ((body as { status?: string }).status ? won : org({ ...won, sector: 'Retail', updated_at: '2026-11-11T12:00:00.000000+00:00' })),
   })
   renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
-  await user.click(await screen.findByRole('button', { name: 'Status of Bolt' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Parked' }))
-  await waitFor(() => expect(within(screen.getByTestId('stage-parked')).getByRole('link', { name: 'Bolt' })).toBeInTheDocument())
-  expect(within(screen.getByTestId('stage-contacted')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Won' }))
+  expect(await screen.findByText('Acme is now a client.')).toBeInTheDocument()
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Edit' }))
+  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(screen.queryByText('Acme is now a client.')).toBeNull())
 })
 
-test('on a phone the empty Won stage does not tell you to drag', async () => {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
+test('a client opened by its link and edited in the drawer shows no notice', async () => {
   const user = userEvent.setup()
-  stubFetch({ 'GET /api/orgs?kind=lead': () => [a, b] })
-  renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('radio', { name: /Won/ }))
-  expect(screen.getByText('No won leads yet.')).toBeInTheDocument()
-  expect(screen.queryByText(/Drop a lead/)).toBeNull()
-})
-
-test('a stale move shows the current record without reloading the list', async () => {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }))
-  const user = userEvent.setup()
+  const client = org({ id: 1, slug: 'acme', name: 'Acme', kind: 'client', status: 'active' })
   const calls = stubFetch({
-    'GET /api/orgs?kind=lead': () => [a, b],
-    'PATCH /api/orgs/1': () =>
-      new Response(JSON.stringify({ detail: 'Changed', current: { ...a, name: 'Acme Ltd', status: 'lead' } }), {
-        status: 409, headers: { 'Content-Type': 'application/json' },
-      }),
+    ...routes,
+    // A client is not on the Pipeline.
+    'GET /api/orgs?kind=lead': () => [b],
+    'GET /api/orgs/by-slug/acme': () => client,
+    'PATCH /api/orgs/1': () => org({ ...client, sector: 'Retail', updated_at: '2026-11-11T12:00:00.000000+00:00' }),
   })
+  renderApp(<PipelinePage />, '/pipeline?org=acme')
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: 'Edit' }))
+  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/orgs/1')).toBe(true))
+  await waitFor(() => expect(screen.getByRole('dialog', { name: 'Acme' })).toBeInTheDocument())
+  expect(screen.queryByText(/is now a client/)).toBeNull()
+})
+
+test('on a phone, rows are two-line items under the same stages, with no stage switcher', async () => {
+  phone()
+  const full = org({ ...a, sector: 'Retail', next_step: 'Send the proposal', owner_email: 'rui@example.com' })
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [full, b] })
   renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: 'Status of Acme' }))
-  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
-  expect(await screen.findByRole('link', { name: 'Acme Ltd' })).toBeInTheDocument()
-  expect(calls.filter((c) => c.key === 'GET /api/orgs?kind=lead')).toHaveLength(1)
+  const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
+  const cells = within(row).getAllByRole('cell')
+  expect(cells).toHaveLength(1)
+  expect(cells[0].children).toHaveLength(2)
+  expect(cells[0].children[0]).toHaveTextContent('Acme Retail')
+  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'rui'])
+  expect(screen.queryAllByRole('columnheader')).toHaveLength(0)
+  expect(screen.getByRole('button', { name: /^Lead/ })).toBeInTheDocument()
+  expect(screen.queryByRole('radiogroup')).toBeNull()
+})
+
+test('on a phone, a row also opens in the drawer', async () => {
+  phone()
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('the owner dropdown narrows the rows', async () => {
+  const user = userEvent.setup()
+  const c = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [a, b, c] })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('button', { name: 'Owner' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Me' }))
+  expect(screen.queryByRole('link', { name: 'Cobalt' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('the filter box narrows the rows, and says so when nothing is left', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  const box = await screen.findByRole('searchbox', { name: 'Filter organisations' })
+  await user.type(box, 'bol')
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+  await user.type(box, 'zzz')
+  expect(screen.getByText('Nothing matches these filters.')).toBeInTheDocument()
+  expect(screen.queryByRole('table')).toBeNull()
+})
+
+test('+ Add organisation saves a lead, opens it in the drawer and shows its row under Lead', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, ...cobaltRoutes })
+  inLayout('/pipeline?owner=ana%40example.com')
+  await user.type(await screen.findByRole('searchbox', { name: 'Filter organisations' }), 'zzz')
+  await user.click(screen.getByRole('button', { name: '+ Add organisation' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(await screen.findByRole('dialog', { name: 'Cobalt' })).toBeInTheDocument()
+  // The filters that would hide it are cleared, so its row is in the list behind the drawer.
+  expect(screen.getByRole('searchbox', { name: 'Filter organisations', hidden: true })).toHaveValue('')
+  expect(within(stage(/^Lead/)).getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+})
+
+test('New in the header shows the new lead under Lead, and closing the drawer focuses its row', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, ...cobaltRoutes })
+  inLayout()
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Cobalt' })
+  expect(within(stage(/^Lead/)).getByRole('link', { name: 'Cobalt', hidden: true })).toBeInTheDocument()
+  await user.click(within(drawer).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('link', { name: 'Cobalt' })).toHaveFocus()
+})
+
+test('closing the drawer returns focus to the row that opened it', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('link', { name: 'Acme' })).toHaveFocus()
+})
+
+test('moving a row to a folded stage and closing the drawer focuses that stage heading', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': () => org({ ...a, status: 'lost' }) })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Acme' }))
+  const drawer = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(drawer).getByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Lost' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: /^Lost.*2 organisations/, hidden: true })).toBeInTheDocument())
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /close/i }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(screen.getByRole('button', { name: /^Lost/ })).toHaveFocus()
+})
+
+test('the fold buttons stay enabled while filtering, say so, and do nothing', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  renderApp(<PipelinePage />)
+  await user.type(await screen.findByRole('searchbox', { name: 'Filter organisations' }), 'a')
+  const lead = screen.getByRole('button', { name: /^Lead/ })
+  expect(lead).toBeEnabled()
+  expect(lead).toHaveAttribute('aria-disabled', 'true')
+  expect(lead).toHaveAccessibleName(expect.stringContaining('(showing all while filtering)'))
+  await user.click(lead)
+  expect(lead).toHaveAttribute('aria-expanded', 'true')
+  expect(localStorage.getItem('binder.pipeline.fold.lead')).toBeNull()
+})
+
+test('an empty Pipeline says there are no leads, whatever the owner filter does not hide', async () => {
+  stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [] })
+  renderApp(<PipelinePage />)
+  expect(await screen.findByText('No leads yet.')).toBeInTheDocument()
 })

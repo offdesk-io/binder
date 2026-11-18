@@ -3,8 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
 import { Loading } from '../components/Loading'
+import { OrgDrawer } from '../components/OrgDrawer'
 import { StatusTag } from '../components/StatusTag'
+import { openInPlace } from '../lib/openInPlace'
 import { useApi } from '../lib/useApi'
+import { useOrgDrawer } from '../lib/useOrgDrawer'
 
 const GROUPS: { kind: SearchHit['kind']; title: string }[] = [
   { kind: 'org', title: 'Organisations' },
@@ -35,6 +38,7 @@ export function SearchPage() {
   const [params] = useSearchParams()
   const q = (params.get('q') ?? '').trim()
   const hits = useApi(() => (q ? api.search(q) : Promise.resolve([] as SearchHit[])), [q], { keep: true })
+  const drawer = useOrgDrawer()
 
   if (!q) return <ColumnEmpty>Type in the search box to find organisations, people and notes.</ColumnEmpty>
   if (hits.error) return <Alert tone="error">{hits.error.message}</Alert>
@@ -43,9 +47,7 @@ export function SearchPage() {
 
   return (
     <div className="tn-stack">
-      <div className="tn-toolbar">
-        <h1 className="tenon-heading-3">Search</h1>
-      </div>
+      <h1 className="tn-custom-sr-only">Search</h1>
       {GROUPS.map((g) => {
         const list = hits.data!.filter((h) => h.kind === g.kind)
         if (list.length === 0) return null
@@ -55,7 +57,11 @@ export function SearchPage() {
               {list.map((h) => (
                 <li key={`${h.kind}${h.id}`}>
                   <div className="tn-cluster">
-                    <Link to={hitLink(h)}>{h.title}</Link>
+                    {h.kind === 'org' ? (
+                      <Link to={hitLink(h)} data-org-open={h.org_slug} onClick={(e) => openInPlace(e, () => drawer.open(h.org_slug))}>{h.title}</Link>
+                    ) : (
+                      <Link to={hitLink(h)}>{h.title}</Link>
+                    )}
                     {h.kind !== 'org' && <span className="tn-custom-faint">· {h.org_name}</span>}
                     <StatusTag status={h.org_status} />
                   </div>
@@ -66,6 +72,7 @@ export function SearchPage() {
           </Column>
         )
       })}
+      <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={() => hits.reload()} onDeleted={() => hits.reload()} />
     </div>
   )
 }

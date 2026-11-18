@@ -146,7 +146,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
         <>
           {base && onDeleted && <ConfirmDelete what="organisation" onConfirm={() => void remove()} />}
           <span className="tn-custom-grow" />
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" form="org-form" disabled={busy}>Save</Button>
         </>
       }

@@ -1,10 +1,11 @@
-import { Alert, Button, Column, ColumnEmpty, Spinner } from '@tiagopedras/tenon'
+import { Alert, Button, ColumnEmpty, Spinner } from '@tiagopedras/tenon'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Contact, Research } from '../api/types'
 import { useSession } from '../app/session'
+import { Section } from '../pages/org/Section'
 import { day, label, person, usd } from '../lib/format'
 import { useApi, type Loaded } from '../lib/useApi'
 import { usePoll } from '../lib/usePoll'
@@ -82,9 +83,8 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
   }
 
   return (
-    <Column
+    <Section
       id="research"
-      titleAs="h2"
       title="Research"
       action={meta.ai && (
         <Button size="sm" variant="secondary" disabled={starting || running} onClick={() => void start()}>
@@ -139,6 +139,6 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
           )}
         </div>
       )}
-    </Column>
+    </Section>
   )
 }

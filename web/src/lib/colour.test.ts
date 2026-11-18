@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { SESSION } from '../test/render'
 import {
-  columnHead, dueTone, lastContactTone, relationshipTone, REASON_TONE, STAGE, stageColour, taskTone, TYPE, typeColour,
+  dueTone, relationshipTone, REASON_TONE, sectorColour, STAGE, stageColour, taskTone, TYPE, typeColour,
 } from './colour'
 
 const { meta } = SESSION
@@ -37,13 +37,6 @@ describe('stage colour', () => {
       expect(c.mark).not.toMatch(/color-/)
     }
   })
-
-  test('a pipeline column is success for won, error for lost, and quiet for parked', () => {
-    expect(columnHead('won')).toEqual({ tone: 'success', muted: false })
-    expect(columnHead('lost')).toEqual({ tone: 'error', muted: false })
-    expect(columnHead('parked')).toEqual({ tone: 'default', muted: true })
-    expect(columnHead('contacted')).toEqual({ tone: 'default', muted: false })
-  })
 })
 
 describe('interaction type colour', () => {
@@ -74,13 +67,6 @@ describe('relationship, due date and attention', () => {
   test('a missed next step is urgent, and going quiet or stuck is a warning', () => {
     expect(REASON_TONE).toEqual({ overdue: 'urgent', quiet: 'warning', stuck: 'warning' })
   })
-
-  test('last contact is success within the fortnight, and warning when stale or never', () => {
-    const now = new Date(2026, 10, 16, 9, 0)
-    expect(lastContactTone(new Date(2026, 10, 3, 9).toISOString(), now)).toBe('success')
-    expect(lastContactTone(new Date(2026, 9, 30, 9).toISOString(), now)).toBe('warning')
-    expect(lastContactTone(null, now)).toBe('warning')
-  })
 })
 
 describe('Bench task state', () => {
@@ -91,4 +77,16 @@ describe('Bench task state', () => {
     expect(taskTone('Cancelled')).toBe('neutral')
     expect(taskTone('Somewhere else')).toBe('neutral')
   })
+})
+
+test('a sector always gets the same chart colour, whatever its case or spacing', () => {
+  expect(sectorColour('Retail')).toEqual(sectorColour(' retail '))
+  expect(sectorColour('Retail').chart).toBeGreaterThanOrEqual(1)
+  expect(sectorColour('Retail').chart).toBeLessThanOrEqual(10)
+  expect(sectorColour('Retail').mark).toBe(`var(--tenon-chart-${sectorColour('Retail').chart})`)
+})
+
+test('different sectors spread across the colours', () => {
+  const names = ['Retail', 'Healthcare', 'Software', 'Logistics', 'Design agency', 'Food & drink', 'Education', 'Finance']
+  expect(new Set(names.map((n) => sectorColour(n).chart)).size).toBeGreaterThanOrEqual(5)
 })

@@ -199,7 +199,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
         <>
           {base && <ConfirmDelete what="log" onConfirm={() => void remove()} />}
           <span className="tn-custom-grow" />
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" form="log-form" disabled={busy}>Save</Button>
         </>
       }
@@ -221,7 +221,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
                   value={paste}
                   onChange={(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPaste(e.target.value)}
                 />
-                <Button variant="secondary" disabled={summarising || !paste.trim()} onClick={() => void summarise()}>
+                <Button variant="secondary" size="sm" disabled={summarising || !paste.trim()} onClick={() => void summarise()}>
                   {summarising ? 'Summarising…' : 'Summarise'}
                 </Button>
               </div>

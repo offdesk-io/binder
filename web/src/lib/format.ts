@@ -64,15 +64,20 @@ export function ago(iso: string | null | undefined, now: Date = new Date()): str
   return day(iso)
 }
 
-export function isOverdue(due: string | null | undefined, now: Date = new Date()): boolean {
-  return !!due && due < todayIso(now)
-}
-
 /** Offdesk works in euros. en-IE writes €12,000, as an English page expects. */
 const EUR = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 
 export function money(n: number | null | undefined): string {
   return n == null ? '' : EUR.format(n)
+}
+
+/** A value in euros for a card's chip: €950, €12k, €12.5k, €1.2M. Empty when there is none. */
+export function moneyShort(n: number | null | undefined): string {
+  if (n == null) return ''
+  const trim = (x: number) => String(Math.round(x * 10) / 10)
+  if (Math.abs(n) >= 1_000_000) return `€${trim(n / 1_000_000)}M`
+  if (Math.abs(n) >= 1000) return `€${trim(n / 1000)}k`
+  return `€${Math.round(n)}`
 }
 
 /** The value for an <input type="datetime-local">, in the browser's zone. */
@@ -90,6 +95,13 @@ export function fromLocalInput(value: string): string {
 /** The name part of an email, which is how people are shown in v1. */
 export function person(email: string | null | undefined): string {
   return email ? email.split('@')[0] : 'No owner'
+}
+
+/** Up to two capitals from the name part of an email, for an owner chip: ana.example@… is AE. */
+export function initials(email: string | null | undefined): string {
+  if (!email) return ''
+  const parts = email.split('@')[0].split(/[._-]+/).filter(Boolean)
+  return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join('')
 }
 
 /**

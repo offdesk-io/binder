@@ -61,14 +61,17 @@ screen.
   screen; the header search still searches everything.
 - **Columns.** Small uppercase headings with the stage's colour dot and a count
   on the right. Columns run to the bottom of the window. The board scrolls
-  sideways when the stages don't fit. Under each lead column, a dashed
-  `+ Add organisation` opens New with that stage set.
+  sideways when the stages don't fit. Under the Lead column, a dashed
+  `+ Add organisation` opens New. Only there, since a new organisation always
+  starts as a lead and the API has no way to create one at another stage.
 - **Cards**, in Bench's layout:
   1. sector, small uppercase, coloured;
   2. the name, bold;
   3. the next step, one muted line;
   4. one row of small chips: due date (red when late, as Bench does), value
-     (`€12k`), the main contact's initials.
+     (`€12k`), the owner's initials. (The organisation list carries no
+     contacts, and the API is out of scope, so the owner stands in for the
+     main contact.)
   The left edge stays the stage colour. The sector colour is fixed per sector
   name, picked from Tenon's chart colours the way Bench colours buckets, and
   must reach AA on the card in both themes. A card with no sector has no label.

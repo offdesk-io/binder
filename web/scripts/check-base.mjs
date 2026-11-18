@@ -13,8 +13,8 @@ function walk(d) {
     if (statSync(p).isDirectory()) { walk(p); continue }
     if (!/\.(html|js|css|webmanifest)$/.test(f)) continue
     const text = readFileSync(p, 'utf8')
-    for (const m of text.matchAll(/(?:href|src|action)=["'](\/[^"']*)["']/g)) {
-      const url = m[1]
+    for (const m of text.matchAll(/(?:href|src|action)=["'](\/[^"']*)["']|url\((['"]?)(\/[^)'"]*)\2\)/g)) {
+      const url = m[1] ?? m[3]
       if (!url.startsWith(base + '/') && !url.startsWith('/auth/')) bad.push(`${p}: ${url}`)
     }
   }

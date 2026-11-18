@@ -23,7 +23,10 @@ a:hover { text-decoration: underline; }
 .tn-custom-appbar-gap { flex: 1 1 auto; }
 .tn-custom-appbar-search { flex: 0 1 200px; min-width: 0; }
 .tn-custom-appbar-search .tn-custom-search { width: 100%; }
-.tn-custom-appbar-actions { display: flex; align-items: center; gap: var(--tenon-dimension-100); }
+.tn-custom-appbar-actions { display: flex; align-items: center; gap: var(--tenon-dimension-100); margin-left: auto; }
+
+/* Above the sticky bar (z-index 20) so the focused skip link is seen; below the modal layer. */
+.tn-skip-link { z-index: 30; }
 .tn-custom-me { white-space: nowrap; color: var(--tenon-text-subtle); }
 
 /* One pill holding the view tabs, Bench's .tabs and .tab. */
@@ -82,7 +85,7 @@ a:hover { text-decoration: underline; }
 
 /* The page under the header: full width, Bench's 16px gutters. */
 .tn-custom-main {
-  flex: 1; min-width: 0;
+  flex: 1; min-width: 0; scroll-margin-top: 64px;
   padding: var(--tenon-dimension-200) var(--tenon-dimension-200) var(--tenon-dimension-600);
 }
 

@@ -24,4 +24,6 @@ test('the header holds the brand, the tabs, the search slot and the actions', ()
 test('without tabs there is no nav', () => {
   renderApp(<AppHeader brand={<span>brand</span>} />)
   expect(screen.queryByRole('navigation')).toBeNull()
+  expect(screen.queryByRole('textbox')).toBeNull()
+  expect(screen.queryByRole('button')).toBeNull()
 })

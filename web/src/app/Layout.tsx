@@ -50,7 +50,7 @@ export function Layout() {
           </>
         }
       />
-      <main id="main" className="tn-custom-main">
+      <main id="main" tabIndex={-1} className="tn-custom-main">
         <Outlet />
       </main>
       {phone && <Nav />}

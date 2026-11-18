@@ -2,7 +2,8 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
+import * as embeddedModule from '../lib/embedded'
 import { org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { Layout } from './Layout'
@@ -165,4 +166,24 @@ test('a pending search keeps the organisation open in the drawer', async () => {
   app('/search?q=one&org=acme')
   await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'x')
   expect(await screen.findByText('at /search?q=onex&org=acme')).toBeInTheDocument()
+})
+
+test('inside a frame the header leaves out the wordmark, the name and Sign out', () => {
+  vi.spyOn(embeddedModule, 'isEmbedded').mockReturnValue(true)
+  app()
+  expect(screen.queryByRole('link', { name: 'Binder, home' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Ana')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Pipeline' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
+  vi.restoreAllMocks()
+})
+
+test('on its own the header is as before', () => {
+  vi.spyOn(embeddedModule, 'isEmbedded').mockReturnValue(false)
+  app()
+  expect(screen.getByRole('link', { name: 'Binder, home' })).toBeInTheDocument()
+  expect(screen.getByText('Ana')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  vi.restoreAllMocks()
 })

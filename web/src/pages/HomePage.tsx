@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { ActivityItem, Org } from '../api/types'
 import { useSession } from '../app/session'
-import { ColourDot } from '../components/ColourTag'
+import { ColourDot, DueDate } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
@@ -67,9 +67,12 @@ export function HomePage() {
               <OrgCard
                 key={a.org.id}
                 org={a.org}
-                footer={a.reasons.map((r) => (
-                  <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>
-                ))}
+                footer={
+                  <span className="tn-custom-chiprow">
+                    {a.org.next_step_due && <DueDate due={a.org.next_step_due} />}
+                    {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
+                  </span>
+                }
               />
             ))
           )}

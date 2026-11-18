@@ -62,3 +62,15 @@ test('closing hands focus to the element that opened this organisation, even if 
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.getByRole('link', { name: 'Acme card' })).toHaveFocus()
 })
+
+test('while loading the title is the slug, and a failed load offers Retry', async () => {
+  const user = userEvent.setup()
+  let ok = false
+  stubFetch({ ...routes, 'GET /api/orgs/by-slug/acme': () => (ok ? acme : new Response(JSON.stringify({ detail: 'Down' }), { status: 500 })) })
+  renderApp(<OrgDrawer slug="acme" onClose={() => {}} />)
+  expect(screen.getByRole('dialog', { name: 'acme' })).toBeInTheDocument()
+  const retry = await screen.findByRole('button', { name: 'Retry' })
+  ok = true
+  await user.click(retry)
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})

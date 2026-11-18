@@ -1,4 +1,4 @@
-import { Alert } from '@tiagopedras/tenon'
+import { Alert, Button } from '@tiagopedras/tenon'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { OrgDetail } from '../pages/org/OrgDetail'
@@ -16,8 +16,6 @@ interface Props {
   onDeleted?: (slug: string) => void
 }
 
-const quote = (s: string) => (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s.replace(/["\\]/g, '\\$&'))
-
 /** One organisation in the drawer over Pipeline, List or Home. */
 export function OrgDrawer({ slug, onClose, onChanged, onDeleted }: Props) {
   return slug ? <Loaded slug={slug} onClose={onClose} onChanged={onChanged} onDeleted={onDeleted} /> : null
@@ -25,14 +23,17 @@ export function OrgDrawer({ slug, onClose, onChanged, onDeleted }: Props) {
 
 function Loaded({ slug, onClose, onChanged, onDeleted }: Props & { slug: string }) {
   const org = useApi(() => api.orgBySlug(slug), [slug])
-  const title = org.data?.name ?? 'Organisation'
+  const title = org.data?.name ?? slug
   // The list behind may re-render while the drawer is open and replace the element that opened it, so focus goes
   // back to whichever element now carries this slug. The card and row links put data-org-open={slug} on themselves.
-  const returnFocus = () => document.querySelector<HTMLElement>(`[data-org-open="${quote(slug)}"]`)
+  const returnFocus = () => Array.from(document.querySelectorAll<HTMLElement>('[data-org-open]')).find((el) => el.dataset.orgOpen === slug) ?? null
   return (
     <Drawer open title={title} onClose={onClose} returnFocus={returnFocus}>
       {org.error && !org.data ? (
-        <Alert tone="error" title="Could not open this organisation">{org.error.message}</Alert>
+        <div className="tn-stack">
+          <Alert tone="error" title="Could not open this organisation">{org.error.message}</Alert>
+          <Button size="sm" variant="secondary" onClick={org.reload}>Retry</Button>
+        </div>
       ) : !org.data ? (
         <Loading />
       ) : (

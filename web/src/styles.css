@@ -333,3 +333,17 @@ a:hover { text-decoration: underline; }
   .tn-custom-find { width: 100%; }
   .tn-custom-filterbar > :last-child { margin-left: 0; }
 }
+
+/* Home's figures: one raised panel, three of Bench's COMPLETED boxes side by side. */
+.tn-custom-figures {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--tenon-background-raised);
+  border: var(--tenon-dimension-012) solid var(--tenon-stroke-default);
+  border-radius: var(--tenon-radius-md);
+}
+.tn-custom-figures > .tenon-stat { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.tn-custom-figures > .tenon-stat + .tenon-stat { border-left: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
+@media (max-width: 767px) {
+  .tn-custom-figures { grid-template-columns: minmax(0, 1fr); }
+  .tn-custom-figures > .tenon-stat + .tenon-stat { border-left: 0; border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
+}

@@ -6,9 +6,11 @@ import { useSession } from '../app/session'
 import { ColourDot, DueDate } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
+import { OrgDrawer } from '../components/OrgDrawer'
 import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
 import { ago, label, money, person, REASON_TEXT, statusLine } from '../lib/format'
 import { useApi } from '../lib/useApi'
+import { useOrgDrawer } from '../lib/useOrgDrawer'
 
 function what(a: ActivityItem): string {
   if (a.kind === 'status') return statusLine(a.from_status, a.to_status ?? '')
@@ -34,6 +36,7 @@ export function HomePage() {
   const attention = useApi(api.attention, [])
   const activity = useApi(() => api.activity(30), [])
   const orgs = useApi(() => api.orgs(), [])
+  const drawer = useOrgDrawer()
   const overdue = attention.data?.filter((a) => a.reasons.includes('overdue')).length ?? 0
   const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
@@ -44,7 +47,7 @@ export function HomePage() {
       ) : !figures ? (
         <Loading />
       ) : (
-        <div className="tn-stat-strip">
+        <section className="tn-custom-figures" data-testid="figures" aria-label="Figures">
           <Stat eyebrow="Open pipeline" value={money(figures.pipeline)} caption={`${figures.openLeads} open leads`} />
           <Stat
             eyebrow="Needs attention"
@@ -52,7 +55,7 @@ export function HomePage() {
             caption={`${figures.overdue} with a missed next step`}
           />
           <Stat eyebrow="Active clients" value={String(figures.active)} caption={`${figures.paused} paused`} />
-        </div>
+        </section>
       )}
       <div className="tn-grid tn-custom-split">
         <Column className="tn-col-8" titleAs="h2" title="Needs attention" count={attention.data?.length}>
@@ -67,6 +70,7 @@ export function HomePage() {
               <OrgCard
                 key={a.org.id}
                 org={a.org}
+                onOpen={(o) => drawer.open(o.slug)}
                 footer={
                   <span className="tn-custom-chiprow">
                     {a.org.next_step_due && <DueDate due={a.org.next_step_due} />}
@@ -101,6 +105,12 @@ export function HomePage() {
           )}
         </Column>
       </div>
+      <OrgDrawer
+        slug={drawer.slug}
+        onClose={drawer.close}
+        onChanged={() => { attention.reload(); orgs.reload(); activity.reload() }}
+        onDeleted={() => { attention.reload(); orgs.reload() }}
+      />
     </div>
   )
 }

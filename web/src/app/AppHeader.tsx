@@ -9,7 +9,7 @@ export interface AppTab {
 }
 
 export interface AppHeaderProps {
-  /** The wordmark, usually a link home. */
+  /** The wordmark, usually a link home. Null when the page is framed and the host shows its own. */
   brand: ReactNode
   /** The app's views, drawn as one segmented pill of links. Left out on a phone, where they move to a tab bar. */
   tabs?: AppTab[]
@@ -27,7 +27,7 @@ export interface AppHeaderProps {
 export function AppHeader({ brand, tabs, search, actions }: AppHeaderProps) {
   return (
     <header className="tn-custom-appbar">
-      <div className="tn-custom-appbar-brand">{brand}</div>
+      {brand && <div className="tn-custom-appbar-brand">{brand}</div>}
       {tabs && tabs.length > 0 && (
         <nav aria-label="Main">
           <ul className="tn-custom-pill">

@@ -30,7 +30,7 @@ STUBS = {
     "getent": '[ -n "${STUB_NO_USER-}" ] && exit 2; echo "binder:x:1000:1000::$STUB_HOME:/bin/bash"',
     "flock": "exit 0",
     "sleep": "exit 0",
-    "npm": ('echo "npm $*" >> "$STUB_LOG"\n'
+    "npm": ('echo "npm $* base=${BINDER_BASE-}" >> "$STUB_LOG"\n'
             'if [ -n "${STUB_NPM_FAIL-}" ] || grep -q BUILDFAIL "$STUB_APP/f.txt"; then exit 1; fi'),
     "curl": 'echo "curl $*" >> "$STUB_LOG"; if grep -q BAD "$STUB_APP/f.txt"; then printf 500; else printf 200; fi',
     "systemctl": (
@@ -120,7 +120,7 @@ def world(tmp_path):
         "STUB_HOME": str(tmp_path), "STUB_LOG": str(w.log), "STUB_APP": str(w.app),
         "STUB_DB": str(w.db), "STUB_PY": sys.executable, "STUB_MIGRATE": MIGRATE, "STUB_MIGRATE_ROW": MIGRATE_ROW,
         "BINDER_APP": str(w.app), "BINDER_DB_PATH": str(w.db), "BINDER_SNAPSHOTS": str(w.snaps),
-        "BINDER_DEPLOY_LOCK": str(tmp_path / "lock"), "BINDER_HEALTH_WAIT": "2",
+        "BINDER_DEPLOY_LOCK": str(tmp_path / "lock"), "BINDER_ENV_FILE": str(tmp_path / "binder.env"), "BINDER_HEALTH_WAIT": "2",
     })
     w.env = env
     w.run = lambda ref: subprocess.run(["bash", str(SCRIPT), ref], env=env,
@@ -261,3 +261,28 @@ def test_dies_clearly_without_a_binder_user(world):
     assert r.returncode != 0
     assert "no binder user" in r.stderr
     assert world.head() == world.a
+
+
+def test_the_build_gets_binder_base_from_the_env_file(world, tmp_path):
+    (tmp_path / "binder.env").write_text("BINDER_AUTH=header\nBINDER_BASE=/binder\n")
+    r = world.run(world.b)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "npm run build --silent base=/binder" in world.calls()
+
+
+def test_the_build_gets_no_base_when_the_env_file_sets_none(world, tmp_path):
+    (tmp_path / "binder.env").write_text("BINDER_AUTH=header\n")
+    r = world.run(world.b)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "npm run build --silent base=\n" in world.calls()
+
+
+@pytest.mark.parametrize("base", ["../x", "binder", "/Binder", "/a/b", "/binder/", "/a b"])
+def test_a_malformed_binder_base_stops_the_deploy_before_it_builds(world, tmp_path, base):
+    (tmp_path / "binder.env").write_text("BINDER_BASE=%s\n" % base)
+    r = world.run(world.b)
+    assert r.returncode != 0
+    assert "BINDER_BASE" in r.stderr
+    assert world.head() == world.a
+    calls = world.calls()
+    assert "npm" not in calls and "systemctl" not in calls

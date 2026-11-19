@@ -2,6 +2,8 @@
  * `detail`, a sentence to show people. A 409 adds `current`, the record as it
  * is now; a request-validation 422 adds `errors`. */
 
+import { withBase } from '../lib/base'
+
 export interface FieldError {
   loc: (string | number)[]
   msg: string
@@ -32,7 +34,7 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
-    res = await fetch(path, {
+    res = await fetch(withBase(path), {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),

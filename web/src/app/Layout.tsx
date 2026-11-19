@@ -2,6 +2,7 @@ import { Button } from '@tiagopedras/tenon'
 import { useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
+import { isEmbedded } from '../lib/embedded'
 import { useIsPhone } from '../lib/useIsPhone'
 import type { Org } from '../api/types'
 import { AppHeader } from './AppHeader'
@@ -32,6 +33,8 @@ function Nav() {
 export function Layout() {
   const { me } = useSession()
   const phone = useIsPhone()
+  // Inside the Offdesk shell, the shell shows the brand, the person and Sign out.
+  const embedded = isEmbedded()
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
   // A page that lists organisations registers here what to do with a new one; with none, it gets its own page.
@@ -41,17 +44,19 @@ export function Layout() {
     <div className="tn-custom-app">
       <a className="tn-skip-link" href="#main">Skip to content</a>
       <AppHeader
-        brand={<Link to="/" aria-label="Binder, home"><Wordmark className="tn-custom-wordmark" /></Link>}
+        brand={embedded ? null : <Link to="/" aria-label="Binder, home"><Wordmark className="tn-custom-wordmark" /></Link>}
         tabs={phone ? undefined : NAV}
         search={<SearchBox />}
         actions={
           <>
             <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
-            {!phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
+            {!embedded && !phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
             {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
-            <form method="post" action="/auth/logout">
-              <Button size="sm" variant="ghost" type="submit">Sign out</Button>
-            </form>
+            {!embedded && (
+              <form method="post" action="/auth/logout">
+                <Button size="sm" variant="ghost" type="submit">Sign out</Button>
+              </form>
+            )}
           </>
         }
       />

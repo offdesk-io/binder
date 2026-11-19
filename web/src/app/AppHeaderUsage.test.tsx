@@ -1,7 +1,12 @@
 import { screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import { renderApp } from '../test/render'
-import { AppHeader } from './AppHeader'
+import { AppHeader } from '@tiagopedras/tenon'
+import { NavLink } from 'react-router-dom'
+
+const link = ({ tab, className, children }: { tab: { to: string; end?: boolean }; className: string; children: React.ReactNode }) => (
+  <NavLink to={tab.to} end={tab.end} className={className}>{children}</NavLink>
+)
 
 const TABS = [
   { to: '/', label: 'Home', end: true },
@@ -10,7 +15,7 @@ const TABS = [
 
 test('the header holds the brand, the tabs, the search slot and the actions', () => {
   renderApp(
-    <AppHeader brand={<span>brand</span>} tabs={TABS} search={<input aria-label="Find" />} actions={<button>Go</button>} />,
+    <AppHeader brand={<span>brand</span>} tabs={TABS} renderLink={link} search={<input aria-label="Find" />} actions={<button>Go</button>} />,
     '/pipeline',
   )
   expect(screen.getByRole('banner')).toBeInTheDocument()

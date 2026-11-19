@@ -1,11 +1,10 @@
-import { Button } from '@tiagopedras/tenon'
+import { AppHeader, Button } from '@tiagopedras/tenon'
 import { useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
 import { isEmbedded } from '../lib/embedded'
 import { useIsPhone } from '../lib/useIsPhone'
 import type { Org } from '../api/types'
-import { AppHeader } from './AppHeader'
 import type { NewOrgContext } from './newOrg'
 import { SearchBox } from './SearchBox'
 import { useSession } from './session'
@@ -17,7 +16,7 @@ const NAV = [
   { to: '/list', label: 'List', end: false },
 ]
 
-/** On a phone the views are a tab bar at the foot of the screen; on a desktop they are AppHeader's tabs. */
+/** On a phone the views are a tab bar at the foot of the screen; on a desktop they are the AppHeader's tabs. */
 function Nav() {
   return (
     <nav aria-label="Main" className="tn-custom-tabs">
@@ -41,11 +40,14 @@ export function Layout() {
   const created = useRef<((org: Org) => void) | null>(null)
   const context: NewOrgContext = { open: () => setCreating(true), created }
   return (
-    <div className="tn-custom-app">
+    <>
       <a className="tn-skip-link" href="#main">Skip to content</a>
       <AppHeader
         brand={embedded ? null : <Link to="/" aria-label="Binder, home"><Wordmark className="tn-custom-wordmark" /></Link>}
         tabs={phone ? undefined : NAV}
+        renderLink={({ tab, className, children }) => (
+          <NavLink to={tab.to} end={tab.end} className={className}>{children}</NavLink>
+        )}
         search={<SearchBox />}
         actions={
           <>
@@ -60,7 +62,7 @@ export function Layout() {
           </>
         }
       />
-      <main id="main" tabIndex={-1} className="tn-custom-main">
+      <main id="main" tabIndex={-1} className="tn-page tn-custom-main">
         <Outlet context={context} />
       </main>
       {phone && <Nav />}
@@ -73,6 +75,6 @@ export function Layout() {
           else navigate(`/o/${o.slug}`)
         }}
       />
-    </div>
+    </>
   )
 }

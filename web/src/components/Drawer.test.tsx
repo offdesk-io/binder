@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Dropdown } from '@tiagopedras/tenon'
+import { Drawer, Dropdown } from '@tiagopedras/tenon'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
-import { Drawer } from './Drawer'
 
 function Harness({ onClose = () => {} }: { onClose?: () => void }) {
   const [open, setOpen] = useState(false)

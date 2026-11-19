@@ -1,9 +1,8 @@
-import { Alert, Button } from '@tiagopedras/tenon'
+import { Alert, Button, Drawer } from '@tiagopedras/tenon'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { OrgDetail } from '../pages/org/OrgDetail'
 import { useApi } from '../lib/useApi'
-import { Drawer } from './Drawer'
 import { Loading } from './Loading'
 
 interface Props {

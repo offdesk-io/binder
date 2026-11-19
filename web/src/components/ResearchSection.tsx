@@ -129,7 +129,7 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
               <ul className="tn-custom-runs">
                 {list.map((r) => (
                   <li key={r.id}>
-                    <Button size="sm" variant="ghost" aria-pressed={shown?.id === r.id} disabled={!r.brief} onClick={() => setPicked(r.id)}>
+                    <Button size="sm" variant="ghost" pressed={shown?.id === r.id} disabled={!r.brief} onClick={() => setPicked(r.id)}>
                       {runLine(r)}
                     </Button>
                   </li>

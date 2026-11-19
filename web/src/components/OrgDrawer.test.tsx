@@ -33,8 +33,8 @@ test('the stage picker, Log, Edit and Open page sit in the drawer head, not its 
   stubFetch(routes)
   renderApp(<OrgDrawer slug="acme" onClose={() => {}} />)
   const dialog = await screen.findByRole('dialog', { name: 'Acme' })
-  const head = dialog.querySelector('.tn-custom-drawer-head') as HTMLElement
-  const body = dialog.querySelector('.tn-custom-drawer-body') as HTMLElement
+  const head = dialog.querySelector('.tenon-drawer__head') as HTMLElement
+  const body = dialog.querySelector('.tenon-drawer__body') as HTMLElement
   const open = await within(head).findByRole('link', { name: 'Open page' })
   expect(open).toHaveAttribute('href', '/o/acme')
   expect(open).toHaveClass('tenon-button')

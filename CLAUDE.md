@@ -24,13 +24,14 @@ There are six plans, each one spec → plan → build → review:
 3. AI (research briefs and paste-and-summarise): done.
 4. Bench link and import: merged to `main`. Bench's side (`feature/lead-tag`)
    is a PR for the owner's review.
-5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: built on
-   `feature/deploy`.
+5. Deploy: nginx, systemd, CI and deploy scripts on Hetzner: merged to
+   `main` and live at binder.offdesk.io. The ruleset on `main` waits for the
+   organisation's Team plan. Sign-in links landing on Bench is issue #10.
 6. UI consistency with Bench (header bar, cards, the organisation
    drawer), plus its follow-up after the owner's first try (Pipeline as a
    list grouped by stage, kind chips and A to Z on the List, Owner
    dropdown; `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`):
-   in progress on `feature/ui-consistency`.
+   merged to `main` (PR #11) and live.
 
 ## Run and test
 

@@ -36,7 +36,7 @@ interface SectionProps extends Pick<ColumnProps, 'count' | 'titleAfter'> {
 
 /**
  * One section of an organisation: a Tenon Column with an h2 on the page, and in the drawer a collapsible Column
- * with an h3 whose open state is kept per device, as Bench's drawer sections are.
+ * with an h3 whose open state is kept per device.
  */
 export function Section({ id, title, action, count, titleAfter, children }: SectionProps) {
   const frame = useFrame()

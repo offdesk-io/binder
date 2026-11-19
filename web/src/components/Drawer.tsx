@@ -24,7 +24,7 @@ export const useDrawerTools = () => useContext(ToolsSlot)
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
 /**
- * A panel that slides in from the right over the page, in the shape Bench's task drawer has. It is a modal dialog:
+ * A panel that slides in from the right over the page. It is a modal dialog:
  * a scrim dims the page, focus moves in and stays in, Escape or the scrim or Close shut it, and focus goes back to
  * whatever had it before. On a phone it is the whole screen. Written to move into Tenon unchanged.
  */

@@ -26,7 +26,7 @@ interface OrgCardProps extends Omit<CardProps, 'title'> {
 }
 
 /**
- * One organisation as a card in Bench's layout: sector as the eyebrow in its colour, the name, the next step, and a
+ * One organisation as a card: sector as the eyebrow in its colour, the name, the next step, and a
  * row of chips (due date, value, the owner's initials). The left stripe is the stage's colour. Any other Card prop
  * passes through. The name link carries data-org-open, so the drawer can hand focus back to this card when it closes.
  */

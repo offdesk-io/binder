@@ -7,10 +7,10 @@ a { text-decoration: none; }
 a:hover { text-decoration: underline; }
 a.tenon-button:hover { text-decoration: none; }
 
-/* The app frame: full window width, the header on top. Bench has no centred column, and neither does Binder. */
+/* The app frame: full window width, the header on top, no centred column. */
 .tn-custom-app { min-height: 100vh; display: flex; flex-direction: column; }
 
-/* AppHeader, in Bench's header's shape (bench/kanban/board.css, "header"). */
+/* AppHeader: the sticky top bar. */
 .tn-custom-appbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
@@ -30,7 +30,7 @@ a.tenon-button:hover { text-decoration: none; }
 .tn-skip-link { z-index: 30; }
 .tn-custom-me { white-space: nowrap; color: var(--tenon-text-subtle); }
 
-/* One pill holding the view tabs, Bench's .tabs and .tab. */
+/* One pill holding the view tabs. */
 .tn-custom-pill {
   list-style: none; margin: 0;
   display: inline-flex; gap: 3px; padding: 3px;
@@ -93,7 +93,7 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-drawer-tools-slot .tn-custom-status { min-width: 0; }
 }
 
-/* The page under the header: full width, Bench's 16px gutters. */
+/* The page under the header: full width, 16px gutters. */
 .tn-custom-main {
   flex: 1; min-width: 0; scroll-margin-top: 64px;
   padding: var(--tenon-dimension-200) var(--tenon-dimension-200) var(--tenon-dimension-600);
@@ -109,18 +109,18 @@ a.tenon-button:hover { text-decoration: none; }
 .tn-custom-grow { flex: 1; }
 .tn-custom-loading { display: flex; justify-content: center; padding: var(--tenon-dimension-400); }
 
-/* A page's own filter box, Bench's "Search tasks…": Tenon's Input, narrower and at the chip row's height. */
+/* A page's own filter box: Tenon's Input, narrower and at the chip row's height. */
 .tn-custom-find {
   width: 200px; max-width: 100%; min-height: 0; padding: 6px 10px;
   border-radius: var(--tenon-radius-default); font-size: var(--tenon-typography-size-sm);
 }
-/* A card's sector label: Bench's bucket name, small, bold, uppercase, in the sector's chart colour. */
+/* A card's sector label: small, bold, uppercase, in the sector's chart colour. */
 .tn-custom-sector {
   font-size: var(--tenon-typography-size-xs); font-weight: 700;
   letter-spacing: .03em; text-transform: uppercase;
   color: var(--tn-sector);
 }
-/* Bench's card title: bold, in ink rather than link blue (the global a:hover still underlines it). These rules are
+/* A card's title: bold, in ink rather than link blue (the global a:hover still underlines it). These rules are
  * deliberately global: OrgCard is the only Card in the app. Then the chip row under the title. */
 .tenon-card .tenon-card__title { font-weight: 650; }
 .tenon-card__title a, .tenon-card__title a:hover { color: var(--tenon-text-default); }
@@ -133,7 +133,7 @@ a.tenon-button:hover { text-decoration: none; }
   font-size: var(--tenon-typography-size-xs); font-weight: 650;
 }
 
-/* The Pipeline: one table, a folding heading row per stage in Bench's head type, then the stage's rows. */
+/* The Pipeline: one table, a folding heading row per stage in the uppercase head type, then the stage's rows. */
 .tn-custom-stage-head th { padding: 0; background: var(--tenon-background-neutral); }
 .tn-custom-stage-toggle {
   display: flex; align-items: center; gap: 8px; width: 100%;
@@ -258,7 +258,7 @@ a.tenon-button:hover { text-decoration: none; }
 .tn-custom-table th:first-child,
 .tn-custom-table td:first-child { white-space: normal; }
 
-/* The list in Bench's style: an uppercase head row (tn-page.css already draws the hairline rows). */
+/* The list: an uppercase head row (tn-page.css already draws the hairline rows). */
 .tn-custom-table thead th {
   font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   color: var(--tenon-text-faint);
@@ -280,7 +280,7 @@ a.tenon-button:hover { text-decoration: none; }
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* Column and section heads in Bench's style: small, bold, uppercase, tracked (bench/kanban/board.css, .tenon-column__head). */
+/* Column and section heads: small, bold, uppercase, tracked. */
 .tenon-column__head {
   padding: 11px 13px 9px; min-height: 41px; gap: 8px;
   font-size: var(--tenon-typography-size-sm); font-weight: 700;
@@ -289,14 +289,14 @@ a.tenon-button:hover { text-decoration: none; }
 .tenon-column__title { font: inherit; letter-spacing: inherit; margin: 0; }
 .tenon-column__count { font-weight: 600; color: var(--tenon-text-faint); }
 
-/* A Stat's figure in ink, its label small and uppercase, as Bench's COMPLETED box. */
+/* A Stat's figure in ink, its label small and uppercase. */
 .tenon-stat { color: var(--tenon-text-default); }
 .tenon-stat__eyebrow {
   font-size: var(--tenon-typography-size-xs); font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--tenon-text-subtle);
 }
 
-/* Drawer, in the shape of Bench's task drawer (bench/kanban/board.css, "drawer"). */
+/* Drawer: a side panel over the page. */
 .tn-custom-scrim {
   position: fixed; inset: 0; z-index: 30;
   background: var(--tenon-background-overlay);
@@ -340,7 +340,7 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-drawer-tools-slot { order: 3; flex: 1 1 100%; }
 }
 
-/* Filter chips: the header's pill, with a count per chip, as Bench's bucket strip. */
+/* Filter chips: the header's pill, with a count per chip. */
 .tn-custom-chips { flex-wrap: wrap; }
 .tn-custom-chips .tn-custom-pill-tab { border: 0; background: transparent; cursor: pointer; font: inherit; font-size: var(--tenon-typography-size-sm); font-weight: 560; }
 .tn-custom-chips .tn-custom-pill-tab[aria-pressed="true"] { background: var(--tenon-background-raised); color: var(--tenon-text-default); }
@@ -364,7 +364,7 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-filterbar-end .tn-custom-find { flex: 1; width: auto; }
 }
 
-/* Home's figures: one raised panel, three of Bench's COMPLETED boxes side by side. */
+/* Home's figures: one raised panel, three figures side by side. */
 .tn-custom-figures {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
   background: var(--tenon-background-raised);

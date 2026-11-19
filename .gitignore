@@ -14,3 +14,4 @@ web/playwright-report/
 import-plan.csv
 import-links.json
 web/dist-base/
+IMPROVEMENTS.md

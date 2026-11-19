@@ -9,7 +9,7 @@ const link = ({ tab, className, children }: { tab: { to: string; end?: boolean }
 )
 
 const TABS = [
-  { to: '/', label: 'Home', end: true },
+  { to: '/', label: 'Overview', end: true },
   { to: '/pipeline', label: 'Pipeline' },
 ]
 
@@ -21,7 +21,7 @@ test('the header holds the brand, the tabs, the search slot and the actions', ()
   expect(screen.getByRole('banner')).toBeInTheDocument()
   expect(screen.getByText('brand')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Pipeline' })).toHaveAttribute('aria-current', 'page')
-  expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current')
+  expect(screen.getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current')
   expect(screen.getByRole('textbox', { name: 'Find' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Go' })).toBeInTheDocument()
 })

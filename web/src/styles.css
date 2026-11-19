@@ -45,10 +45,6 @@ a.tenon-button:hover { text-decoration: none; }
 /* Colour. A stage, type or due colour comes from a Tag or Card prop. These are the few places a prop cannot reach.
  * The stage and type colour arrives in --tn-stage and --tn-dot, set from lib/colour.ts. */
 
-/* The page sits on Tenon's recessed surface, so the raised cards read as cards: a tint in light, black in dark.
- * :root raises the rule's specificity above the body's own tn-shell background. */
-:root body { background: var(--tenon-background-sunken); }
-
 /* A categorical Tag. Tenon draws a chart colour as text on the neutral chip, and in light mode six of the ten
  * fail AA there. On the raised surface each reaches AA in both themes, so the chip sits on the raised surface
  * with a hairline edge and the colour stays in the text and the dot. */

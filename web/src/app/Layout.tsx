@@ -62,7 +62,7 @@ export function Layout() {
           </>
         }
       />
-      <main id="main" tabIndex={-1} className="tn-page tn-custom-main">
+      <main id="main" tabIndex={-1} className="tn-custom-main">
         <Outlet context={context} />
       </main>
       {phone && <Nav />}

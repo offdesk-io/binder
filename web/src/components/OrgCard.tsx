@@ -23,6 +23,11 @@ interface OrgCardProps extends Omit<CardProps, 'title'> {
   org: Org
   /** Open the organisation in place (the drawer). A plain or keyboard click calls this; a modified click follows the link. */
   onOpen?: (org: Org) => void
+  /** Show the stage tag. A card inside a stage's column leaves it off, since the column says it. */
+  showStatus?: boolean
+  /** A click anywhere on the card opens it, as the name's link does. The click is handled once, on the card, and the
+   * link stays a real link for the keyboard and a modified click. */
+  openOnCard?: boolean
 }
 
 /**
@@ -30,21 +35,23 @@ interface OrgCardProps extends Omit<CardProps, 'title'> {
  * row of chips (due date, value, the owner's initials). The left stripe is the stage's colour. Any other Card prop
  * passes through. The name link carries data-org-open, so the drawer can hand focus back to this card when it closes.
  */
-export function OrgCard({ org, onOpen, ...rest }: OrgCardProps) {
-  const open = (e: MouseEvent<HTMLAnchorElement>) => {
+export function OrgCard({ org, onOpen, showStatus = true, openOnCard = false, ...rest }: OrgCardProps) {
+  const open = (e: MouseEvent<HTMLElement>) => {
     if (onOpen) openInPlace(e, () => onOpen(org))
   }
   return (
     <Card
       eyebrow={org.sector?.trim() ? <SectorLabel sector={org.sector} /> : undefined}
       title={
-        <Link to={`/o/${org.slug}`} data-org-open={org.slug} onClick={open}>
+        <Link to={`/o/${org.slug}`} data-org-open={org.slug} onClick={openOnCard ? undefined : open}>
           {org.name}
         </Link>
       }
       titleAs="h3"
       accent={stageColour(org.status).mark}
-      tags={<StatusTag status={org.status} />}
+      tags={showStatus ? <StatusTag status={org.status} /> : undefined}
+      interactive={openOnCard || undefined}
+      onClick={openOnCard ? open : undefined}
       summary={org.next_step ? <span className="tn-custom-muted">{org.next_step}</span> : undefined}
       footer={
         <span className="tn-custom-chiprow">

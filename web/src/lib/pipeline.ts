@@ -25,3 +25,13 @@ export function stages(orgs: Org[], statuses: string[]): Stage[] {
 
 /** A stage that starts folded the first time: one that is closed for good or parked. */
 export const FOLDED_BY_DEFAULT = new Set(['lost', 'parked'])
+
+/** Take back a move that failed to save: the copy now in the list keeps whatever else changed meanwhile (a drawer
+ * save, say), and only the status goes back, and only if nobody has moved it since. A record no longer in the list
+ * stays out. */
+export function undoMove(list: Org[] | undefined, was: Org, movedTo: string): Org[] {
+  const rest = list ?? []
+  const now = rest.find((o) => o.id === was.id)
+  if (!now || now.status !== movedTo) return rest
+  return rest.map((o) => (o.id === was.id ? { ...now, status: was.status } : o))
+}

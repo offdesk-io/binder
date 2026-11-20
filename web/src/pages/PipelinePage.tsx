@@ -1,5 +1,5 @@
 import { Alert, Button, ColumnEmpty, Dropdown, Input, SegmentedControl } from '@tiagopedras/tenon'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
@@ -10,7 +10,7 @@ import { OrgDrawer } from '../components/OrgDrawer'
 import { saveErrorText } from '../lib/forms'
 import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
-import { stages } from '../lib/pipeline'
+import { stages, undoMove } from '../lib/pipeline'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
@@ -56,8 +56,12 @@ export function PipelinePage() {
 
   function chooseView(v: View) {
     setView(v)
+    setMoveError(undefined)
     writeView(v)
   }
+
+  // A failed move's message belongs to the board behind; opening a record moves on from it.
+  useEffect(() => { if (drawer.slug) setMoveError(undefined) }, [drawer.slug])
 
   /** A card dropped on another stage: shown there at once, then saved with only the status. A failed save puts it
    * back; a stale one (409) takes the server's current copy. */
@@ -73,7 +77,7 @@ export function PipelinePage() {
     } catch (e) {
       setMoveError(saveErrorText(e))
       const current = e instanceof ApiError && e.status === 409 ? (e.current as Org | undefined) : undefined
-      orgs.setData((prev) => place(prev, current ?? org))
+      orgs.setData((prev) => (current ? place(prev, current) : undoMove(prev, org, status)))
     } finally {
       moving.current.delete(org.id)
     }

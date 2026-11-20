@@ -492,3 +492,66 @@ test('on a phone the columns still render', async () => {
   await openColumns()
   expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6)
 })
+
+const failing = () => new Response(JSON.stringify({ detail: 'Server on fire' }), { status: 500 })
+const openAcme = {
+  'GET /api/orgs/by-slug/acme': () => a,
+  'GET /api/orgs/1/contacts': () => [],
+  'GET /api/orgs/1/timeline': () => [],
+  'GET /api/orgs/1/research': () => [],
+  'GET /api/orgs/1/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+  'GET /api/orgs/by-slug/bolt': () => b,
+  'GET /api/orgs/2/contacts': () => [],
+  'GET /api/orgs/2/timeline': () => [],
+  'GET /api/orgs/2/research': () => [],
+  'GET /api/orgs/2/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+}
+
+test('a failed move\'s alert goes when the view changes', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': failing })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Server on fire')
+  await user.click(screen.getByRole('radio', { name: 'List' }))
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('a failed move\'s alert goes when the drawer opens', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, ...openAcme, 'PATCH /api/orgs/1': failing })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  await screen.findByText('Server on fire')
+  await user.click(screen.getByRole('link', { name: 'Bolt' }))
+  await screen.findByRole('dialog')
+  expect(screen.queryByText('Server on fire')).toBeNull()
+})
+
+test('a failed move keeps what the drawer saved meanwhile and puts only the status back', async () => {
+  const user = userEvent.setup()
+  let release: (r: Response) => void = () => {}
+  let calls = 0
+  stubFetch({
+    ...routes,
+    ...openAcme,
+    'PATCH /api/orgs/1': () => {
+      calls++
+      if (calls === 1) return new Promise<Response>((res) => { release = res })
+      return { ...a, status: 'contacted', next_step: 'Call Acme', updated_at: 'later' }
+    },
+  })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  // The drawer saves the same record while the move is in flight (here: a status the move also targets).
+  await user.click(within(columnOf('Contacted')).getByRole('link', { name: 'Acme' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Acme' })
+  await user.click(within(dialog).getByRole('button', { name: 'Status' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Contacted' }))
+  await user.click(within(dialog).getByRole('button', { name: /close/i }))
+  release(failing())
+  await screen.findByText('Server on fire')
+  const card = within(columnOf('Lead')).getByRole('link', { name: 'Acme' }).closest('.tenon-card') as HTMLElement
+  expect(card).toHaveTextContent('Call Acme')
+  expect(within(columnOf('Contacted')).queryByRole('link', { name: 'Acme' })).toBeNull()
+})

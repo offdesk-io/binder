@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { org } from '../test/fixtures'
-import { FOLDED_BY_DEFAULT, stages } from './pipeline'
+import { FOLDED_BY_DEFAULT, stages, undoMove } from './pipeline'
 
 test('stages follow the given order, and an empty stage still appears', () => {
   const out = stages([org({ id: 1, status: 'contacted' }), org({ id: 2, status: 'lead' })], ['lead', 'contacted', 'lost'])
@@ -32,4 +32,19 @@ test('a stage totals its values, counting none as nothing', () => {
 
 test('lost and parked start folded', () => {
   expect([...FOLDED_BY_DEFAULT].sort()).toEqual(['lost', 'parked'])
+})
+
+test('undoMove puts only the status back and keeps a newer copy of the rest', () => {
+  const was = org({ id: 1, status: 'lead', next_step: null })
+  const newer = org({ id: 1, status: 'contacted', next_step: 'Call', updated_at: 'later' })
+  const other = org({ id: 2, status: 'lead' })
+  expect(undoMove([newer, other], was, 'contacted')).toEqual([{ ...newer, status: 'lead' }, other])
+})
+
+test('undoMove leaves a record someone moved since, or that has left the list', () => {
+  const was = org({ id: 1, status: 'lead' })
+  const moved = org({ id: 1, status: 'parked' })
+  expect(undoMove([moved], was, 'contacted')).toEqual([moved])
+  expect(undoMove([], was, 'contacted')).toEqual([])
+  expect(undoMove(undefined, was, 'contacted')).toEqual([])
 })

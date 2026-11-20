@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -258,7 +258,7 @@ test('on a phone, rows are two-line items under the same stages, with no stage s
   expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'rui'])
   expect(screen.queryAllByRole('columnheader')).toHaveLength(0)
   expect(screen.getByRole('button', { name: /^Lead/ })).toBeInTheDocument()
-  expect(screen.queryByRole('radiogroup')).toBeNull()
+  expect(screen.queryByRole('radiogroup', { name: 'Stage' })).toBeNull()
 })
 
 test('on a phone, a row also opens in the drawer', async () => {
@@ -366,4 +366,129 @@ test('an empty Pipeline says there are no leads, whatever the owner filter does 
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [] })
   renderApp(<PipelinePage />)
   expect(await screen.findByText('No leads yet.')).toBeInTheDocument()
+})
+
+// The Columns view
+
+const dt = () => ({ setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '', dropEffect: '' })
+
+async function openColumns() {
+  localStorage.setItem('binder.pipeline.view', 'columns')
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+}
+
+/** The column a stage's heading belongs to, and its body, where drops land. */
+const columnOf = (name: string) => screen.getByRole('heading', { name, level: 2 }).closest('.tenon-column') as HTMLElement
+const bodyOf = (name: string) => columnOf(name).querySelector('.tenon-column__body') as HTMLElement
+
+function drag(card: string, to: string) {
+  const el = screen.getByRole('link', { name: card }).closest('[draggable="true"]') as HTMLElement
+  fireEvent.dragStart(el, { dataTransfer: dt() })
+  fireEvent.dragOver(bodyOf(to), { dataTransfer: dt() })
+  fireEvent.drop(bodyOf(to), { dataTransfer: dt() })
+}
+
+test('the toggle starts on List, switches to Columns, and the choice is remembered', async () => {
+  const user = userEvent.setup()
+  stubFetch(routes)
+  const first = renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('radio', { name: 'List' })).toHaveAttribute('aria-checked', 'true')
+  expect(screen.getByRole('table', { name: 'Leads by stage' })).toBeInTheDocument()
+  await user.click(screen.getByRole('radio', { name: 'Columns' }))
+  expect(screen.queryByRole('table')).toBeNull()
+  expect(localStorage.getItem('binder.pipeline.view')).toBe('columns')
+  first.unmount()
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  expect(screen.getByRole('radio', { name: 'Columns' })).toHaveAttribute('aria-checked', 'true')
+  expect(screen.queryByRole('table')).toBeNull()
+})
+
+test('the page works when storage is off', async () => {
+  stubFetch(routes)
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('off') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('off') })
+  const user = userEvent.setup()
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('radio', { name: 'Columns' }))
+  expect(screen.getByRole('heading', { name: 'Contacted', level: 2 })).toBeInTheDocument()
+  vi.restoreAllMocks()
+})
+
+test('Columns shows one column per stage, in order, without Won, each with its cards', async () => {
+  stubFetch(routes)
+  await openColumns()
+  const names = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+  expect(names).toEqual(['Lead', 'Contacted', 'In conversation', 'Proposal sent', 'Lost', 'Parked'])
+  expect(within(columnOf('Lead')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+  expect(within(columnOf('Lead')).getByRole('link', { name: 'Zinc' })).toBeInTheDocument()
+  expect(within(columnOf('Contacted')).getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+  expect(within(columnOf('Lost')).getByRole('link', { name: 'Gone' })).toBeInTheDocument()
+})
+
+test('the filters and the drawer work in Columns', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    ...routes,
+    'GET /api/orgs/by-slug/bolt': () => b,
+    'GET /api/orgs/2/contacts': () => [],
+    'GET /api/orgs/2/timeline': () => [],
+    'GET /api/orgs/2/research': () => [],
+    'GET /api/orgs/2/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+  })
+  await openColumns()
+  await user.type(screen.getByRole('searchbox', { name: 'Filter organisations' }), 'bol')
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  await user.click(screen.getByRole('link', { name: 'Bolt' }))
+  expect(await screen.findByRole('dialog', { name: 'Bolt' })).toBeInTheDocument()
+})
+
+test('dropping a card on another stage saves only the status and updated_at, and moves the card', async () => {
+  const calls = stubFetch({ ...routes, 'PATCH /api/orgs/1': () => ({ ...a, status: 'contacted', updated_at: '2026-11-11T09:00:00.000000+00:00' }) })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  await waitFor(() => expect(within(columnOf('Contacted')).getByRole('link', { name: 'Acme' })).toBeInTheDocument())
+  expect(within(columnOf('Lead')).queryByRole('link', { name: 'Acme' })).toBeNull()
+  await waitFor(() => expect(calls.filter((c) => c.key === 'PATCH /api/orgs/1')).toHaveLength(1))
+  expect(calls.find((c) => c.key === 'PATCH /api/orgs/1')!.body).toEqual({ status: 'contacted', updated_at: AT })
+})
+
+test('dropping a card on its own stage sends nothing', async () => {
+  const calls = stubFetch(routes)
+  await openColumns()
+  drag('Acme', 'Lead')
+  expect(calls.some((c) => c.key.startsWith('PATCH'))).toBe(false)
+  expect(within(columnOf('Lead')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('a failed save puts the card back and shows an alert', async () => {
+  stubFetch({ ...routes, 'PATCH /api/orgs/1': () => new Response(JSON.stringify({ detail: 'Server on fire' }), { status: 500 }) })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Server on fire')
+  expect(within(columnOf('Lead')).getByRole('link', { name: 'Acme' })).toBeInTheDocument()
+  expect(within(columnOf('Contacted')).queryByRole('link', { name: 'Acme' })).toBeNull()
+})
+
+test('a 409 loads the current copy into the list and says so', async () => {
+  const theirs = { ...a, status: 'in_conversation', updated_at: '2026-11-12T09:00:00.000000+00:00' }
+  stubFetch({
+    ...routes,
+    'PATCH /api/orgs/1': () => new Response(JSON.stringify({ detail: 'Changed', current: theirs }), { status: 409 }),
+  })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Someone changed this')
+  await waitFor(() => expect(within(columnOf('In conversation')).getByRole('link', { name: 'Acme' })).toBeInTheDocument())
+  expect(within(columnOf('Contacted')).queryByRole('link', { name: 'Acme' })).toBeNull()
+})
+
+test('on a phone the columns still render', async () => {
+  phone()
+  stubFetch(routes)
+  await openColumns()
+  expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(6)
 })

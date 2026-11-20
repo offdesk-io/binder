@@ -312,3 +312,14 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-figures { grid-template-columns: minmax(0, 1fr); }
   .tn-custom-figures > .tenon-stat + .tenon-stat { border-left: 0; border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
 }
+
+/* The Pipeline's Columns view: Tenon Columns side by side, scrolling across; stacked on a phone. */
+.tn-custom-pipeline-columns {
+  display: flex; align-items: flex-start; gap: var(--tenon-dimension-200); overflow-x: auto;
+  padding-bottom: var(--tenon-dimension-100);
+}
+.tn-custom-pipeline-columns > .tn-custom-pipeline-column { flex: 0 0 18rem; min-width: 0; }
+@media (max-width: 767px) {
+  .tn-custom-pipeline-columns { flex-direction: column; align-items: stretch; overflow-x: visible; }
+  .tn-custom-pipeline-columns > .tn-custom-pipeline-column { flex: none; }
+}

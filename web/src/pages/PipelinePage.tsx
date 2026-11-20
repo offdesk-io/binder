@@ -1,18 +1,40 @@
-import { Alert, Button, ColumnEmpty, Dropdown, Input } from '@tiagopedras/tenon'
-import { useState } from 'react'
+import { Alert, Button, ColumnEmpty, Dropdown, Input, SegmentedControl } from '@tiagopedras/tenon'
+import { useRef, useState } from 'react'
+import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useNewOrg } from '../app/newOrg'
 import { useSession } from '../app/session'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { saveErrorText } from '../lib/forms'
 import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
 import { stages } from '../lib/pipeline'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
+import { PipelineColumns } from './pipeline/PipelineColumns'
 import { StageGroup } from './pipeline/StageGroup'
+
+type View = 'list' | 'columns'
+const VIEW_KEY = 'binder.pipeline.view'
+
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'columns' ? 'columns' : 'list'
+  } catch {
+    return 'list' // Storage can be off (a private window); the default applies.
+  }
+}
+
+function writeView(view: View) {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+  } catch {
+    // The view still switches, it just isn't remembered.
+  }
+}
 
 /** A saved lead replaces its old copy; one that is no longer a lead leaves. */
 function place(prev: Org[] | undefined, org: Org): Org[] {
@@ -27,7 +49,35 @@ export function PipelinePage() {
   const [notice, setNotice] = useState<string>()
   const [owner, setOwner] = useOwnerFilter()
   const [find, setFind] = useState('')
+  const [view, setView] = useState<View>(readView)
+  const [moveError, setMoveError] = useState<string>()
+  const moving = useRef(new Set<number>())
   const drawer = useOrgDrawer()
+
+  function chooseView(v: View) {
+    setView(v)
+    writeView(v)
+  }
+
+  /** A card dropped on another stage: shown there at once, then saved with only the status. A failed save puts it
+   * back; a stale one (409) takes the server's current copy. */
+  async function moveTo(org: Org, status: string) {
+    if (status === org.status || moving.current.has(org.id)) return
+    moving.current.add(org.id)
+    setNotice(undefined)
+    setMoveError(undefined)
+    orgs.setData((prev) => place(prev, { ...org, status }))
+    try {
+      const saved = await api.patchOrg(org.id, { updated_at: org.updated_at, status })
+      orgs.setData((prev) => place(prev, saved))
+    } catch (e) {
+      setMoveError(saveErrorText(e))
+      const current = e instanceof ApiError && e.status === 409 ? (e.current as Org | undefined) : undefined
+      orgs.setData((prev) => place(prev, current ?? org))
+    } finally {
+      moving.current.delete(org.id)
+    }
+  }
 
   /** A record saved in the drawer goes to its stage. A lead that has just become a client leaves the Pipeline with a
    * notice; later saves of that client (or of one opened by its link) say nothing. */
@@ -65,6 +115,8 @@ export function PipelinePage() {
       <div className="tn-custom-filterbar">
         <Dropdown className="tn-custom-filter" aria-label="Owner" value={owner} onChange={setOwner}
           options={ownerOptions(orgs.data, me.email, owner)} />
+        <SegmentedControl aria-label="View" value={view} onChange={chooseView}
+          options={[{ value: 'list', label: 'List' }, { value: 'columns', label: 'Columns' }]} />
         <div className="tn-custom-filterbar-end">
           <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
             value={find} onChange={(e) => setFind(e.target.value)} />
@@ -72,8 +124,11 @@ export function PipelinePage() {
         </div>
       </div>
       {notice && <Alert tone="success">{notice}</Alert>}
+      {moveError && <Alert tone="error">{moveError}</Alert>}
       {groups.every((g) => g.orgs.length === 0) ? (
         <ColumnEmpty>{filtering ? 'Nothing matches these filters.' : 'No leads yet.'}</ColumnEmpty>
+      ) : view === 'columns' ? (
+        <PipelineColumns stages={groups} onOpen={(o) => drawer.open(o.slug)} onMove={moveTo} />
       ) : (
         <div className="tn-table-wrap">
           <table className="tn-custom-table tn-custom-pipeline-table" aria-label="Leads by stage">

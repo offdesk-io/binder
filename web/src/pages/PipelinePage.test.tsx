@@ -555,3 +555,13 @@ test('a failed move keeps what the drawer saved meanwhile and puts only the stat
   expect(card).toHaveTextContent('Call Acme')
   expect(within(columnOf('Contacted')).queryByRole('link', { name: 'Acme' })).toBeNull()
 })
+
+test('Columns cards show no stage tag and open the drawer from anywhere on the card', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...routes, ...openAcme })
+  await openColumns()
+  const lead = columnOf('Lead')
+  for (const card of Array.from(lead.querySelectorAll('.tenon-card'))) expect(card).not.toHaveTextContent(/^Lead|\bLead$/)
+  await user.click(within(lead).getAllByRole('link', { name: 'Acme' })[0].closest('.tenon-card') as HTMLElement)
+  expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})

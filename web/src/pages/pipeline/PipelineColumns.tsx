@@ -38,7 +38,7 @@ export function PipelineColumns({ stages, onOpen, onMove }: Props) {
             data-stage={s.status}
           >
             {s.orgs.length === 0 ? <ColumnEmpty>No leads</ColumnEmpty> : s.orgs.map((o) => (
-              <OrgCard key={o.id} org={o} onOpen={onOpen} {...drag.card(o.id, s.status)} />
+              <OrgCard key={o.id} org={o} onOpen={onOpen} showStatus={false} openOnCard {...drag.card(o.id, s.status)} />
             ))}
           </Column>
         )

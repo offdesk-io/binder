@@ -40,9 +40,10 @@ export interface Org {
 
 export interface Contact {
   id: number
-  org_id: number
-  org_name: string
-  org_slug: string
+  /** Null for someone with no organisation, as are org_name and org_slug. */
+  org_id: number | null
+  org_name: string | null
+  org_slug: string | null
   name: string
   role: string | null
   email: string | null
@@ -99,7 +100,8 @@ export interface ThanksRow {
 
 export interface Interaction {
   id: number
-  org_id: number
+  /** Null for a log with a person who has no organisation. */
+  org_id: number | null
   type: string
   happened_at: string
   summary: string
@@ -241,9 +243,12 @@ export interface ContactFields {
   notes: string | null
   is_primary: boolean
   relationship: string | null
+  connector: boolean
+  postal_address: string | null
 }
 export type ContactInput = Pick<ContactFields, 'name'> & Partial<ContactFields>
-export type ContactPatch = Partial<ContactFields> & { updated_at: string }
+/** `org_id` moves the person to another organisation, or null for none. */
+export type ContactPatch = Partial<ContactFields> & { org_id?: number | null; updated_at: string }
 /** POST /api/contacts: a person with an organisation, or on their own. */
 export type PersonInput = ContactInput & { org_id?: number | null }
 

@@ -320,3 +320,7 @@ a.tenon-button:hover { text-decoration: none; }
 
 /* A key connector's star, wherever the person appears. */
 .tn-custom-star { color: var(--tenon-text-warning); }
+
+
+/* A postal address keeps its lines. */
+.tn-custom-address { white-space: pre-line; }

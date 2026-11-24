@@ -191,3 +191,18 @@ test('a summary that arrives after the log was closed and reopened does not fill
   expect(screen.getByLabelText(/What happened/)).toHaveValue('')
   expect(screen.queryByText(/Filled in from the pasted text/)).not.toBeInTheDocument()
 })
+
+
+test('a log against a person goes to that person', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({ 'POST /api/contacts/5/interactions': () => interaction({ org_id: null }) })
+  const onSaved = vi.fn()
+  const solo = contact({ org_id: null, org_name: null, org_slug: null })
+  renderApp(<QuickLog open orgId={null} personId={5} contacts={[solo]} preselect={[5]} onClose={() => {}} onSaved={onSaved} />)
+  expect(screen.queryByRole('button', { name: 'Paste and summarise' })).toBeNull()
+  await user.type(screen.getByLabelText(/What happened/), 'Coffee')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls[0].key).toBe('POST /api/contacts/5/interactions')
+  expect(calls[0].body).toMatchObject({ summary: 'Coffee', contact_ids: [5] })
+})

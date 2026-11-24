@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
-import { contact } from '../test/fixtures'
+import { contact, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { ContactForm, contactBody, contactForm } from './ContactForm'
 
@@ -48,4 +48,51 @@ test('a conflict loads their version into the form and says so', async () => {
   expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
   expect(screen.getByLabelText('Role')).toHaveValue('CTO')
   expect(screen.getByLabelText('Phone')).toHaveValue('')
+})
+
+
+test('on its own, a new person goes to /api/contacts with the star on and no organisation', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    'GET /api/orgs?sort=name': () => [],
+    'POST /api/contacts': () => contact({ org_id: null, org_name: null, org_slug: null, connector: true }),
+  })
+  const onSaved = vi.fn()
+  renderApp(<ContactForm open orgId={null} chooseOrg connectorDefault onClose={() => {}} onSaved={onSaved} />)
+  expect(screen.getByLabelText('Key connector')).toBeChecked()
+  expect(screen.queryByLabelText('Who to talk to')).toBeNull()
+  await user.type(screen.getByLabelText(/^Name/), 'Marta')
+  await user.type(screen.getByLabelText('Postal address'), '1 Example Street')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls.find((c) => c.key === 'POST /api/contacts')!.body).toMatchObject({
+    name: 'Marta', connector: true, postal_address: '1 Example Street', org_id: null, is_primary: false,
+  })
+})
+
+test('taking a person out of their organisation sends only org_id', async () => {
+  const user = userEvent.setup()
+  const bo = contact()
+  const calls = stubFetch({
+    'GET /api/orgs?sort=name': () => [org(), org({ id: 2, name: 'Bolt', slug: 'bolt' })],
+    'PATCH /api/contacts/5': () => ({ ...bo, org_id: null, org_name: null, org_slug: null }),
+  })
+  renderApp(<ContactForm open orgId={1} chooseOrg contact={bo} onClose={() => {}} onSaved={() => {}} />)
+  expect(screen.getByLabelText('Who to talk to')).toBeInTheDocument()
+  // The dropdown waits for the organisations to load.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Organisation' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Organisation' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'No organisation' }))
+  expect(screen.queryByLabelText('Who to talk to')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/contacts/5')).toBe(true))
+  expect(calls.find((c) => c.key === 'PATCH /api/contacts/5')!.body).toEqual({ org_id: null, updated_at: bo.updated_at })
+})
+
+test('on an organisation, the form does not offer a choice of organisation', () => {
+  const calls = stubFetch({})
+  renderApp(<ContactForm open orgId={1} onClose={() => {}} onSaved={() => {}} />)
+  expect(screen.queryByRole('button', { name: 'Organisation' })).toBeNull()
+  expect(screen.getByLabelText('Key connector')).not.toBeChecked()
+  expect(calls).toHaveLength(0)
 })

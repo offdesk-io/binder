@@ -177,14 +177,22 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   409 with `current` (the row, or null). `DELETE` on the same path removes
   it. One row per person and year.
 - **Contact** (`/api/orgs/{id}/contacts`, `/api/contacts/{id}`): `id`,
-  `org_id`, `org_name`, `org_slug`, `name`, `role`, `email`, `phone`,
-  `linkedin_url`, `notes`, `is_primary` (bool), `relationship` (or null),
-  `created_at`, `updated_at`, `updated_by`. The list and the single contact
-  return the same fields.
+  `org_id`, `org_name`, `org_slug` (all three null for someone with no
+  organisation), `name`, `role`, `email`, `phone`, `linkedin_url`, `notes`,
+  `is_primary` (bool; only someone at an organisation can be the one to talk
+  to), `relationship` (or null), `connector` (bool: a key connector),
+  `postal_address`, `created_at`, `updated_at`, `updated_by`. The list and the
+  single contact return the same fields. `POST /api/contacts` adds a person
+  with an optional `org_id`; a PATCH may carry `org_id` to move them to
+  another organisation or, with null, to none, and a move clears
+  `is_primary` unless the same save sets it.
 - **Interaction** (`/api/orgs/{id}/interactions`, `/api/interactions/{id}`):
   `id`, `org_id`, `type`, `happened_at`, `summary`, `next_step`,
   `next_step_due`, `contact_ids`, `author_email`, `created_at`, `updated_at`,
-  `updated_by`.
+  `updated_by`. `POST /api/contacts/{id}/interactions` logs against a person:
+  they are added to `contact_ids`, and `org_id` is their organisation, or null
+  when they have none. A log with no organisation needs at least one person
+  (422 otherwise), and goes when the last of its people is deleted.
 - **Status change** (`/api/orgs/{id}/status-history`): `id`, `org_id`,
   `from_status`, `to_status`, `at`, `by_email`.
 - **Bench task** (`GET /api/orgs/{id}/work`, answering a **Work** record):

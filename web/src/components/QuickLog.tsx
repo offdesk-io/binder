@@ -66,7 +66,10 @@ export function fromSummary(f: LogFormState, s: Summary, types: string[], known:
 
 interface Props {
   open: boolean
-  orgId: number
+  /** The organisation the log is for; null for a person who has none. */
+  orgId: number | null
+  /** Log against this person (from their page): the log goes to them, and to their organisation if they have one. */
+  personId?: number
   /** Undefined while the list is still loading: nobody is dropped until it is known. */
   contacts: Contact[] | undefined
   /** Left out to log something new. */
@@ -77,7 +80,7 @@ interface Props {
   onSaved: () => void
 }
 
-export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, onSaved }: Props) {
+export function QuickLog({ open, orgId, personId, contacts, initial, preselect, onClose, onSaved }: Props) {
   const { meta } = useSession()
   const first = meta.interaction_types[0]
   const people = contacts ?? []
@@ -120,7 +123,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
     }))
 
   async function summarise() {
-    if (summarising || !paste.trim()) return
+    if (summarising || !paste.trim() || orgId === null) return
     const mine = ++generation.current
     setSummarising(true)
     setError(undefined)
@@ -159,7 +162,9 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
       if (base) {
         const diff = changed<InteractionFields>({ ...base, contact_ids: sorted(base.contact_ids) }, body)
         if (Object.keys(diff).length > 0) await api.patchInteraction(base.id, { ...diff, updated_at: base.updated_at })
-      } else {
+      } else if (personId !== undefined) {
+        await api.logForPerson(personId, body)
+      } else if (orgId !== null) {
         await api.createInteraction(orgId, body)
       }
       onSaved()
@@ -206,7 +211,7 @@ export function QuickLog({ open, orgId, contacts, initial, preselect, onClose, o
     >
       <form id="log-form" className="tn-stack" noValidate onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
-        {!base && meta.ai && (
+        {!base && meta.ai && orgId !== null && (
           <>
             <div className="tn-cluster">
               <ToggleChip pressed={pasting} onClick={() => setPasting((p) => !p)}>Paste and summarise</ToggleChip>

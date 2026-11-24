@@ -150,7 +150,7 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `id`, `slug`, `name`, `kind` (`lead`, `client`, `partner` or `referrer`),
   `status`, `website`, `sector` (one of meta's `sectors`, or null),
   `description` (what they do, or for a referrer where they work), `size`,
-  `location`, `owner_email` (one of meta's `owners` on write, or null; an older
+  `location`, `owner_email` (one of meta's `owners` on write, or null for nobody; left out of a POST it is the creator when they are on the list; an older
   value off the list stays until it is changed), `source`, `value_estimate`,
   `tags` (list), `summary`, `next_step`, `next_step_due`, `introduced_by_id`,
   `introduced_by`, `introduced`, `won_at`, `person`, `last_contact`,
@@ -165,11 +165,14 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   and null on every other kind. Creating a referrer, or refiling a record as
   one, gives it a primary contact named after it when it has none. A `person`
   object on POST or PATCH (any of `email`, `phone`, `linkedin_url`) is written
-  to that contact in the same save, renaming a referrer renames the contact,
+  to that contact in the same save, renaming a referrer renames its own contact,
   and the contact cannot be deleted or stop being primary while another has
   not taken over. A referrer refuses `website`, `size` and `sector`, and any
-  other kind refuses `person` (422). A record that stops being a referrer
-  keeps its contacts.
+  other kind refuses `person` (422). Renaming a referrer renames only its own contact, the
+  one made for it or the primary when it became a referrer, whichever contact is
+  primary later. Refiling a record as a referrer clears its website, size and
+  sector and keeps its description, now where they work. An empty `person` is
+  the same as none. A record that stops being a referrer keeps its contacts.
   `GET /api/orgs` filters by `kind`, `status`, `owner`, `tag`, `q` (part of
   the name) and `won` (`true` keeps records ever moved to `won`, `false`
   those never were), and sorts by `sort`: `updated` (the default), `name`,

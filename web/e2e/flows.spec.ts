@@ -249,3 +249,31 @@ test('a referrer is made as a person and its page shows a person card and no Peo
   const after = await (await request.get(`/api/orgs/by-slug/${slug}`)).json()
   expect(after.person).toMatchObject({ email: 'rui.ref@example.com', phone: null })
 })
+
+test('choosing Nobody as Handled by on a new record keeps it with nobody', async ({ page, request }) => {
+  const name = unique('Nobody Co')
+  await page.goto('/pipeline')
+  await page.getByRole('button', { name: 'New' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel(/^Name/).fill(name)
+  await dialog.getByRole('button', { name: 'Handled by' }).click()
+  await page.getByRole('menuitemradio', { name: 'Nobody' }).click()
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('dialog', { name })).toBeVisible()
+  const slug = new URL(page.url()).searchParams.get('org')!
+  const saved = await (await request.get(`/api/orgs/by-slug/${slug}`)).json()
+  expect(saved.owner_email).toBeNull()
+})
+
+test('refiling a lead with a sector as a referrer leaves no sector on it', async ({ page, request }) => {
+  const org = await newOrg(request, unique('Was Retail'), { sector: 'retail_ecommerce', description: 'Sells online' })
+  await page.goto(`/o/${org.slug}`)
+  await page.getByRole('button', { name: 'Edit' }).click()
+  await page.getByRole('dialog').getByRole('radio', { name: 'Referrer' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('dialog')).toBeHidden()
+  const saved = await (await request.get(`/api/orgs/${org.id}`)).json()
+  expect(saved).toMatchObject({ kind: 'referrer', sector: null, description: 'Sells online' })
+  await expect(page.getByText('Sells online')).toBeVisible()
+  await expect(page.getByText('Retail and e-commerce')).toHaveCount(0)
+})

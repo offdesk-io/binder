@@ -225,11 +225,16 @@ def test_referrer_refuses_organisation_fields(client, field, value):
     assert _patch(client, ref, **{field: None}).status_code == 200
 
 
-def test_becoming_a_referrer_with_a_site_set_is_refused_only_if_sent(client):
-    lead = _new(client, "Rita Example", website="example.com")
-    assert _patch(client, lead, kind="referrer", website="example.org").status_code == 422
+def test_becoming_a_referrer_clears_website_size_and_sector_but_keeps_description(client):
+    lead = _new(client, "Rita Example", website="example.com", size="10", sector="consulting",
+                description="Project manager at Example Co")
+    assert _patch(client, lead, kind="referrer", website="example.org").status_code == 422  # sent with a value: refused
     r = _patch(client, lead, kind="referrer")
-    assert r.status_code == 200 and r.json()["website"] == "example.com"  # kept, not refused
+    assert r.status_code == 200
+    got = r.json()
+    assert (got["website"], got["size"], got["sector"]) == (None, None, None)
+    assert got["description"] == "Project manager at Example Co"
+    assert client.get("/api/search?q=consulting").json() == []
 
 
 def test_lead_becomes_referrer_and_gets_a_contact(client):
@@ -285,3 +290,88 @@ def test_deleting_a_referrer_deletes_its_contact(client):
     ref = _new(client, "Rita Example", kind="referrer")
     assert client.delete("/api/orgs/%d" % ref["id"]).status_code == 204
     assert client.get("/api/contacts/%d" % ref["person"]["contact_id"]).status_code == 404
+
+
+# Renaming renames the referrer's own contact only
+
+
+def test_renaming_a_referrer_leaves_another_primary_alone(client):
+    ref = _new(client, "Rita Example", kind="referrer")
+    own = ref["person"]["contact_id"]
+    other = client.post("/api/orgs/%d/contacts" % ref["id"], json={"name": "Bo Example", "is_primary": True}).json()
+    assert _get(client, ref)["person"]["contact_id"] == other["id"]  # Bo took over as primary
+    _patch(client, _get(client, ref), name="Rita B. Example")
+    names = {c["id"]: c["name"] for c in _contacts(client, ref)}
+    assert names == {own: "Rita B. Example", other["id"]: "Bo Example"}
+
+
+def test_a_referrer_made_from_a_lead_renames_the_primary_it_started_with(client):
+    lead = _new(client, "Wrongly Filed Co")
+    bo = client.post("/api/orgs/%d/contacts" % lead["id"], json={"name": "Bo Example", "is_primary": True}).json()
+    client.post("/api/orgs/%d/contacts" % lead["id"], json={"name": "Cy Example"})
+    ref = _patch(client, lead, kind="referrer").json()
+    assert ref["person"]["contact_id"] == bo["id"]
+    _patch(client, ref, name="Bo Example Jr")
+    assert sorted(c["name"] for c in _contacts(client, ref)) == ["Bo Example Jr", "Cy Example"]
+
+
+def test_the_record_does_not_show_the_tracking_column(client):
+    ref = _new(client, "Rita Example", kind="referrer")
+    assert "person_contact_id" not in ref and "person_contact_id" not in _get(client, ref)
+
+
+def test_leaving_and_rejoining_referrer_adopts_the_primary_again(client):
+    ref = _new(client, "Rita Example", kind="referrer")
+    lead = _patch(client, ref, kind="lead").json()
+    bo = client.post("/api/orgs/%d/contacts" % lead["id"], json={"name": "Bo Example", "is_primary": True}).json()
+    back = _patch(client, lead, kind="referrer").json()
+    assert back["person"]["contact_id"] == bo["id"]
+
+
+def test_migration_008_points_referrers_at_their_primary_and_clears_their_sector(tmp_path, monkeypatch):
+    path = str(tmp_path / "l.db")
+    conn = connect(path)
+    _upto(tmp_path, monkeypatch, 7)
+    migrate(conn, path)
+    for slug, kind, sector in (("r", "referrer", "consulting"), ("l", "lead", "consulting")):
+        conn.execute("INSERT INTO organisations(slug,name,kind,status,sector,created_at,updated_at,updated_by)"
+                     " VALUES (?,?,?,?,?,'t','t','u')", (slug, slug.upper(), kind, "identified", sector))
+    conn.execute("INSERT INTO contacts(org_id,name,is_primary,created_at,updated_at,updated_by) VALUES (1,'Rita',0,'t','t','u')")
+    conn.execute("INSERT INTO contacts(org_id,name,is_primary,created_at,updated_at,updated_by) VALUES (1,'Rita P',1,'t','t','u')")
+    monkeypatch.setattr("binder.db.MIGRATIONS", REAL_MIGRATIONS)
+    migrate(conn, path)
+    rows = {r["slug"]: (r["person_contact_id"], r["sector"]) for r in conn.execute("SELECT * FROM organisations")}
+    assert rows == {"r": (2, None), "l": (None, "consulting")}
+
+
+# Handled by: not sent is the creator, null is nobody
+
+
+def test_owner_not_sent_defaults_to_the_creator_when_on_the_list(client):
+    me = client.get("/api/whoami").json()["email"]
+    assert _new(client, "A")["owner_email"] == me
+
+
+def test_owner_null_is_nobody(client):
+    assert _new(client, "A", owner_email=None)["owner_email"] is None
+
+
+def test_owner_null_stays_nobody_on_the_list_too(client):
+    me = client.get("/api/whoami").json()["email"]
+    assert _new(client, "A", owner_email=me)["owner_email"] == me
+    assert _new(client, "B", owner_email=None)["owner_email"] is None
+    assert client.get("/api/orgs?owner=%s" % me).json()[0]["name"] == "A"
+
+
+# An empty person is nothing
+
+
+def test_empty_person_on_a_non_referrer_is_ignored(client):
+    lead = _new(client, "Acme", person={})
+    assert lead["person"] is None and _contacts(client, lead) == []
+    r = _patch(client, lead, person={}, summary="x")
+    assert r.status_code == 200 and r.json()["summary"] == "x"
+
+
+def test_a_person_with_content_on_a_non_referrer_is_still_refused(client):
+    assert client.post("/api/orgs", json={"name": "B", "person": {"phone": "1"}}).status_code == 422

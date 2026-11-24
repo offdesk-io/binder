@@ -29,7 +29,7 @@ def list_orgs(kind: str = None, status: str = None, owner: str = None, tag: str 
 @router.post("", status_code=201)
 def create_org(body: OrgCreate, request: Request, db: sqlite3.Connection = Depends(get_db),
                who: Identity = Depends(guard)):
-    return orgs.create(db, body.model_dump(), who.email, owners=_owners(request))
+    return orgs.create(db, body.model_dump(exclude_unset=True), who.email, owners=_owners(request))
 
 
 @router.get("/by-slug/{slug}")

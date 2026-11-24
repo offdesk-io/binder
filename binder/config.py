@@ -17,13 +17,17 @@ https://bench.offdesk.io). BINDER_BENCH_FILE reads a todo.md from disk
 instead, for local development and tests only. Either one needs
 BINDER_BENCH_CORE, the core folder of a Bench checkout, whose todo.py
 parses the board. With neither, Bench is off.
+BINDER_OWNERS lists who an organisation can be handled by, as
+`email=Name` pairs separated by commas. It is kept out of the repo, since the
+names are real people's. Unset, the list is empty and only "nobody" can be
+chosen.
 """
 
 import os
 import zoneinfo
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Tuple
 from urllib.parse import urlsplit
 
 LOOPBACK = ("127.0.0.1", "::1")
@@ -50,6 +54,22 @@ class Settings:
     bench_board: str = "work"
     bench_core: str = ""  # the core/ folder of a Bench checkout, for todo.py
     bench_file: str = ""  # a todo.md to read instead of Bench, for local development
+    owners: Tuple[Tuple[str, str], ...] = ()  # (email, name) pairs a record can be handled by
+
+
+def parse_owners(raw: str) -> Tuple[Tuple[str, str], ...]:
+    out = []
+    for part in raw.split(","):
+        if not part.strip():
+            continue
+        email, sep, name = part.partition("=")
+        email, name = email.strip().lower(), name.strip()
+        if not sep or "@" not in email or not name:
+            raise ConfigError("BINDER_OWNERS needs email=Name pairs separated by commas, not %r." % part.strip())
+        if email in (e for e, _ in out):
+            raise ConfigError("BINDER_OWNERS names %s twice." % email)
+        out.append((email, name))
+    return tuple(out)
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
@@ -111,4 +131,5 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         bench_board=env.get("BINDER_BENCH_BOARD", "work"),
         bench_core=bench_core,
         bench_file=bench_file,
+        owners=parse_owners(env.get("BINDER_OWNERS", "")),
     )

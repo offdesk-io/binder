@@ -60,12 +60,23 @@ def not_null(v):
     return v
 
 
+class PersonFields(_Body):
+    """A referrer's own contact details, kept on its primary contact."""
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+
+    _email = field_validator("email")(lower_email)
+    _linkedin = field_validator("linkedin_url")(web_url)
+
+
 class OrgCreate(_Body):
     name: str = Field(min_length=1, max_length=200)
     slug: Optional[str] = None
     kind: str = "lead"
     website: Optional[str] = None
     sector: Optional[str] = None
+    description: Optional[str] = None
     size: Optional[str] = None
     location: Optional[str] = None
     owner_email: Optional[str] = None
@@ -76,6 +87,7 @@ class OrgCreate(_Body):
     next_step: Optional[str] = None
     next_step_due: Optional[str] = None
     introduced_by_id: Optional[int] = None
+    person: Optional[PersonFields] = None
 
     _due = field_validator("next_step_due")(iso_date)
     _owner = field_validator("owner_email")(lower_email)
@@ -89,6 +101,7 @@ class OrgPatch(_Body):
     status: Optional[str] = None
     website: Optional[str] = None
     sector: Optional[str] = None
+    description: Optional[str] = None
     size: Optional[str] = None
     location: Optional[str] = None
     owner_email: Optional[str] = None
@@ -99,6 +112,7 @@ class OrgPatch(_Body):
     next_step: Optional[str] = None
     next_step_due: Optional[str] = None
     introduced_by_id: Optional[int] = None
+    person: Optional[PersonFields] = None
 
     _name = field_validator("name", "kind")(not_null)
     _due = field_validator("next_step_due")(iso_date)

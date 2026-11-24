@@ -8,16 +8,20 @@ from binder.ai import FakeAI
 from binder.app import create_app
 from binder.config import load_settings
 
+# Who a record can be handled by in tests. Made up, like every address here.
+OWNERS = "ana@example.com=Ana,rui@example.com=Rui,ines@example.com=Inês"
 TEAM = {"x-offdesk-email": "ana@example.com", "x-offdesk-name": "Ana", "x-offdesk-teams": "offdesk"}
 WRITE = dict(TEAM, **{"x-binder": "1"})
 
 
 @pytest.fixture
 def make_client(tmp_path):
-    def _make(auth="header", ai=None, run_job=None, bench=None):
+    def _make(auth="header", ai=None, run_job=None, bench=None, owners=OWNERS):
         env = {"BINDER_DB": str(tmp_path / "t.db"), "BINDER_WEB": str(tmp_path / "no-web")}  # never the real build
         if auth:
             env["BINDER_AUTH"] = auth
+        if owners is not None:
+            env["BINDER_OWNERS"] = owners
         return TestClient(create_app(load_settings(env), ai=ai, run_job=run_job, bench=bench))
     return _make
 

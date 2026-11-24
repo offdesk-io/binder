@@ -2,15 +2,18 @@ import json
 import re
 import sqlite3
 import unicodedata
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
-from ..statuses import INTRODUCER_KINDS, check_transition, initial_status
+from ..statuses import INTRODUCER_KINDS, SECTORS, check_transition, initial_status
 from . import row
 
-FIELDS = ("name", "website", "sector", "size", "location", "owner_email", "source",
+FIELDS = ("name", "website", "sector", "description", "size", "location", "owner_email", "source",
           "value_estimate", "tags", "summary", "next_step", "next_step_due", "introduced_by_id")
+# A referrer is a person: these fields live on its primary contact, and these are refused on the record.
+PERSON_FIELDS = ("email", "phone", "linkedin_url")
+NOT_FOR_REFERRERS = ("website", "size", "sector")
 
 LAST_CONTACT = "(SELECT max(happened_at) FROM interactions i WHERE i.org_id = o.id)"
 # The partner or referrer who introduced this record, and the leads and clients
@@ -21,8 +24,11 @@ INTRODUCED = ("(SELECT json_group_array(json_object('id', x.id, 'slug', x.slug, 
               "'status', x.status)) FROM organisations x WHERE x.introduced_by_id = o.id)")
 # When the record was last moved to `won`, so the Pipeline can show won clients.
 WON_AT = "(SELECT max(at) FROM status_history h WHERE h.org_id = o.id AND h.to_status = 'won')"
-COLUMNS = "o.*, %s AS last_contact, %s AS won_at, %s AS introduced_by, %s AS introduced" % (
-    LAST_CONTACT, WON_AT, INTRODUCED_BY, INTRODUCED)
+# A referrer's own contact details, from its primary contact. Null for every other kind.
+PERSON = ("(SELECT json_object('contact_id', c.id, 'email', c.email, 'phone', c.phone, 'linkedin_url', "
+          "c.linkedin_url) FROM contacts c WHERE o.kind = 'referrer' AND c.org_id = o.id AND c.is_primary = 1)")
+COLUMNS = "o.*, %s AS last_contact, %s AS won_at, %s AS introduced_by, %s AS introduced, %s AS person" % (
+    LAST_CONTACT, WON_AT, INTRODUCED_BY, INTRODUCED, PERSON)
 
 
 def slugify(text: str) -> str:
@@ -44,6 +50,7 @@ def _out(r: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
         d["tags"] = json.loads(d["tags"])
         d["introduced_by"] = json.loads(d["introduced_by"]) if d["introduced_by"] else None
         d["introduced"] = sorted(json.loads(d["introduced"]), key=lambda x: (x["name"].lower(), x["id"]))
+        d["person"] = json.loads(d["person"]) if d["person"] else None
     return d
 
 
@@ -67,6 +74,43 @@ def _check_introducer(conn, kind: str, introducer_id: Optional[int], org_id: Opt
         raise Invalid("Organisation %d is a %s: only a partner or referrer introduces" % (introducer_id, r["kind"]))
 
 
+def _check_fields(kind: str, data: Dict[str, Any], person: Optional[Dict[str, Any]],
+                  owners: Optional[Sequence[str]]) -> None:
+    """`data` holds only the fields being written. `owners` is None for scripts,
+    which may write any owner; the API passes the BINDER_OWNERS emails."""
+    if data.get("sector") not in (None,) + SECTORS:
+        raise Invalid("sector must be one of %s, or null" % ", ".join(SECTORS))
+    if kind == "referrer":
+        refused = [f for f in NOT_FOR_REFERRERS if data.get(f) is not None]
+        if refused:
+            raise Invalid("A referrer is a person and has no %s" % " or ".join(refused))
+    elif person:
+        raise Invalid("Only a referrer has person fields")
+    owner = data.get("owner_email")
+    if owners is not None and owner is not None and owner not in owners:
+        raise Invalid("Handled by must be one of the team (%s), or nobody" % (", ".join(owners) or "none set"))
+
+
+def _person(conn, org_id: int, name: str, person: Dict[str, Any], rename: bool, by: str, at: str) -> None:
+    """Give a referrer its primary contact, named after it, if it has none, and
+    write the person fields sent onto it. `rename` carries a new record name over."""
+    r = conn.execute("SELECT id FROM contacts WHERE org_id = ? AND is_primary = 1", (org_id,)).fetchone()
+    fields = {k: v for k, v in person.items() if k in PERSON_FIELDS}
+    if r is None:
+        fields["name"] = name
+        cols = list(fields)
+        conn.execute("INSERT INTO contacts(org_id, is_primary, created_at, updated_at, updated_by, %s) "
+                     "VALUES (?,1,?,?,?,%s)" % (", ".join(cols), ", ".join("?" * len(cols))),
+                     [org_id, at, at, by] + [fields[c] for c in cols])
+        return
+    if rename:
+        fields["name"] = name
+    if fields:
+        fields["updated_at"], fields["updated_by"] = at, by
+        conn.execute("UPDATE contacts SET %s WHERE id = ?" % ", ".join("%s = ?" % k for k in fields),
+                     list(fields.values()) + [r["id"]])
+
+
 def get(conn: sqlite3.Connection, org_id: int) -> Dict[str, Any]:
     d = _out(conn.execute("SELECT %s FROM organisations o WHERE o.id = ?" % COLUMNS, (org_id,)).fetchone())
     if d is None:
@@ -81,15 +125,21 @@ def get_by_slug(conn: sqlite3.Connection, slug: str) -> Dict[str, Any]:
     return get(conn, r["id"])
 
 
-def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str, Any]:
+def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str,
+           owners: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+    """A record with no owner is handled by whoever creates it, when they are
+    one of `owners` (or always, for a script). A referrer gets its primary
+    contact, with any `person` fields, in the same transaction."""
     kind = data.pop("kind", "lead") or "lead"
     status = initial_status(kind)
+    person = data.pop("person", None) or {}
     if data.get("introduced_by_id") is None:
         data.pop("introduced_by_id", None)
     requested_slug = data.pop("slug", None)
     data.setdefault("owner_email", None)
     if not data["owner_email"]:
-        data["owner_email"] = by
+        data["owner_email"] = by if owners is None or by in owners else None
+    _check_fields(kind, data, person, owners)
     data["tags"] = json.dumps(data.get("tags") or [])
     at = now()
     cols = [f for f in FIELDS if f in data]
@@ -102,6 +152,8 @@ def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str,
             "VALUES (?,?,?,?,?,?,%s)" % (", ".join(cols), ", ".join("?" * len(cols))),
             [slug, kind, status, at, at, by] + [data[c] for c in cols])
         _history(conn, cur.lastrowid, None, status, by, at)
+        if kind == "referrer":
+            _person(conn, cur.lastrowid, data["name"], person, False, by, at)
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -109,14 +161,20 @@ def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str,
     return get(conn, cur.lastrowid)
 
 
-def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str) -> Dict[str, Any]:
+def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str,
+           owners: Optional[Sequence[str]] = None) -> Dict[str, Any]:
     """A PATCH may change the kind, to fix a record filed as the wrong one. The
     record then takes the new kind's first status, or `status` from the same
     PATCH checked against the new kind, and history records the move like any
     status change. A partner or referrer has no introducer, so becoming one
     clears it; a partner or referrer that becomes a lead or client no longer
-    introduces anyone, so the records it introduced lose their link."""
+    introduces anyone, so the records it introduced lose their link.
+
+    A record that is or becomes a referrer keeps one primary contact: made,
+    named after it, if it has none, renamed with it, and holding the `person`
+    fields. A record that stops being a referrer keeps its contacts."""
     expected = patch.pop("updated_at")
+    person = patch.pop("person", None) or {}
     conn.execute("BEGIN IMMEDIATE")
     try:
         current = get(conn, org_id)
@@ -141,6 +199,10 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
             sets["introduced_by_id"] = None
         if "introduced_by_id" in sets or kind_changed:
             _check_introducer(conn, kind, sets.get("introduced_by_id", current["introduced_by_id"]), org_id)
+        _check_fields(kind, sets, person, owners)
+        if kind == "referrer":
+            name = sets.get("name", current["name"])
+            _person(conn, org_id, name, person, name != current["name"], by, at)
         if kind_changed and current["kind"] in INTRODUCER_KINDS and kind not in INTRODUCER_KINDS:
             conn.execute("UPDATE organisations SET introduced_by_id = NULL, updated_at = ?, updated_by = ? "
                          "WHERE introduced_by_id = ?", (at, by, org_id))

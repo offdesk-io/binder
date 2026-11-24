@@ -43,10 +43,10 @@ def test_patch_fields(client, org):
 
 
 def test_stale_patch_is_409_with_current(client, org):
-    client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "sector": "Retail"})
-    r = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "sector": "Food"})
+    client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "description": "Retail"})
+    r = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "description": "Food"})
     assert r.status_code == 409
-    assert r.json()["current"]["sector"] == "Retail"
+    assert r.json()["current"]["description"] == "Retail"
 
 
 def test_list_filters(client):

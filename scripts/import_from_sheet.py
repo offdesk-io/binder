@@ -2,10 +2,12 @@
 
     python -m scripts.import_from_sheet apply merge-plan.csv --by import@local
 
-One row per organisation. Columns: slug, name, kind, status, website, sector, size, location,
-owner_email, source, value_estimate, tags (semicolon list), summary, next_step, next_step_due,
+One row per organisation. Columns: slug, name, kind, status, website, sector, description, size,
+location, owner_email, source, value_estimate, tags (semicolon list), summary, next_step, next_step_due,
 last_contact (a date), contacts (semicolon list of "name|role|email|phone|linkedin"), notes,
-sources, conflicts. The sheet holds real names and stays out of git.
+sources, conflicts. The sheet holds real names and stays out of git. A `sector` that is one of
+Binder's sector keys is kept as the sector; any other text in it is what they do, and goes to
+`description` when that column is empty.
 
 Running it twice adds nothing twice, the same rule as import_from_bench: an organisation that
 already exists (by slug) is left as it is, a contact whose name is already on it is skipped, and
@@ -95,10 +97,14 @@ def apply_rows(conn: sqlite3.Connection, rows: List[Dict[str, str]], by: str) ->
         except NotFound:
             data: Dict[str, Any] = {"name": r["name"], "slug": r["slug"], "kind": r["kind"],
                                     "tags": [t.strip() for t in r.get("tags", "").split(";") if t.strip()]}
-            for f in ("website", "sector", "size", "location", "owner_email", "source", "summary",
+            for f in ("website", "description", "size", "location", "owner_email", "source", "summary",
                       "next_step", "next_step_due"):
                 if r.get(f):
                     data[f] = r[f]
+            if r.get("sector") in statuses.SECTORS:
+                data["sector"] = r["sector"]
+            elif r.get("sector"):
+                data.setdefault("description", r["sector"])
             if r.get("value_estimate"):
                 data["value_estimate"] = float(r["value_estimate"])
             org = orgs.create(conn, data, by)

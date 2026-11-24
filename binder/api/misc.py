@@ -26,6 +26,8 @@ def meta(request: Request):
         "referrer_statuses": list(statuses.REFERRER_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
+        "sectors": list(statuses.SECTORS),
+        "owners": [{"email": e, "name": n} for e, n in request.app.state.settings.owners],
         "ai": request.app.state.ai is not None,
         "bench": request.app.state.bench is not None,
     }

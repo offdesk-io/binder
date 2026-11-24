@@ -47,6 +47,9 @@ def test_meta_lists_the_vocabularies(client):
         "referrer_statuses": list(statuses.REFERRER_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
+        "sectors": list(statuses.SECTORS),
+        "owners": [{"email": "ana@example.com", "name": "Ana"}, {"email": "rui@example.com", "name": "Rui"},
+                   {"email": "ines@example.com", "name": "Inês"}],
         "ai": False,
         "bench": False,
     }

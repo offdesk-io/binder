@@ -48,10 +48,29 @@ export interface Org {
   introduced: Introduced[]
   /** When the record was last moved to `won`, or null if it never was. */
   won_at: string | null
+  /** What they do, or for a referrer where they work. */
+  description: string | null
+  /** A referrer's own details, kept on its primary contact. Null for every other kind. */
+  person: Person | null
   last_contact: string | null
   created_at: string
   updated_at: string
   updated_by: string
+}
+
+export interface PersonFields {
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+}
+
+export interface Person extends PersonFields {
+  contact_id: number
+}
+
+export interface Owner {
+  email: string
+  name: string
 }
 
 export interface Contact {
@@ -172,6 +191,10 @@ export interface Meta {
   referrer_statuses: string[]
   interaction_types: string[]
   relationships: string[]
+  /** The sector keys; an organisation's `sector` is one of these or null. */
+  sectors: string[]
+  /** Who a record can be handled by. Empty when the server has none set: then only nobody. */
+  owners: Owner[]
   /** False when the server has no AI: research and summarise are hidden. */
   ai: boolean
   /** False when Bench is not connected: the Work section is hidden. */
@@ -202,13 +225,22 @@ export interface OrgFields {
   next_step_due: string | null
 }
 /** `introduced_by_id` is a partner's or referrer's id, and only a lead or client takes one. */
-export type OrgInput = Pick<OrgFields, 'name'> & Partial<OrgFields> & { kind?: Kind; introduced_by_id?: number | null }
+/** Only a referrer takes `person`, and a referrer refuses `website`, `size` and `sector`. */
+export type OrgInput = Pick<OrgFields, 'name'> & Partial<OrgFields> & {
+  kind?: Kind
+  introduced_by_id?: number | null
+  description?: string | null
+  person?: Partial<PersonFields>
+}
 /** A `kind` that differs from the record's refiles it: it takes the new kind's first status, or `status` if the
  * same PATCH sends one for the new kind. Becoming a partner or referrer clears `introduced_by_id`. */
 export type OrgPatch = Partial<OrgFields> & {
   kind?: Kind
   status?: string
   introduced_by_id?: number | null
+  description?: string | null
+  /** Only the person fields that changed. Renaming a referrer renames its primary contact too. */
+  person?: Partial<PersonFields>
   updated_at: string
 }
 

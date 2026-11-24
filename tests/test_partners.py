@@ -379,10 +379,10 @@ def test_migration_006_keeps_rows_children_and_search(tmp_path, monkeypatch):
     search_before = sorted(tuple(r) for r in conn.execute("SELECT kind, ref_id, org_id, title FROM search"))
     index_names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'")}
 
-    monkeypatch.setattr("binder.db.MIGRATIONS", REAL_MIGRATIONS)
+    _upto(tmp_path, monkeypatch, 6)
     migrate(conn, path)
 
-    assert conn.execute("PRAGMA user_version").fetchone()[0] >= 6
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 6
     assert [tuple(r)[:-1] for r in conn.execute("SELECT * FROM organisations ORDER BY id")] == before
     assert [r[0] for r in conn.execute("SELECT introduced_by_id FROM organisations")] == [None, None]
     for table in ("contacts", "interactions", "status_history", "bench_links"):

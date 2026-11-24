@@ -13,8 +13,8 @@ from ..pricing import cost_usd
 from . import contacts, interactions, orgs, row
 
 INTERRUPTED = "Stopped when the server restarted. Run it again."
-ORG_FACTS = ("name", "website", "sector", "size", "location", "kind", "status", "source", "tags", "summary",
-             "next_step")
+ORG_FACTS = ("name", "website", "sector", "description", "size", "location", "kind", "status", "source", "tags",
+             "summary", "next_step")
 PERSON_FACTS = ("id", "name", "role", "relationship", "is_primary", "notes")
 
 

@@ -3,7 +3,9 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { BriefPerson, Contact, Research } from '../api/types'
-import { day, person, safeHref, usd } from '../lib/format'
+import { useSession } from '../app/session'
+import { day, safeHref, usd } from '../lib/format'
+import { ownerName } from '../lib/owners'
 import type { Loaded } from '../lib/useApi'
 
 /** The contact a suggested person already is: the same id, or the same name ignoring case. */
@@ -35,6 +37,7 @@ interface Props {
 }
 
 export function BriefView({ run, orgId, people }: Props) {
+  const { owners } = useSession().meta
   const b = run.brief!
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string>()
@@ -130,7 +133,7 @@ export function BriefView({ run, orgId, people }: Props) {
         </Part>
       )}
       <p className="tenon-caption tn-custom-faint">
-        Researched {day(run.run_at)} by {person(run.author_email)}
+        Researched {day(run.run_at)} by {ownerName(owners, run.author_email)}
         {run.model && ` · ${run.model}`}
         {run.cost_usd != null && ` · ${usd(run.cost_usd)}`}
       </p>

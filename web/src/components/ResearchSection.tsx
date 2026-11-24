@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
-import type { Contact, Research } from '../api/types'
+import type { Contact, Owner, Research } from '../api/types'
 import { useSession } from '../app/session'
 import { Section } from '../pages/org/Section'
-import { day, label, person, usd } from '../lib/format'
+import { day, label, usd } from '../lib/format'
+import { ownerName } from '../lib/owners'
 import { useApi, type Loaded } from '../lib/useApi'
 import { usePoll } from '../lib/usePoll'
 import { BriefView } from './BriefView'
@@ -30,8 +31,8 @@ interface Props {
 const load = (s: Subject) => (s.kind === 'org' ? api.orgResearch(s.id) : api.contactResearch(s.id))
 const startRun = (s: Subject) => (s.kind === 'org' ? api.startOrgResearch(s.id) : api.startContactResearch(s.id))
 
-export function runLine(r: Research): string {
-  return [day(r.run_at), person(r.author_email), label(r.status), usd(r.cost_usd)].filter(Boolean).join(' · ')
+export function runLine(r: Research, owners: Owner[]): string {
+  return [day(r.run_at), ownerName(owners, r.author_email), label(r.status), usd(r.cost_usd)].filter(Boolean).join(' · ')
 }
 
 export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Props) {
@@ -130,7 +131,7 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
                 {list.map((r) => (
                   <li key={r.id}>
                     <Button size="sm" variant="ghost" pressed={shown?.id === r.id} disabled={!r.brief} onClick={() => setPicked(r.id)}>
-                      {runLine(r)}
+                      {runLine(r, meta.owners)}
                     </Button>
                   </li>
                 ))}

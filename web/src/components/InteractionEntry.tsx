@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { typeColour } from '../lib/colour'
-import { day, label, person } from '../lib/format'
+import { useSession } from '../app/session'
+import { day, label } from '../lib/format'
+import { ownerName } from '../lib/owners'
 import { ColourTag, DueDate } from './ColourTag'
 
 interface Props {
@@ -16,12 +18,13 @@ interface Props {
 
 /** One logged interaction, as the timeline and the contact page show it. The type has its own colour. */
 export function InteractionEntry({ type, at, by, summary, next_step, next_step_due, people, action }: Props) {
+  const { owners } = useSession().meta
   return (
     <article className="tn-custom-entry">
       <div className="tn-cluster">
         <ColourTag colour={typeColour(type)}>{label(type)}</ColourTag>
         <span className="tenon-caption tn-custom-entry-meta">
-          {day(at)} · {person(by)}
+          {day(at)} · {ownerName(owners, by)}
           {people.length > 0 && ` · with ${people.join(', ')}`}
         </span>
         {action}

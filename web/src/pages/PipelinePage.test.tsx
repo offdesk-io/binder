@@ -612,7 +612,7 @@ test('Partners shows its own stages, with Paused set apart and folded', async ()
   await user.click(screen.getByRole('radio', { name: 'Partners' }))
   await screen.findByRole('link', { name: 'Pixel Partners' })
   const heads = screen.getAllByRole('rowheader').map((h) => h.querySelector('.tn-custom-stage-name')?.textContent)
-  expect(heads).toEqual(['Identified', 'In talks', 'Terms sent', 'Active', 'Paused'])
+  expect(heads).toEqual(['Identified', 'Contacted', 'In talks', 'Terms sent', 'Active', 'Paused'])
   expect(screen.getByRole('button', { name: /^Paused/ })).toHaveAttribute('aria-expanded', 'false')
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
   expect(screen.getByRole('table', { name: 'Partners by stage' })).toBeInTheDocument()
@@ -626,7 +626,7 @@ test('Referrers has no Terms sent', async () => {
   await user.click(screen.getByRole('radio', { name: 'Referrers' }))
   await screen.findByRole('link', { name: 'Rui' })
   const heads = screen.getAllByRole('rowheader').map((h) => h.querySelector('.tn-custom-stage-name')?.textContent)
-  expect(heads).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
+  expect(heads).toEqual(['Identified', 'Contacted', 'In talks', 'Active', 'Paused'])
 })
 
 test('the kind choice and the view choice are remembered separately, and a partner board is remembered too', async () => {
@@ -642,7 +642,7 @@ test('the kind choice and the view choice are remembered separately, and a partn
   renderApp(<PipelinePage />)
   await screen.findByRole('link', { name: 'Pixel Partners' })
   expect(screen.getByRole('radio', { name: 'Partners' })).toHaveAttribute('aria-checked', 'true')
-  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Identified', 'In talks', 'Terms sent', 'Active', 'Paused'])
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Identified', 'Contacted', 'In talks', 'Terms sent', 'Active', 'Paused'])
 })
 
 test('a stored kind that is not one of the three falls back to Leads', async () => {

@@ -14,6 +14,8 @@ import { StatusPicker } from '../../components/StatusPicker'
 import { stageColour } from '../../lib/colour'
 import { ago, label, money, person, safeHref } from '../../lib/format'
 import { saveErrorText } from '../../lib/forms'
+import { SEGMENT_KEY } from '../../lib/pipeline'
+import { writeChoice } from '../../lib/remembered'
 import { useApi } from '../../lib/useApi'
 import { useIsPhone } from '../../lib/useIsPhone'
 import { IntroducedSection } from './IntroducedSection'
@@ -99,6 +101,14 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
     }
   }
 
+  /** Back to where this kind of record lives: Clients for a client, the Pipeline for the rest, on the segment
+   * that holds its kind. */
+  function goAfterDelete() {
+    if (org.kind === 'client') return navigate('/clients')
+    writeChoice(SEGMENT_KEY, org.kind)
+    navigate('/pipeline')
+  }
+
   const caption = (
     <p className="tenon-caption tn-custom-faint">
       {label(org.kind)} · owned by {person(org.owner_email)}
@@ -129,7 +139,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           setOrg(o)
           timeline.reload()
         }}
-        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/pipeline'))}
+        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : goAfterDelete())}
       />
       <QuickLog
         open={log !== undefined}

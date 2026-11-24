@@ -11,7 +11,7 @@ import { saveErrorText } from '../lib/forms'
 import { statusesOf } from '../lib/kinds'
 import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
-import { stages, undoMove, undoWon, wonStage, type Stage } from '../lib/pipeline'
+import { SEGMENT_KEY, stages, undoMove, undoWon, wonStage, type Stage } from '../lib/pipeline'
 import { readChoice, writeChoice } from '../lib/remembered'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -25,7 +25,6 @@ const VIEWS: readonly View[] = ['list', 'columns']
 
 /** Which records the page shows: leads (with the clients won from them), partners or referrers. */
 type Segment = 'lead' | 'partner' | 'referrer'
-const SEGMENT_KEY = 'binder.pipeline.kind'
 const SEGMENTS: readonly Segment[] = ['lead', 'partner', 'referrer']
 const SEGMENT_OPTIONS: { value: Segment; label: string }[] = [
   { value: 'lead', label: 'Leads' },
@@ -42,17 +41,22 @@ function load(segment: Segment): Promise<Org[]> {
 }
 
 /** A saved record replaces its old copy; one that no longer belongs to the segment leaves. A client belongs to Leads
- * only for having been won. */
+ * only for having been won, and the won clients stay newest-won first. */
 function place(prev: Org[] | undefined, org: Org, segment: Segment): Org[] {
   const rest = (prev ?? []).filter((o) => o.id !== org.id)
   const belongs = org.kind === segment || (segment === 'lead' && org.kind === 'client' && !!org.won_at)
-  return belongs ? [org, ...rest] : rest
+  const out = belongs ? [org, ...rest] : rest
+  if (segment !== 'lead') return out
+  const byWon = (a: Org, b: Org) => (a.won_at ?? '') < (b.won_at ?? '') ? 1 : (a.won_at ?? '') > (b.won_at ?? '') ? -1 : 0
+  return [...out.filter((o) => o.kind !== 'client'), ...out.filter((o) => o.kind === 'client').sort(byWon)]
 }
 
 export function PipelinePage() {
   const { meta, me } = useSession()
   const phone = useIsPhone()
   const [segment, setSegment] = useState<Segment>(() => readChoice(SEGMENT_KEY, SEGMENTS, 'lead'))
+  // The segment on screen now, for a save that finishes after the page has moved to another one.
+  const onScreen = useRef(segment)
   const orgs = useApi(() => load(segment), [segment])
   const [notice, setNotice] = useState<string>()
   const [owner, setOwner] = useOwnerFilter()
@@ -70,6 +74,7 @@ export function PipelinePage() {
 
   function chooseSegment(s: Segment) {
     if (s === segment) return
+    onScreen.current = s
     setSegment(s)
     setNotice(undefined)
     setMoveError(undefined)
@@ -86,15 +91,18 @@ export function PipelinePage() {
     moving.current.add(org.id)
     setNotice(undefined)
     setMoveError(undefined)
-    const won = segment === 'lead' && status === 'won'
+    const from = segment
+    const won = from === 'lead' && status === 'won'
     const shown: Org = won
       ? { ...org, kind: 'client', status: meta.client_statuses[0] ?? 'active', won_at: new Date().toISOString() }
       : { ...org, status }
     orgs.setData((prev) => place(prev, shown, segment))
     try {
       const saved = await api.patchOrg(org.id, { updated_at: org.updated_at, status })
-      orgs.setData((prev) => place(prev, saved, segment))
+      // The page has moved to another segment: that list is loading its own records, and this one is not in it.
+      if (onScreen.current === from) orgs.setData((prev) => place(prev, saved, from))
     } catch (e) {
+      if (onScreen.current !== from) return
       setMoveError(saveErrorText(e))
       const current = e instanceof ApiError && e.status === 409 ? (e.current as Org | undefined) : undefined
       orgs.setData((prev) => (current ? place(prev, current, segment) : won ? undoWon(prev, org, shown) : undoMove(prev, org, status)))

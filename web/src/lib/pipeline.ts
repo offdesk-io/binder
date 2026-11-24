@@ -50,3 +50,6 @@ export function undoMove(list: Org[] | undefined, was: Org, movedTo: string): Or
   if (!now || now.status !== movedTo) return rest
   return rest.map((o) => (o.id === was.id ? { ...now, status: was.status } : o))
 }
+
+/** Where the Pipeline's Leads | Partners | Referrers choice is kept per device. */
+export const SEGMENT_KEY = 'binder.pipeline.kind'

@@ -747,3 +747,61 @@ test('a partner or referrer card in a drawer save that refiles it leaves the seg
   await user.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(within(screen.getByRole('table', { name: 'Partners by stage' })).queryByRole('link', { name: 'Pixel Partners', hidden: true })).toBeNull())
 })
+
+test('a won client edited in the drawer keeps its place in the newest-won-first order', async () => {
+  const user = userEvent.setup()
+  const newer = org({ id: 21, name: 'Newer', slug: 'newer', kind: 'client', status: 'active', won_at: '2026-11-20T10:00:00.000000+00:00' })
+  const older = org({ id: 22, name: 'Older', slug: 'older', kind: 'client', status: 'active', won_at: '2026-11-01T10:00:00.000000+00:00' })
+  stubFetch({
+    ...routes,
+    'GET /api/orgs?kind=client&won=true': () => [newer, older],
+    'GET /api/orgs/by-slug/older': () => older,
+    'GET /api/orgs/22/contacts': () => [],
+    'GET /api/orgs/22/timeline': () => [],
+    'GET /api/orgs/22/research': () => [],
+    'GET /api/orgs/22/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+    'PATCH /api/orgs/22': () => ({ ...older, sector: 'Retail', updated_at: '2026-11-21T12:00:00.000000+00:00' }),
+  })
+  renderApp(<PipelinePage />)
+  await user.click(await screen.findByRole('link', { name: 'Older' }))
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Edit' }))
+  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(within(stage(/^Won/)).getByText('Retail', { exact: false })).toBeInTheDocument())
+  const names = within(stage(/^Won/)).getAllByRole('link', { hidden: true }).map((l) => l.textContent)
+  expect(names).toEqual(['Newer', 'Older'])
+})
+
+test('a move that finishes after switching segment does not touch the other segment', async () => {
+  const user = userEvent.setup()
+  let release!: (r: Response) => void
+  stubFetch({
+    ...segmentRoutes,
+    'PATCH /api/orgs/1': () => new Promise<Response>((res) => { release = res }),
+  })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  await user.click(screen.getByRole('radio', { name: 'Partners' }))
+  await screen.findByRole('link', { name: 'Pixel Partners' })
+  release(new Response(JSON.stringify({ ...a, status: 'identified', updated_at: 'later' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  await new Promise((r) => setTimeout(r, 50))
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Pixel Partners' })).toBeInTheDocument()
+})
+
+test('a move that fails after switching segment shows no alert on the other segment', async () => {
+  const user = userEvent.setup()
+  let release!: (r: Response) => void
+  stubFetch({
+    ...segmentRoutes,
+    'PATCH /api/orgs/1': () => new Promise<Response>((res) => { release = res }),
+  })
+  await openColumns()
+  drag('Acme', 'Contacted')
+  await user.click(screen.getByRole('radio', { name: 'Partners' }))
+  await screen.findByRole('link', { name: 'Pixel Partners' })
+  release(new Response(JSON.stringify({ detail: 'Server on fire' }), { status: 500 }))
+  await new Promise((r) => setTimeout(r, 50))
+  expect(screen.queryByText('Server on fire')).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+})

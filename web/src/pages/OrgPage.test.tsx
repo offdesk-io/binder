@@ -228,3 +228,45 @@ test('a referrer that has introduced nobody says so, and its status picker is it
   await user.click(screen.getByRole('button', { name: 'Status' }))
   expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
 })
+
+async function deleteFromPage(kind: 'lead' | 'client' | 'partner' | 'referrer') {
+  const user = userEvent.setup()
+  stubs({
+    'GET /api/orgs/by-slug/acme': () => org({ id: 1, kind, status: kind === 'client' ? 'active' : kind === 'lead' ? 'lead' : 'identified' }),
+    'GET /api/orgs?kind=partner&sort=name': () => [],
+    'GET /api/orgs?kind=referrer&sort=name': () => [],
+    'DELETE /api/orgs/1': () => undefined,
+  })
+  renderApp(
+    <Routes>
+      <Route path="/o/:slug" element={<OrgPage />} />
+      <Route path="/pipeline" element={<p>pipeline page</p>} />
+      <Route path="/clients" element={<p>clients page</p>} />
+    </Routes>,
+    '/o/acme',
+  )
+  await user.click(await screen.findByRole('button', { name: 'Edit' }))
+  await user.click(screen.getByRole('button', { name: 'Delete' }))
+  await user.click(screen.getByRole('button', { name: 'Delete this organisation' }))
+}
+
+test('deleting a client from its page goes to Clients', async () => {
+  await deleteFromPage('client')
+  expect(await screen.findByText('clients page')).toBeInTheDocument()
+})
+
+test('deleting a lead from its page goes to the Pipeline, on the Leads segment', async () => {
+  localStorage.setItem('binder.pipeline.kind', 'partner')
+  await deleteFromPage('lead')
+  expect(await screen.findByText('pipeline page')).toBeInTheDocument()
+  expect(localStorage.getItem('binder.pipeline.kind')).toBe('lead')
+  localStorage.clear()
+})
+
+test.each(['partner', 'referrer'] as const)('deleting a %s from its page goes to the Pipeline with that segment selected', async (kind) => {
+  localStorage.clear()
+  await deleteFromPage(kind)
+  expect(await screen.findByText('pipeline page')).toBeInTheDocument()
+  expect(localStorage.getItem('binder.pipeline.kind')).toBe(kind)
+  localStorage.clear()
+})

@@ -10,10 +10,11 @@ import zoneinfo
 from typing import Any, Dict, List, Optional
 
 from ..statuses import OPEN_LEAD_STATUSES
-from . import orgs, row
+from . import contacts, orgs, row
 
 QUIET_DAYS = 14
 STUCK_DAYS = 30
+CONNECTOR_DAYS = 90  # a key connector with no log for this long needs a word
 
 
 def _now_utc() -> datetime.datetime:
@@ -31,7 +32,11 @@ def _cutoff(today: str, days: int) -> str:
 
 def attention(conn: sqlite3.Connection, today: Optional[str] = None,
               tz: str = "Europe/Lisbon") -> List[Dict[str, Any]]:
-    """`today` (YYYY-MM-DD) is for tests; by default it is the date now in `tz`."""
+    """Organisations first, as {org, reasons}, most reasons first and then by
+    name; then key connectors with no log for CONNECTOR_DAYS (counted from
+    when they were added if they have none), A to Z, as
+    {contact, reasons: ["quiet_connector"]}. `today` (YYYY-MM-DD) is for
+    tests; by default it is the date now in `tz`."""
     today = today or _today(tz)
     quiet_before = _cutoff(today, QUIET_DAYS)
     stuck_before = _cutoff(today, STUCK_DAYS)
@@ -51,6 +56,11 @@ def attention(conn: sqlite3.Connection, today: Optional[str] = None,
         if reasons:
             out.append({"org": orgs.get(conn, r["id"]), "reasons": reasons})
     out.sort(key=lambda x: (-len(x["reasons"]), x["org"]["name"].lower()))
+    quiet_since = _cutoff(today, CONNECTOR_DAYS)
+    for r in conn.execute(
+            "SELECT c.id FROM contacts c WHERE c.connector = 1 AND coalesce(%s, c.created_at) < ? "
+            "ORDER BY c.name COLLATE NOCASE" % contacts.LAST_TOUCH, (quiet_since,)).fetchall():
+        out.append({"contact": contacts.get(conn, r["id"]), "reasons": ["quiet_connector"]})
     return out
 
 

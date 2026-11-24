@@ -73,11 +73,13 @@ export function dueTone(due: string | null | undefined, now: Date = new Date()):
   return 'neutral'
 }
 
-/** The attention reasons on Home. A missed next step is urgent; going quiet or stuck is a warning. */
+/** The attention reasons on Home. A missed next step is urgent; going quiet or stuck, or a key person gone quiet, is a
+ * warning. */
 export const REASON_TONE: Record<string, TagTone> = {
   overdue: 'urgent',
   quiet: 'warning',
   stuck: 'warning',
+  quiet_connector: 'warning',
 }
 
 /** A Bench column as a Tag: Doing is running, Reviewing is accent, Done is success, and Cancelled is muted. */

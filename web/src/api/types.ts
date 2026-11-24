@@ -86,9 +86,63 @@ export interface Contact {
   notes: string | null
   is_primary: boolean
   relationship: string | null
+  /** Starred as a key connector. A referrer's own person is a key person without it. */
+  connector: boolean
+  postal_address: string | null
+  /** Read only: this is a referrer's own person, so a key person whatever `connector` says. */
+  is_referrer: boolean
   created_at: string
   updated_at: string
   updated_by: string
+}
+
+/** The referrer a key person is, when they are one. */
+export interface PersonReferrer {
+  id: number
+  slug: string
+  name: string
+  status: string
+}
+
+/** A key person: a contact starred as a key connector, or a referrer's own person. */
+export interface KeyPerson {
+  id: number
+  org_id: number
+  name: string
+  role: string | null
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  connector: boolean
+  postal_address: string | null
+  org_name: string
+  org_slug: string
+  /** Set for a referrer's own person, else null. */
+  referrer: PersonReferrer | null
+  /** Their newest log, or null when there is none. */
+  last_contact: string | null
+  /** The leads and clients their referrer introduced; 0 for everyone else. */
+  introduced_count: number
+}
+
+/** One key person's year-end thanks for one year. */
+export interface Thanks {
+  id: number
+  contact_id: number
+  year: number
+  what: string | null
+  /** The day it was sent, or null while it has not been. */
+  sent_on: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+  updated_by: string
+}
+
+/** A line of a year's thanks checklist: the person, and their row for that year or null. */
+export interface ThanksItem {
+  person: KeyPerson
+  thanks: Thanks | null
 }
 
 export interface Interaction {
@@ -173,14 +227,26 @@ export interface SearchHit {
   snippet: string
   /** The person a research brief is about; null for every other hit. */
   contact_id: number | null
+  /** A contact hit for a key person, who shows the star. False for every other hit. */
+  key_person: boolean
 }
 
 export type Reason = 'overdue' | 'quiet' | 'stuck'
 
-export interface AttentionItem {
+export type PersonReason = 'quiet_connector'
+
+export interface OrgAttention {
   org: Org
   reasons: Reason[]
 }
+
+/** A key person with no log in 90 days. These come after the organisations. */
+export interface PersonAttention {
+  contact: KeyPerson
+  reasons: PersonReason[]
+}
+
+export type AttentionItem = OrgAttention | PersonAttention
 
 export interface Meta {
   kinds: Kind[]
@@ -253,9 +319,19 @@ export interface ContactFields {
   notes: string | null
   is_primary: boolean
   relationship: string | null
+  connector: boolean
+  postal_address: string | null
 }
 export type ContactInput = Pick<ContactFields, 'name'> & Partial<ContactFields>
 export type ContactPatch = Partial<ContactFields> & { updated_at: string }
+
+/** `updated_at` is the row's as loaded, or null when there was no row yet. Only the fields that changed. */
+export interface ThanksPut {
+  updated_at: string | null
+  what?: string | null
+  sent_on?: string | null
+  note?: string | null
+}
 
 export interface InteractionFields {
   type: string

@@ -15,7 +15,8 @@ export function org(o: Partial<Org> = {}): Org {
 export function contact(o: Partial<Contact> = {}): Contact {
   return {
     id: 5, org_id: 1, org_name: 'Acme', org_slug: 'acme', name: 'Bo', role: null, email: null,
-    phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null,
+    phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null, connector: false,
+    postal_address: null, is_referrer: false,
     created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
   }
 }

@@ -1,7 +1,7 @@
 import { Alert, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
-import type { ActivityItem, Org } from '../api/types'
+import type { ActivityItem, Org, OrgAttention } from '../api/types'
 import { useSession } from '../app/session'
 import { ColourDot } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
@@ -38,7 +38,8 @@ export function HomePage() {
   const activity = useApi(() => api.activity(30), [])
   const orgs = useApi(() => api.orgs(), [])
   const drawer = useOrgDrawer()
-  const overdue = attention.data?.filter((a) => a.reasons.includes('overdue')).length ?? 0
+  const orgItems = attention.data?.filter((a): a is OrgAttention => 'org' in a)
+  const overdue = orgItems?.filter((a) => a.reasons.includes('overdue')).length ?? 0
   const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
     <div className="tn-stack">
@@ -67,7 +68,7 @@ export function HomePage() {
           ) : attention.data.length === 0 ? (
             <ColumnEmpty boxed>Nothing needs you today.</ColumnEmpty>
           ) : (
-            attention.data.map((a) => (
+            orgItems?.map((a) => (
               <OrgCard
                 key={a.org.id}
                 org={a.org}

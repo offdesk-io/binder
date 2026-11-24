@@ -182,8 +182,31 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
 - **Contact** (`/api/orgs/{id}/contacts`, `/api/contacts/{id}`): `id`,
   `org_id`, `org_name`, `org_slug`, `name`, `role`, `email`, `phone`,
   `linkedin_url`, `notes`, `is_primary` (bool), `relationship` (or null),
-  `created_at`, `updated_at`, `updated_by`. The list and the single contact
-  return the same fields.
+  `connector` (bool: starred as a key connector), `postal_address` (or null,
+  up to 1000 characters), `is_referrer` (bool, read only: this is a referrer's
+  own person), `created_at`, `updated_at`, `updated_by`. The list and the
+  single contact return the same fields. POST and PATCH take `connector` and
+  `postal_address`.
+- **Key person** (`GET /api/people?q=`): a contact starred as a key connector,
+  or a referrer's own person. `id`, `org_id`, `name`, `role`, `email`,
+  `phone`, `linkedin_url`, `connector`, `postal_address`, `org_name`,
+  `org_slug`, `referrer` (`{id, slug, name, status}` for a referrer's person,
+  else null), `last_contact` (their newest log: one naming them, or for a
+  referrer's person any log on the referrer; null if none) and
+  `introduced_count` (the leads and clients their referrer introduced; 0 for
+  everyone else). A to Z by name. `q` matches part of the name, role or
+  organisation.
+- **Thanks** (`GET /api/thanks?year=`, `PUT /api/thanks/{contact_id}/{year}`):
+  a year's checklist, one item per key person, A to Z: `{person, thanks}`,
+  where `person` is a key person and `thanks` is their row for that year or
+  null. `year` defaults to this year in `BINDER_TZ`. A row is `id`,
+  `contact_id`, `year`, `what` (up to 200 characters), `sent_on` (a date, or
+  null), `note` (up to 2000), `created_at`, `updated_at`, `updated_by`; one
+  per person and year. `PUT` creates or changes it, writing only the fields
+  sent, and carries the row's `updated_at`, or null when there was none: a
+  stale one gets 409 with `current`, the row or null. Someone who is not a key
+  person is 422. A person who stops being key keeps their rows and leaves the
+  list; deleting them deletes their rows.
 - **Interaction** (`/api/orgs/{id}/interactions`, `/api/interactions/{id}`):
   `id`, `org_id`, `type`, `happened_at`, `summary`, `next_step`,
   `next_step_due`, `contact_ids`, `author_email`, `created_at`, `updated_at`,
@@ -223,7 +246,7 @@ A record's `kind` is `lead`, `client`, `partner` or `referrer`, and only
 organisations have one. Leads and clients are the pipeline. A partner is an
 organisation OFFDESK has or seeks an agreement with; a referrer is a person who
 passes work on for a fee, kept as an organisation named after them. Partners
-and referrers never appear in needs attention or activity, and the Pipeline
+and referrers never appear as organisations in needs attention or activity, and the Pipeline
 asks for leads only. `introduced_by_id` may be set, on create or PATCH, only
 on a lead or client, and only to a partner or referrer other than itself;
 anything else is 422.
@@ -245,7 +268,8 @@ a status change can share an `id`.
 - **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
   `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `org_kind`, `title`, `snippet`
   (each match wrapped in the control characters `\u0002` and `\u0003`), and
-  `contact_id`: the person a research brief is about, null otherwise.
+  `contact_id`: the person a research brief is about, null otherwise, and
+  `key_person` (bool): a contact hit for a key person.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**
   (`/api/activity?limit=`): `kind` (`interaction` or `status`), `id`,
   `org_id`, `at`, `by_email`. Interaction items add `type` and `summary`;
@@ -257,7 +281,12 @@ a status change can share an `id`.
   also carry the interaction's other fields; activity items carry `org_name`
   and `org_slug`.
 - **Needs attention** (`/api/attention`): `{org, reasons}`, where `org` is an
-  organisation and `reasons` is a list of `overdue`, `quiet` and `stuck`.
+  organisation and `reasons` is a list of `overdue`, `quiet` and `stuck`;
+  then, A to Z, `{contact, reasons: ["quiet_connector"]}` for each key person
+  with no log in 90 days (counted from when they were added if they have
+  none), where `contact` is a key person as `/api/people` lists them. A
+  referrer's person counts only while the referrer is `active`; a starred
+  contact always does.
 
 ### Summarise
 

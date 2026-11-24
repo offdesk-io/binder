@@ -1,4 +1,4 @@
-import type { Reason } from '../api/types'
+import type { PersonReason, Reason } from '../api/types'
 
 /** `in_conversation` → `In conversation`. */
 export function label(code: string): string {
@@ -6,10 +6,11 @@ export function label(code: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export const REASON_TEXT: Record<Reason, string> = {
+export const REASON_TEXT: Record<Reason | PersonReason, string> = {
   overdue: 'Next step overdue',
   quiet: 'No contact in 14 days',
   stuck: 'Same stage for 30 days',
+  quiet_connector: 'No contact in 90 days',
 }
 
 export function statusLine(from: string | null, to: string): string {
@@ -36,6 +37,15 @@ export function day(value: string | null | undefined): string {
   if (!value) return ''
   const d = parse(value)
   return Number.isNaN(d.getTime()) ? '' : DAY.format(d)
+}
+
+const SHORT_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })
+
+/** A day without its year, `12 Oct`, for when someone was last in touch. Empty when there is none. */
+export function shortDay(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = parse(value)
+  return Number.isNaN(d.getTime()) ? '' : SHORT_DAY.format(d)
 }
 
 /** The time of day, `09:30`, for something read a moment ago. */

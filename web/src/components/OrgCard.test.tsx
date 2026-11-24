@@ -6,15 +6,17 @@ import { renderApp, SESSION } from '../test/render'
 import { OrgCard } from './OrgCard'
 
 const acme = org({
-  id: 1, slug: 'acme', name: 'Acme', sector: 'Retail', next_step: 'Send the proposal', next_step_due: '2026-11-20',
+  id: 1, slug: 'acme', name: 'Acme', sector: 'Retail', description: 'Sells kilns online', next_step: 'Send the proposal', next_step_due: '2026-11-20',
   value_estimate: 12000, owner_email: 'rui@example.com',
 })
 
-test('a card shows sector, name, next step and the chips', () => {
+test('a card shows sector, name, description and the chips', () => {
   renderApp(<OrgCard org={acme} />)
   expect(screen.getByText('Retail')).toHaveClass('tn-custom-sector')
   expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/o/acme')
-  expect(screen.getByText('Send the proposal')).toBeInTheDocument()
+  expect(screen.getByText('Sells kilns online')).toBeInTheDocument()
+  expect(screen.queryByText('Send the proposal')).toBeNull()
+  expect(screen.queryByText(/2026|Nov/)).toBeNull()
   expect(screen.getByText('€12k')).toBeInTheDocument()
   expect(screen.getByText('R')).toHaveAttribute('title', expect.stringContaining('Handled by Rui'))
 })
@@ -22,6 +24,12 @@ test('a card shows sector, name, next step and the chips', () => {
 test('the name link carries the slug the drawer hands focus back to', () => {
   renderApp(<OrgCard org={acme} />)
   expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('data-org-open', 'acme')
+})
+
+test('no description, no summary line', () => {
+  renderApp(<OrgCard org={org({ description: null, next_step: 'Send the proposal' })} />)
+  expect(document.querySelector('.tn-custom-muted')).toBeNull()
+  expect(screen.queryByText('Send the proposal')).toBeNull()
 })
 
 test('no sector, no label', () => {
@@ -69,7 +77,7 @@ test('with openOnCard, a click on the card body opens it once', async () => {
   const user = userEvent.setup()
   const onOpen = vi.fn()
   renderApp(<OrgCard org={acme} onOpen={onOpen} openOnCard />)
-  await user.click(screen.getByText('Send the proposal'))
+  await user.click(screen.getByText('Sells kilns online'))
   expect(onOpen).toHaveBeenCalledTimes(1)
   expect(onOpen).toHaveBeenCalledWith(acme)
 })

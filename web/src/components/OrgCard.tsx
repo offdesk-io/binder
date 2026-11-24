@@ -33,8 +33,8 @@ interface OrgCardProps extends Omit<CardProps, 'title'> {
 }
 
 /**
- * One organisation as a card: sector as the eyebrow in its colour, the name, the next step, and a
- * row of chips (due date, value, the initials of whoever handles it). The left stripe is the stage's colour. Any other Card prop
+ * One organisation as a card: sector as the eyebrow in its colour, the name, the description, and a
+ * row of chips (value, the initials of whoever handles it). The left stripe is the stage's colour. Any other Card prop
  * passes through. The name link carries data-org-open, so the drawer can hand focus back to this card when it closes.
  */
 export function OrgCard({ org, onOpen, showStatus = true, openOnCard = false, ...rest }: OrgCardProps) {
@@ -55,10 +55,9 @@ export function OrgCard({ org, onOpen, showStatus = true, openOnCard = false, ..
       tags={showStatus ? <StatusTag status={org.status} /> : undefined}
       interactive={openOnCard || undefined}
       onClick={openOnCard ? open : undefined}
-      summary={org.next_step ? <span className="tn-custom-muted">{org.next_step}</span> : undefined}
+      summary={org.description?.trim() ? <span className="tn-custom-muted">{org.description}</span> : undefined}
       footer={
         <span className="tn-custom-chiprow">
-          {org.next_step_due && <DueDate due={org.next_step_due} />}
           {org.value_estimate != null && <Tag>{moneyShort(org.value_estimate)}</Tag>}
           {org.owner_email && (
             <span className="tn-custom-avatar" title={`Handled by ${ownerName(owners, org.owner_email)}`}>{ownerInitials(owners, org.owner_email)}</span>

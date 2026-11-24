@@ -539,7 +539,7 @@ test('a failed move keeps what the drawer saved meanwhile and puts only the stat
     'PATCH /api/orgs/1': () => {
       calls++
       if (calls === 1) return new Promise<Response>((res) => { release = res })
-      return { ...a, status: 'contacted', next_step: 'Call Acme', updated_at: 'later' }
+      return { ...a, status: 'contacted', description: 'Call Acme', updated_at: 'later' }
     },
   })
   await openColumns()

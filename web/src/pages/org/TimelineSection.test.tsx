@@ -22,6 +22,16 @@ test('a limit shows the newest entries and links to the rest', () => {
   expect(screen.getByRole('link', { name: 'Show all 7' })).toHaveAttribute('href', '/o/acme')
 })
 
+test('a status line names who made it, in full when they are on the team and by email otherwise', () => {
+  const status = (id: number, by_email: string): TimelineItem => ({
+    kind: 'status', id, org_id: 1, at: '2026-11-10T12:00:00+00:00', from_status: 'lead', to_status: 'contacted', by_email,
+  })
+  const two = [status(1, 'rui@example.com'), status(2, 'old.hand@example.com')]
+  renderApp(<TimelineSection items={{ ...loaded, data: two }} contacts={[]} onEdit={() => {}} />)
+  expect(screen.getByText(/· Rui ·/)).toBeInTheDocument()
+  expect(screen.getByText(/· old\.hand ·/)).toBeInTheDocument()
+})
+
 test('without a limit every entry shows and there is no link', () => {
   renderApp(<TimelineSection items={loaded} contacts={[]} onEdit={() => {}} />)
   expect(screen.getAllByRole('listitem')).toHaveLength(7)

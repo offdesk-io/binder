@@ -32,6 +32,19 @@ test('shows what needs attention, with its reasons, and recent activity', async 
   expect(hrefs).toContain('/o/bolt')
 })
 
+test('the activity feed names who did it, in full when they are on the team and by email otherwise', async () => {
+  stubFetch({
+    'GET /api/attention': () => [],
+    'GET /api/activity?limit=30': () => [
+      activity({ by_email: 'rui@example.com' }),
+      activity({ id: 2, by_email: 'old.hand@example.com' }),
+    ],
+  })
+  renderApp(<HomePage />)
+  expect(await screen.findByText(/^Rui · /)).toBeInTheDocument()
+  expect(screen.getByText(/^old\.hand · /)).toBeInTheDocument()
+})
+
 test('says so when nothing needs attention', async () => {
   stubFetch({ 'GET /api/attention': () => [], 'GET /api/activity?limit=30': () => [] })
   renderApp(<HomePage />)

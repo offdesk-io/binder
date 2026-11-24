@@ -2,11 +2,13 @@ import { Alert, Button, ColumnEmpty } from '@tiagopedras/tenon'
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import type { Contact, TimelineInteraction, TimelineItem } from '../../api/types'
+import { useSession } from '../../app/session'
 import { ColourDot } from '../../components/ColourTag'
 import { InteractionEntry } from '../../components/InteractionEntry'
 import { Loading } from '../../components/Loading'
 import { stageColour } from '../../lib/colour'
-import { day, label, person, safeHref, statusLine } from '../../lib/format'
+import { day, label, safeHref, statusLine } from '../../lib/format'
+import { ownerName } from '../../lib/owners'
 import type { Loaded } from '../../lib/useApi'
 import { Section } from './Section'
 
@@ -21,6 +23,7 @@ interface Props {
 }
 
 export function TimelineSection({ items, contacts, onEdit, limit, moreHref }: Props) {
+  const { owners } = useSession().meta
   const names = new Map(contacts.map((c) => [c.id, c.name]))
   const { hash } = useLocation()
 
@@ -44,7 +47,7 @@ export function TimelineSection({ items, contacts, onEdit, limit, moreHref }: Pr
               i.kind === 'status' ? (
                 <li key={`s${i.id}`} className="tn-custom-muted">
                   <ColourDot colour={stageColour(i.to_status)} /> {statusLine(i.from_status, i.to_status)}{' '}
-                  <span className="tn-custom-entry-meta">· {person(i.by_email)} · {day(i.at)}</span>
+                  <span className="tn-custom-entry-meta">· {ownerName(owners, i.by_email)} · {day(i.at)}</span>
                 </li>
               ) : i.kind === 'bench' ? (
                 <li key={`b${i.id}`} className="tn-custom-muted">

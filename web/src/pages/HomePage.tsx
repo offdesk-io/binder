@@ -8,7 +8,8 @@ import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
 import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
-import { ago, label, money, person, REASON_TEXT, statusLine } from '../lib/format'
+import { ago, label, money, REASON_TEXT, statusLine } from '../lib/format'
+import { ownerName } from '../lib/owners'
 import { useApi } from '../lib/useApi'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
 
@@ -97,7 +98,7 @@ export function HomePage() {
                     <span className="tn-custom-faint" aria-hidden="true"> · </span>
                     <span>{what(a)}</span>
                   </p>
-                  <div className="tenon-caption tn-custom-faint">{person(a.by_email)} · {ago(a.at)}</div>
+                  <div className="tenon-caption tn-custom-faint">{ownerName(meta.owners, a.by_email)} · {ago(a.at)}</div>
                 </li>
               ))}
             </ul>

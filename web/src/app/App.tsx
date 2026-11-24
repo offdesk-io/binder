@@ -6,6 +6,7 @@ import { ListPage } from '../pages/ListPage'
 import { ContactPage } from '../pages/ContactPage'
 import { OrgPage } from '../pages/OrgPage'
 import { PartnersPage } from '../pages/PartnersPage'
+import { PeoplePage } from '../pages/PeoplePage'
 import { PipelinePage } from '../pages/PipelinePage'
 import { SearchPage } from '../pages/SearchPage'
 import { SessionProvider } from './session'
@@ -23,6 +24,7 @@ export function App() {
           <Route path="pipeline" element={<PipelinePage />} />
           <Route path="list" element={<ListPage />} />
           <Route path="partners" element={<PartnersPage />} />
+          <Route path="people" element={<PeoplePage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="o/:slug" element={<OrgPage />} />
           <Route path="c/:id" element={<ContactPage />} />

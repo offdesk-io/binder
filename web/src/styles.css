@@ -324,3 +324,17 @@ a.tenon-button:hover { text-decoration: none; }
 
 /* A postal address keeps its lines. */
 .tn-custom-address { white-space: pre-line; }
+
+
+/* People: the reach buttons, and the Thanks checklist's lines. On a phone each button and each field takes the
+   full width, so they are easy to tap. */
+.tn-custom-reach { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); }
+.tn-custom-thanks-line {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) auto minmax(0, 2fr);
+  align-items: center; gap: var(--tenon-dimension-100);
+}
+.tn-custom-thanks-line > .tenon-alert { grid-column: 1 / -1; }
+@media (max-width: 767px) {
+  .tn-custom-reach > * { flex: 1 1 100%; justify-content: center; }
+  .tn-custom-thanks-line { grid-template-columns: minmax(0, 1fr); }
+}

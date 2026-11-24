@@ -15,6 +15,7 @@ const NAV = [
   { to: '/pipeline', label: 'Pipeline', end: false },
   { to: '/list', label: 'List', end: false },
   { to: '/partners', label: 'Partners', end: false },
+  { to: '/people', label: 'People', end: false },
 ]
 
 /** On a phone the views are a tab bar at the foot of the screen; on a desktop they are the AppHeader's tabs. */

@@ -193,3 +193,9 @@ test('Partners is a tab', () => {
   app()
   expect(screen.getByRole('link', { name: 'Partners' })).toHaveAttribute('href', '/partners')
 })
+
+
+test('People is a tab', () => {
+  app()
+  expect(screen.getByRole('link', { name: 'People' })).toHaveAttribute('href', '/people')
+})

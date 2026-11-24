@@ -94,13 +94,24 @@ export function taskTone(state: string): TagTone {
   return TASK_TONE[state] ?? 'neutral'
 }
 
+/** The six sectors, one Tenon chart colour each, all different. Drawn as text on a raised card, where each chart
+ * colour reaches AA in both themes (see .tn-custom-chart in styles.css). */
+export const SECTOR: Record<string, Colour> = {
+  manufacturing: chart(3),
+  consulting: chart(6),
+  technology: chart(1),
+  retail_ecommerce: chart(8),
+  healthcare: chart(4),
+  construction_installations: chart(2),
+}
+
 /**
- * A sector's colour, for the label at the top of a card. The sector is free text, so
- * its name is hashed to one of Tenon's ten chart colours: the same name always lands on the same colour. Drawn as
- * text on a raised card, where each chart colour reaches AA in both themes (see .tn-custom-chart in styles.css).
+ * A sector's colour, for the label at the top of a card. A value the six do not cover (an older free-text one) is
+ * hashed to one of Tenon's ten chart colours: the same name always lands on the same colour.
  */
 export function sectorColour(sector: string): Colour {
   const name = sector.trim().toLowerCase()
+  if (SECTOR[name]) return SECTOR[name]
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
   return chart(((h % 10) + 1) as TagChart)

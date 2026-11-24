@@ -50,30 +50,35 @@ test('a filter in a shared link is applied on load', () => {
   expect(screen.getByText('shown 1')).toBeInTheDocument()
 })
 
-test('options: Any owner, Me, other owners by name, No owner', () => {
+test('options: Anyone, Me, other people by name, Nobody', () => {
   expect(ownerOptions(orgs, 'ana@example.com')).toEqual([
-    { value: '', label: 'Any owner' },
+    { value: '', label: 'Anyone' },
     { value: 'ana@example.com', label: 'Me' },
     { value: 'rui@example.com', label: 'rui' },
-    { value: 'none', label: 'No owner' },
+    { value: 'none', label: 'Nobody' },
   ])
 })
 
-test('options leave out Me when I own none, and No owner when every one has an owner', () => {
-  expect(ownerOptions([orgs[2]], 'ana@example.com').map((o) => o.label)).toEqual(['Any owner', 'rui'])
+test('options leave out Me when I own none, and Nobody when every one has someone', () => {
+  expect(ownerOptions([orgs[2]], 'ana@example.com').map((o) => o.label)).toEqual(['Anyone', 'rui'])
 })
 
 test('other owners are sorted by name', () => {
   const many = [org({ id: 1, owner_email: 'zed@example.com' }), org({ id: 2, owner_email: 'bo@example.com' })]
-  expect(ownerOptions(many, 'me@example.com').map((o) => o.label)).toEqual(['Any owner', 'bo', 'zed'])
+  expect(ownerOptions(many, 'me@example.com').map((o) => o.label)).toEqual(['Anyone', 'bo', 'zed'])
 })
 
-test('a stale ?owner=none is labelled No owner', () => {
+test('a stale ?owner=none is labelled Nobody', () => {
   const owned = [orgs[0]]
-  expect(ownerOptions(owned, 'ana@example.com', 'none')[2]).toEqual({ value: 'none', label: 'No owner' })
+  expect(ownerOptions(owned, 'ana@example.com', 'none')[2]).toEqual({ value: 'none', label: 'Nobody' })
 })
 
 test('an active owner nobody matches is still listed', () => {
   expect(ownerOptions(orgs, 'ana@example.com', 'gone@example.com')[4]).toEqual({ value: 'gone@example.com', label: 'gone' })
   expect(ownerOptions(orgs, 'ana@example.com', 'rui@example.com')).toHaveLength(4)
+})
+
+test('other people are listed by their name from the team list', () => {
+  const team = [{ email: 'rui@example.com', name: 'Rui Costa' }]
+  expect(ownerOptions(orgs, 'ana@example.com', undefined, team).map((o) => o.label)).toEqual(['Anyone', 'Me', 'Rui Costa', 'Nobody'])
 })

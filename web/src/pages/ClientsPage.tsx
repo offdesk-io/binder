@@ -10,9 +10,10 @@ import { NextStep, OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
 import { SectorLabel } from '../components/SectorLabel'
 import { StatusTag } from '../components/StatusTag'
-import { ago, label, money, person } from '../lib/format'
+import { ago, label, money } from '../lib/format'
 import { matchesText } from '../lib/matchesText'
 import { openInPlace } from '../lib/openInPlace'
+import { ownerName } from '../lib/owners'
 import { byOwner, ownerOptions } from '../lib/ownerFilter'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -101,8 +102,8 @@ export function ClientsPage() {
       )}
       <div className="tn-toolbar">
         <div className="tn-cluster">
-          <Dropdown className="tn-custom-filter" aria-label="Owner" value={f.owner} onChange={(v) => put('owner', v)}
-            options={ownerOptions(all, me.email, f.owner)} />
+          <Dropdown className="tn-custom-filter" aria-label="Handled by" value={f.owner} onChange={(v) => put('owner', v)}
+            options={ownerOptions(all, me.email, f.owner, meta.owners)} />
           <Dropdown className="tn-custom-filter" aria-label="Status" value={f.status} onChange={(v) => put('status', v)}
             options={[{ value: '', label: 'Any status' }, ...statuses.map((s) => ({ value: s, label: label(s) }))]} />
           <Dropdown className="tn-custom-filter" aria-label="Tag" value={f.tag} onChange={(v) => put('tag', v)}
@@ -127,7 +128,7 @@ export function ClientsPage() {
                 <th scope="col">Name</th>
                 <th scope="col">Sector</th>
                 <th scope="col">Status</th>
-                <th scope="col">Owner</th>
+                <th scope="col">Handled by</th>
                 <th scope="col">Last contact</th>
                 <th scope="col">Next step</th>
                 <th scope="col" data-numeric>Value</th>
@@ -143,7 +144,7 @@ export function ClientsPage() {
                     <SectorLabel sector={o.sector} />
                   </td>
                   <td><StatusTag status={o.status} /></td>
-                  <td>{person(o.owner_email)}</td>
+                  <td>{ownerName(meta.owners, o.owner_email)}</td>
                   <td>{ago(o.last_contact)}</td>
                   <td><NextStep org={o} /></td>
                   <td data-numeric className="tn-numeric">{money(o.value_estimate)}</td>

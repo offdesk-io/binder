@@ -143,7 +143,7 @@ export function PipelinePage() {
       : stages(shown, statusesOf(meta, segment))
   const locked = segment === 'lead' ? 'won' : undefined
   const heads = [
-    { name: 'Name' }, { name: 'Sector' }, { name: 'Next step' }, { name: 'Value', numeric: true }, { name: 'Owner' },
+    { name: 'Name' }, { name: 'Sector' }, { name: 'Next step' }, { name: 'Value', numeric: true }, { name: 'Handled by' },
     { name: 'Last contact' },
   ]
   const columns = phone ? 1 : heads.length
@@ -153,8 +153,8 @@ export function PipelinePage() {
     <div className="tn-stack">
       <h1 className="tn-custom-sr-only">Leads pipeline</h1>
       <div className="tn-custom-filterbar">
-        <Dropdown className="tn-custom-filter" aria-label="Owner" value={owner} onChange={setOwner}
-          options={ownerOptions(orgs.data, me.email, owner)} />
+        <Dropdown className="tn-custom-filter" aria-label="Handled by" value={owner} onChange={setOwner}
+          options={ownerOptions(orgs.data, me.email, owner, meta.owners)} />
         <SegmentedControl aria-label="Kind" value={segment} onChange={chooseSegment} options={SEGMENT_OPTIONS} />
         <SegmentedControl aria-label="View" value={view} onChange={chooseView}
           options={[{ value: 'list', label: 'List' }, { value: 'columns', label: 'Board' }]} />

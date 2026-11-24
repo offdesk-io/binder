@@ -145,19 +145,19 @@ test('rows within a stage run by due date, overdue first, then undated by name',
 
 test('a row shows sector, next step with its due date, value, owner and last contact', async () => {
   const full = org({
-    id: 1, name: 'Acme', slug: 'acme', sector: 'Retail', next_step: 'Send the proposal', next_step_due: '2099-01-01',
+    id: 1, name: 'Acme', slug: 'acme', sector: 'retail_ecommerce', next_step: 'Send the proposal', next_step_due: '2099-01-01',
     value_estimate: 12000, owner_email: 'rui@example.com', last_contact: null,
   })
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [full] })
   renderApp(<PipelinePage />)
   const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
   const cells = within(row).getAllByRole('cell').map((c) => c.textContent)
-  expect(cells[1]).toBe('Retail')
+  expect(cells[1]).toBe('Retail and e-commerce')
   expect(cells[2]).toContain('Send the proposal')
   expect(cells[3]).toBe('€12,000')
-  expect(cells[4]).toBe('rui')
+  expect(cells[4]).toBe('Rui')
   expect(cells[5]).toBe('never')
-  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'Sector', 'Next step', 'Value', 'Owner', 'Last contact'])
+  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'Sector', 'Next step', 'Value', 'Handled by', 'Last contact'])
 })
 
 test('the pipeline has a visually hidden title', async () => {
@@ -213,7 +213,7 @@ test('after Won, a later save of the same client does not announce it again', as
   const won = org({ ...a, kind: 'client', status: 'active' })
   stubFetch({
     ...routes,
-    'PATCH /api/orgs/1': (body) => ((body as { status?: string }).status ? won : org({ ...won, sector: 'Retail', updated_at: '2026-11-11T12:00:00.000000+00:00' })),
+    'PATCH /api/orgs/1': (body) => ((body as { status?: string }).status ? won : org({ ...won, location: 'Leeds', updated_at: '2026-11-11T12:00:00.000000+00:00' })),
   })
   renderApp(<PipelinePage />)
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
@@ -221,7 +221,7 @@ test('after Won, a later save of the same client does not announce it again', as
   await user.click(screen.getByRole('menuitemradio', { name: 'Won' }))
   expect(await screen.findByText('Acme is now a client.')).toBeInTheDocument()
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Edit' }))
-  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.type(screen.getByLabelText('Location'), 'Leeds')
   await user.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(screen.queryByText('Acme is now a client.')).toBeNull())
 })
@@ -234,12 +234,12 @@ test('a client opened by its link and edited in the drawer shows no notice', asy
     // A client is not on the Pipeline.
     'GET /api/orgs?kind=lead': () => [b],
     'GET /api/orgs/by-slug/acme': () => client,
-    'PATCH /api/orgs/1': () => org({ ...client, sector: 'Retail', updated_at: '2026-11-11T12:00:00.000000+00:00' }),
+    'PATCH /api/orgs/1': () => org({ ...client, location: 'Leeds', updated_at: '2026-11-11T12:00:00.000000+00:00' }),
   })
   renderApp(<PipelinePage />, '/pipeline?org=acme')
   const drawer = await screen.findByRole('dialog', { name: 'Acme' })
   await user.click(within(drawer).getByRole('button', { name: 'Edit' }))
-  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.type(screen.getByLabelText('Location'), 'Leeds')
   await user.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/orgs/1')).toBe(true))
   await waitFor(() => expect(screen.getByRole('dialog', { name: 'Acme' })).toBeInTheDocument())
@@ -256,7 +256,7 @@ test('on a phone, rows are two-line items under the same stages, with no stage s
   expect(cells).toHaveLength(1)
   expect(cells[0].children).toHaveLength(2)
   expect(cells[0].children[0]).toHaveTextContent('Acme Retail')
-  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'rui'])
+  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'Rui'])
   expect(screen.queryAllByRole('columnheader')).toHaveLength(0)
   expect(screen.getByRole('button', { name: /^Lead/ })).toBeInTheDocument()
   expect(screen.queryByRole('radiogroup', { name: 'Stage' })).toBeNull()
@@ -276,7 +276,7 @@ test('the owner dropdown narrows the rows', async () => {
   const c = org({ id: 3, name: 'Cobalt', slug: 'cobalt', status: 'lead', owner_email: 'rui@example.com' })
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [a, b, c] })
   renderApp(<PipelinePage />)
-  await user.click(await screen.findByRole('button', { name: 'Owner' }))
+  await user.click(await screen.findByRole('button', { name: 'Handled by' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Me' }))
   expect(screen.queryByRole('link', { name: 'Cobalt' })).toBeNull()
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
@@ -760,14 +760,14 @@ test('a won client edited in the drawer keeps its place in the newest-won-first 
     'GET /api/orgs/22/timeline': () => [],
     'GET /api/orgs/22/research': () => [],
     'GET /api/orgs/22/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
-    'PATCH /api/orgs/22': () => ({ ...older, sector: 'Retail', updated_at: '2026-11-21T12:00:00.000000+00:00' }),
+    'PATCH /api/orgs/22': () => ({ ...older, sector: 'retail_ecommerce', updated_at: '2026-11-21T12:00:00.000000+00:00' }),
   })
   renderApp(<PipelinePage />)
   await user.click(await screen.findByRole('link', { name: 'Older' }))
   await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Edit' }))
-  await user.type(screen.getByLabelText('Sector'), 'Retail')
+  await user.type(screen.getByLabelText('Location'), 'Leeds')
   await user.click(screen.getByRole('button', { name: 'Save' }))
-  await waitFor(() => expect(within(stage(/^Won/)).getByText('Retail', { exact: false })).toBeInTheDocument())
+  await waitFor(() => expect(within(stage(/^Won/)).getByText('Retail and e-commerce', { exact: false })).toBeInTheDocument())
   const names = within(stage(/^Won/)).getAllByRole('link', { hidden: true }).map((l) => l.textContent)
   expect(names).toEqual(['Newer', 'Older'])
 })

@@ -139,7 +139,7 @@ test('changing the sort keeps the list and the dropdowns on screen', async () =>
   await user.click(screen.getByRole('button', { name: 'Sort' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Recently updated' }))
   expect(screen.getByRole('link', { name: 'Acme' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Owner' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Handled by' })).toBeInTheDocument()
   release([bolt, acme])
 })
 
@@ -233,7 +233,7 @@ test('the owner dropdown filters and goes in the address', async () => {
   stubFetch({ [NAME]: () => [acme, bolt] })
   renderApp(<><ClientsPage /><Where /></>, '/clients')
   await screen.findByRole('link', { name: 'Acme' })
-  await user.click(screen.getByRole('button', { name: 'Owner' }))
+  await user.click(screen.getByRole('button', { name: 'Handled by' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'bo' }))
   expect(await screen.findByText('at /clients?owner=bo%40example.com')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()

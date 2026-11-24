@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { org } from '../test/fixtures'
-import { renderApp } from '../test/render'
+import { renderApp, SESSION } from '../test/render'
 import { OrgCard } from './OrgCard'
 
 const acme = org({
@@ -16,7 +16,7 @@ test('a card shows sector, name, next step and the chips', () => {
   expect(screen.getByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/o/acme')
   expect(screen.getByText('Send the proposal')).toBeInTheDocument()
   expect(screen.getByText('€12k')).toBeInTheDocument()
-  expect(screen.getByText('R')).toHaveAttribute('title', expect.stringContaining('rui'))
+  expect(screen.getByText('R')).toHaveAttribute('title', expect.stringContaining('Handled by Rui'))
 })
 
 test('the name link carries the slug the drawer hands focus back to', () => {
@@ -117,4 +117,17 @@ test('the stage tag shows unless showStatus is off', () => {
   unmount()
   renderApp(<OrgCard org={acme} showStatus={false} />)
   expect(screen.queryByText('Lead')).toBeNull()
+})
+
+test('the avatar takes its initials from the name on the team list, and its tooltip says Handled by', () => {
+  const session = { ...SESSION, meta: { ...SESSION.meta, owners: [{ email: 'ana.silva@example.com', name: 'Ana Silva' }] } }
+  renderApp(<OrgCard org={org({ owner_email: 'ana.silva@example.com' })} />, '/', session)
+  expect(screen.getByText('AS')).toHaveAttribute('title', 'Handled by Ana Silva')
+})
+
+test('the eyebrow names the sector and takes its colour', () => {
+  renderApp(<OrgCard org={org({ sector: 'healthcare' })} />)
+  const eyebrow = screen.getByText('Healthcare')
+  expect(eyebrow).toHaveClass('tn-custom-sector')
+  expect(eyebrow).toHaveStyle({ '--tn-sector': 'var(--tenon-chart-4)' })
 })

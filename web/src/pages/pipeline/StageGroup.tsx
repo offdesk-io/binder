@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useSession } from '../../app/session'
 import type { Org } from '../../api/types'
 import { ColourDot, DueDate } from '../../components/ColourTag'
 import { SectorLabel } from '../../components/SectorLabel'
 import { stageColour } from '../../lib/colour'
-import { ago, label, money, moneyShort, person } from '../../lib/format'
+import { ago, label, money, moneyShort } from '../../lib/format'
+import { ownerName } from '../../lib/owners'
 import { openInPlace } from '../../lib/openInPlace'
 import { FOLDED_BY_DEFAULT, type Stage } from '../../lib/pipeline'
 
@@ -46,6 +48,7 @@ interface StageGroupProps {
  */
 export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }: StageGroupProps) {
   const { status, orgs, total } = stage
+  const { owners } = useSession().meta
   const [kept, setKept] = useState(() => readOpen(status))
   const open = forceOpen || kept
   const toggle = () => {
@@ -88,7 +91,7 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
                   // In a plain span, so the separator dot sits outside the Tag's chip.
                   o.next_step_due && <span key="due"><DueDate due={o.next_step_due} /></span>,
                   o.value_estimate != null && <span key="value">{money(o.value_estimate)}</span>,
-                  <span key="owner">{person(o.owner_email)}</span>,
+                  <span key="owner">{ownerName(owners, o.owner_email)}</span>,
                 ]}
               </div>
             </td>
@@ -103,7 +106,7 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
               {o.next_step_due && <DueDate due={o.next_step_due} />}
             </td>
             <td data-numeric className="tn-numeric">{money(o.value_estimate)}</td>
-            <td>{person(o.owner_email)}</td>
+            <td>{ownerName(owners, o.owner_email)}</td>
             <td>{ago(o.last_contact)}</td>
           </tr>
         ),

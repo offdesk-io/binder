@@ -50,7 +50,7 @@ describe('format', () => {
 
   test('people, links and status lines', () => {
     expect(person('ana@example.com')).toBe('ana')
-    expect(person(null)).toBe('No owner')
+    expect(person(null)).toBe('Nobody')
     expect(safeHref('acme.example.com')).toBe('https://acme.example.com')
     expect(safeHref('http://acme.example.com')).toBe('http://acme.example.com')
     expect(safeHref('localhost:3000')).toBe('https://localhost:3000')

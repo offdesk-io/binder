@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react'
 import { sectorColour } from '../lib/colour'
+import { sectorLabel } from '../lib/sectors'
 
-/** An organisation's sector as a label: small, bold, uppercase, in the sector's colour. Nothing when empty. */
+/** An organisation's sector as a label: small, bold, uppercase, in the sector's colour, named for people. Nothing when empty. */
 export function SectorLabel({ sector }: { sector: string | null | undefined }) {
   const s = sector?.trim()
   if (!s) return null
-  return <span className="tn-custom-sector" style={{ '--tn-sector': sectorColour(s).mark } as CSSProperties}>{s}</span>
+  return <span className="tn-custom-sector" style={{ '--tn-sector': sectorColour(s).mark } as CSSProperties}>{sectorLabel(s)}</span>
 }

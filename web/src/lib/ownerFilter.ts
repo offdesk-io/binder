@@ -1,7 +1,7 @@
 import type { DropdownOption } from '@tiagopedras/tenon'
 import { useSearchParams } from 'react-router-dom'
-import type { Org } from '../api/types'
-import { person } from './format'
+import type { Org, Owner } from '../api/types'
+import { ownerName } from './owners'
 
 /** '' is everyone, 'none' is organisations without an owner, anything else is an owner's email. */
 export type OwnerValue = string
@@ -26,20 +26,20 @@ export function byOwner(orgs: Org[], value: OwnerValue): Org[] {
   return orgs.filter((o) => o.owner_email === value)
 }
 
-/** The Owner dropdown's options: Any owner, Me (when I own any), every other owner by name, No owner (when any has none). */
-export function ownerOptions(orgs: Org[], me: string, active?: OwnerValue): DropdownOption[] {
+/** The Handled by dropdown's options: Anyone, Me (when I handle any), every other person by name, Nobody (when any record has no one). */
+export function ownerOptions(orgs: Org[], me: string, active?: OwnerValue, team: Owner[] = []): DropdownOption[] {
   const owners = new Set(orgs.map((o) => o.owner_email ?? 'none'))
   const others = Array.from(owners)
     .filter((k) => k !== 'none' && k !== me)
-    .map((k) => ({ value: k, label: person(k) }))
+    .map((k) => ({ value: k, label: ownerName(team, k) }))
     .sort((a, b) => a.label.localeCompare(b.label))
   const options: DropdownOption[] = [
-    { value: '', label: 'Any owner' },
+    { value: '', label: 'Anyone' },
     ...(owners.has(me) ? [{ value: me, label: 'Me' }] : []),
     ...others,
-    ...(owners.has('none') ? [{ value: 'none', label: 'No owner' }] : []),
+    ...(owners.has('none') ? [{ value: 'none', label: 'Nobody' }] : []),
   ]
-  // An active owner nobody matches (an old link) is still listed, so the filter shows.
-  if (active && !options.some((o) => o.value === active)) options.push({ value: active, label: active === 'none' ? 'No owner' : person(active) })
+  // An active person nobody matches (an old link) is still listed, so the filter shows.
+  if (active && !options.some((o) => o.value === active)) options.push({ value: active, label: active === 'none' ? 'Nobody' : ownerName(team, active) })
   return options
 }

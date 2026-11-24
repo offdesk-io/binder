@@ -85,7 +85,7 @@ test('winning a lead turns the page into a client with client statuses', async (
   await user.click(await screen.findByRole('button', { name: 'Status' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Won' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Active'))
-  expect(screen.getByText(/Client · owned by/)).toBeInTheDocument()
+  expect(screen.getByText(/Client · handled by/)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Status' }))
   expect(screen.getByRole('menuitemradio', { name: 'Paused' })).toBeInTheDocument()
   expect(screen.queryByRole('menuitemradio', { name: 'Won' })).toBeNull()
@@ -217,7 +217,7 @@ test('a partner lists what it introduced, each linking to its page with its stat
   expect(within(section as HTMLElement).getByRole('link', { name: 'Cobalt' })).toHaveAttribute('href', '/o/cobalt')
   expect(section).toHaveTextContent('Contacted')
   expect(section).toHaveTextContent('Paused')
-  expect(screen.getByText(/Partner · owned by/)).toBeInTheDocument()
+  expect(screen.getByText(/Partner · handled by/)).toBeInTheDocument()
 })
 
 test('a referrer that has introduced nobody says so, and its status picker is its own', async () => {
@@ -269,4 +269,40 @@ test.each(['partner', 'referrer'] as const)('deleting a %s from its page goes to
   expect(await screen.findByText('pipeline page')).toBeInTheDocument()
   expect(localStorage.getItem('binder.pipeline.kind')).toBe(kind)
   localStorage.clear()
+})
+
+test('what they do shows under the name, and the sector and handler by name', async () => {
+  stubs({ 'GET /api/orgs/by-slug/acme': () => org({ id: 1, description: 'Makes industrial kilns', sector: 'manufacturing', owner_email: 'rui@example.com' }) })
+  page()
+  const title = await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  const text = screen.getByText('Makes industrial kilns')
+  expect(title.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.getByText('Manufacturing')).toBeInTheDocument()
+  expect(screen.getByText(/Lead · handled by Rui/)).toBeInTheDocument()
+})
+
+test('a referrer shows its details as a person card at the top and has no People section', async () => {
+  const rui = org({
+    id: 1, name: 'Rui Costa', kind: 'referrer', status: 'identified', description: 'Costa Kilns',
+    person: { contact_id: 4, email: 'rui@example.com', phone: '+351 900 000 000', linkedin_url: 'linkedin.com/in/rui' },
+  })
+  stubs({ 'GET /api/orgs/by-slug/acme': () => rui })
+  page()
+  const card = (await screen.findByRole('heading', { name: 'Contact details' })).closest('#person') as HTMLElement
+  expect(card).not.toBeNull()
+  expect(within(card).getByText('Costa Kilns')).toBeInTheDocument()
+  expect(within(card).getByRole('link', { name: 'rui@example.com' })).toHaveAttribute('href', 'mailto:rui@example.com')
+  expect(within(card).getByRole('link', { name: '+351 900 000 000' })).toHaveAttribute('href', 'tel:+351 900 000 000')
+  expect(within(card).getByRole('link', { name: 'linkedin.com/in/rui' })).toHaveAttribute('href', 'https://linkedin.com/in/rui')
+  expect(screen.queryByRole('heading', { name: 'People' })).toBeNull()
+  // Works at is in the card, not repeated under the name.
+  expect(screen.getAllByText('Costa Kilns')).toHaveLength(1)
+})
+
+test('a company still has its People section and no person card', async () => {
+  stubs()
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(await screen.findByRole('heading', { name: 'People' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Contact details' })).toBeNull()
 })

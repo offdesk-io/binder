@@ -44,6 +44,9 @@ BINDER_AI=fake BINDER_DB=binder.db .venv/bin/python -m binder   # canned AI answ
 (cd web && npm run e2e)                                # Playwright, builds first
 ```
 
+The local `binder.db` is test data only. Real records are read and changed on
+`https://binder.offdesk.io`, never by writing to the local database.
+
 Run both suites before every commit. `pytest -m online` tests hit real
 services and never run in CI.
 

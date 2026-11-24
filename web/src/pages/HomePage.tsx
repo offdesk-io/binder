@@ -1,12 +1,14 @@
-import { Alert, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
+import { Alert, Card, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
-import type { ActivityItem, Org, OrgAttention } from '../api/types'
+import type { ActivityItem, Org, OrgAttention, PersonAttention } from '../api/types'
 import { useSession } from '../app/session'
 import { ColourDot } from '../components/ColourTag'
+import { KindTag } from '../components/KindTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { Star } from '../components/Star'
 import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
 import { ago, label, money, REASON_TEXT, statusLine } from '../lib/format'
 import { ownerName } from '../lib/owners'
@@ -16,6 +18,28 @@ import { useOrgDrawer } from '../lib/useOrgDrawer'
 function what(a: ActivityItem): string {
   if (a.kind === 'status') return statusLine(a.from_status, a.to_status ?? '')
   return `${label(a.type ?? '')}: ${a.summary ?? ''}`
+}
+
+/** A key person we have not logged with in 90 days: who they are and where, linking to their page. */
+function QuietPerson({ item }: { item: PersonAttention }) {
+  const p = item.contact
+  return (
+    <Card
+      titleAs="h3"
+      title={<span className="tn-custom-person-name"><Star /><Link to={`/c/${p.id}`}>{p.name}</Link></span>}
+      summary={
+        <span className="tn-custom-stage-line tn-custom-muted">
+          {p.role && <span>{p.role}</span>}
+          {p.referrer ? <KindTag kind="referrer" /> : <span>{p.org_name}</span>}
+        </span>
+      }
+      footer={
+        <span className="tn-custom-chiprow">
+          {item.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
+        </span>
+      }
+    />
+  )
 }
 
 /** The figures the stat strip counts, from the organisations and the attention list the page already loads. */
@@ -39,6 +63,7 @@ export function HomePage() {
   const orgs = useApi(() => api.orgs(), [])
   const drawer = useOrgDrawer()
   const orgItems = attention.data?.filter((a): a is OrgAttention => 'org' in a)
+  const personItems = attention.data?.filter((a): a is PersonAttention => 'contact' in a)
   const overdue = orgItems?.filter((a) => a.reasons.includes('overdue')).length ?? 0
   const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
@@ -68,18 +93,21 @@ export function HomePage() {
           ) : attention.data.length === 0 ? (
             <ColumnEmpty boxed>Nothing needs you today.</ColumnEmpty>
           ) : (
-            orgItems?.map((a) => (
-              <OrgCard
-                key={a.org.id}
-                org={a.org}
-                onOpen={(o) => drawer.open(o.slug)}
-                footer={
-                  <span className="tn-custom-chiprow">
-                    {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
-                  </span>
-                }
-              />
-            ))
+            <>
+              {orgItems?.map((a) => (
+                <OrgCard
+                  key={a.org.id}
+                  org={a.org}
+                  onOpen={(o) => drawer.open(o.slug)}
+                  footer={
+                    <span className="tn-custom-chiprow">
+                      {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
+                    </span>
+                  }
+                />
+              ))}
+              {personItems?.map((a) => <QuietPerson key={`person${a.contact.id}`} item={a} />)}
+            </>
           )}
         </Column>
         <Column className="tn-col-4" titleAs="h2" title="Recent activity">

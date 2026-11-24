@@ -75,6 +75,7 @@ class OrgCreate(_Body):
     summary: Optional[str] = None
     next_step: Optional[str] = None
     next_step_due: Optional[str] = None
+    introduced_by_id: Optional[int] = None
 
     _due = field_validator("next_step_due")(iso_date)
     _owner = field_validator("owner_email")(lower_email)
@@ -84,6 +85,7 @@ class OrgCreate(_Body):
 class OrgPatch(_Body):
     updated_at: str
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    kind: Optional[str] = None
     status: Optional[str] = None
     website: Optional[str] = None
     sector: Optional[str] = None
@@ -96,8 +98,9 @@ class OrgPatch(_Body):
     summary: Optional[str] = None
     next_step: Optional[str] = None
     next_step_due: Optional[str] = None
+    introduced_by_id: Optional[int] = None
 
-    _name = field_validator("name")(not_null)
+    _name = field_validator("name", "kind")(not_null)
     _due = field_validator("next_step_due")(iso_date)
     _owner = field_validator("owner_email")(lower_email)
     _site = field_validator("website")(web_url)

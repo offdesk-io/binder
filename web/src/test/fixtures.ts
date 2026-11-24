@@ -6,7 +6,8 @@ export function org(o: Partial<Org> = {}): Org {
   return {
     id: 1, slug: 'acme', name: 'Acme', kind: 'lead', status: 'lead', website: null, sector: null,
     size: null, location: null, owner_email: 'ana@example.com', source: null, value_estimate: null,
-    tags: [], summary: null, next_step: null, next_step_due: null, last_contact: null,
+    tags: [], summary: null, next_step: null, next_step_due: null, introduced_by_id: null, introduced_by: null,
+    introduced: [], last_contact: null,
     created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
   }
 }

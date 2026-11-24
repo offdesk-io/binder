@@ -2,6 +2,7 @@
 
 All stored timestamps are UTC with microseconds (db.now()), so cutoffs are
 built in the same shape and compared as text. `next_step_due` is a plain date.
+Both feeds are about the pipeline, so partners and referrers stay out of them.
 """
 
 import datetime
@@ -9,11 +10,12 @@ import sqlite3
 import zoneinfo
 from typing import Any, Dict, List, Optional
 
-from ..statuses import OPEN_LEAD_STATUSES
+from ..statuses import OPEN_LEAD_STATUSES, PIPELINE_KINDS
 from . import orgs, row
 
 QUIET_DAYS = 14
 STUCK_DAYS = 30
+PIPELINE = "o.kind IN (%s)" % ",".join("'%s'" % k for k in PIPELINE_KINDS)
 
 
 def _now_utc() -> datetime.datetime:
@@ -43,7 +45,7 @@ def attention(conn: sqlite3.Connection, today: Optional[str] = None,
         "     coalesce((SELECT max(happened_at) FROM interactions i WHERE i.org_id = o.id), o.created_at) < ?) AS quiet, "
         "  (o.kind = 'lead' AND o.status IN (%s) AND "
         "     coalesce((SELECT max(at) FROM status_history h WHERE h.org_id = o.id), o.created_at) < ?) AS stuck "
-        "FROM organisations o" % (open_list, open_list),
+        "FROM organisations o WHERE %s" % (open_list, open_list, PIPELINE),
         (today, quiet_before, stuck_before)).fetchall()
     out = []
     for r in rows:
@@ -63,9 +65,9 @@ def activity(conn: sqlite3.Connection, limit: int = 30) -> List[Dict[str, Any]]:
         "SELECT * FROM ("
         " SELECT 'interaction' AS kind, i.id, i.org_id, o.name AS org_name, o.slug AS org_slug, i.happened_at AS at, "
         "        i.type, i.summary, NULL AS from_status, NULL AS to_status, i.author_email AS by_email "
-        " FROM interactions i JOIN organisations o ON o.id = i.org_id "
+        " FROM interactions i JOIN organisations o ON o.id = i.org_id WHERE %s "
         " UNION ALL "
         " SELECT 'status', h.id, h.org_id, o.name, o.slug, h.at, NULL, NULL, h.from_status, h.to_status, h.by_email "
-        " FROM status_history h JOIN organisations o ON o.id = h.org_id"
-        ") ORDER BY at DESC, kind LIMIT ?", (limit,))
+        " FROM status_history h JOIN organisations o ON o.id = h.org_id WHERE %s"
+        ") ORDER BY at DESC, kind LIMIT ?" % (PIPELINE, PIPELINE), (limit,))
     return [row(r) for r in rows]

@@ -71,8 +71,7 @@ def check_rows(rows: List[Dict[str, str]]) -> None:
         if r["slug"] in seen:
             raise SheetError("%s: the slug appears twice." % who)
         seen.add(r["slug"])
-        allowed = statuses.LEAD_STATUSES if r.get("kind") == "lead" else statuses.CLIENT_STATUSES
-        if r.get("kind") not in statuses.KINDS or r.get("status") not in allowed:
+        if r.get("kind") not in statuses.KINDS or r.get("status") not in statuses.statuses_for(r["kind"]):
             raise SheetError("%s: %r is not a %s status." % (who, r.get("status"), r.get("kind")))
         if r.get("owner_email") and not EMAIL_RE.match(r["owner_email"]):
             raise SheetError("%s: owner_email %r is not an email address." % (who, r["owner_email"]))

@@ -1,7 +1,28 @@
 /* Response and request shapes. The README's API section is the reference:
  * change the two together. */
 
-export type Kind = 'lead' | 'client'
+/** Leads and clients are the pipeline. Partners and referrers introduce them, and never appear in the
+ * pipeline, needs attention or activity. A referrer is a person, kept as an organisation named after them. */
+export type Kind = 'lead' | 'client' | 'partner' | 'referrer'
+export type PipelineKind = 'lead' | 'client'
+export type IntroducerKind = 'partner' | 'referrer'
+
+/** The partner or referrer who introduced a lead or client. */
+export interface Introducer {
+  id: number
+  slug: string
+  name: string
+  kind: IntroducerKind
+}
+
+/** A lead or client a partner or referrer introduced. */
+export interface Introduced {
+  id: number
+  slug: string
+  name: string
+  kind: PipelineKind
+  status: string
+}
 
 export interface Org {
   id: number
@@ -20,6 +41,11 @@ export interface Org {
   summary: string | null
   next_step: string | null
   next_step_due: string | null
+  /** Set only on a lead or client. `introduced_by` is the same record, named. */
+  introduced_by_id: number | null
+  introduced_by: Introducer | null
+  /** Sorted by name. Always empty on a lead or client. */
+  introduced: Introduced[]
   last_contact: string | null
   created_at: string
   updated_at: string
@@ -121,6 +147,7 @@ export interface SearchHit {
   org_slug: string
   /** The organisation's current status, which sets the stage colour the hit shows. */
   org_status: string
+  org_kind: Kind
   title: string
   snippet: string
   /** The person a research brief is about; null for every other hit. */
@@ -139,6 +166,8 @@ export interface Meta {
   lead_statuses: string[]
   open_lead_statuses: string[]
   client_statuses: string[]
+  /** Shared by partners and referrers. */
+  partner_statuses: string[]
   interaction_types: string[]
   relationships: string[]
   /** False when the server has no AI: research and summarise are hidden. */
@@ -170,8 +199,16 @@ export interface OrgFields {
   next_step: string | null
   next_step_due: string | null
 }
-export type OrgInput = Pick<OrgFields, 'name'> & Partial<OrgFields> & { kind?: Kind }
-export type OrgPatch = Partial<OrgFields> & { status?: string; updated_at: string }
+/** `introduced_by_id` is a partner's or referrer's id, and only a lead or client takes one. */
+export type OrgInput = Pick<OrgFields, 'name'> & Partial<OrgFields> & { kind?: Kind; introduced_by_id?: number | null }
+/** A `kind` that differs from the record's refiles it: it takes the new kind's first status, or `status` if the
+ * same PATCH sends one for the new kind. Becoming a partner or referrer clears `introduced_by_id`. */
+export type OrgPatch = Partial<OrgFields> & {
+  kind?: Kind
+  status?: string
+  introduced_by_id?: number | null
+  updated_at: string
+}
 
 export interface ContactFields {
   name: string

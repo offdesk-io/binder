@@ -8,10 +8,11 @@ const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true }
 
 export const SESSION: Session = {
   meta: {
-    kinds: ['lead', 'client'],
+    kinds: ['lead', 'client', 'partner', 'referrer'],
     lead_statuses: ['lead', 'contacted', 'in_conversation', 'proposal_sent', 'won', 'lost', 'parked'],
     open_lead_statuses: ['lead', 'contacted', 'in_conversation', 'proposal_sent'],
     client_statuses: ['active', 'paused', 'past'],
+    partner_statuses: ['in_talks', 'active', 'paused', 'past'],
     interaction_types: ['call', 'email', 'meeting', 'note'],
     relationships: ['cold', 'warm', 'strong'],
     ai: true,

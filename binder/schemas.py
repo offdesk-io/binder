@@ -129,6 +129,8 @@ class ContactCreate(_Body):
     notes: Optional[str] = None
     is_primary: bool = False
     relationship: Optional[str] = None
+    connector: bool = False
+    postal_address: Optional[str] = Field(default=None, max_length=1000)
 
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
@@ -144,8 +146,10 @@ class ContactPatch(_Body):
     notes: Optional[str] = None
     is_primary: Optional[bool] = None
     relationship: Optional[str] = None
+    connector: Optional[bool] = None
+    postal_address: Optional[str] = Field(default=None, max_length=1000)
 
-    _name = field_validator("name")(not_null)
+    _name = field_validator("name", "connector")(not_null)
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
 

@@ -2,7 +2,8 @@
 
 All stored timestamps are UTC with microseconds (db.now()), so cutoffs are
 built in the same shape and compared as text. `next_step_due` is a plain date.
-Both feeds are about the pipeline, so partners and referrers stay out of them.
+Both feeds are about the pipeline, so partners and referrers stay out of them as
+organisations. Needs attention also nudges key people we have not logged with in a while.
 """
 
 import datetime
@@ -11,10 +12,11 @@ import zoneinfo
 from typing import Any, Dict, List, Optional
 
 from ..statuses import OPEN_LEAD_STATUSES, PIPELINE_KINDS
-from . import orgs, row
+from . import orgs, people, row
 
 QUIET_DAYS = 14
 STUCK_DAYS = 30
+PERSON_QUIET_DAYS = 90  # a key person with no log for this long needs a word
 PIPELINE = "o.kind IN (%s)" % ",".join("'%s'" % k for k in PIPELINE_KINDS)
 
 
@@ -33,7 +35,11 @@ def _cutoff(today: str, days: int) -> str:
 
 def attention(conn: sqlite3.Connection, today: Optional[str] = None,
               tz: str = "Europe/Lisbon") -> List[Dict[str, Any]]:
-    """`today` (YYYY-MM-DD) is for tests; by default it is the date now in `tz`."""
+    """Organisations first, as {org, reasons}, most reasons first and then by
+    name; then key people with no log for PERSON_QUIET_DAYS, A to Z, as
+    {contact, reasons: ["quiet_connector"]}, where `contact` is a row of the
+    people list. `today` (YYYY-MM-DD) is for tests; by default it is the date
+    now in `tz`."""
     today = today or _today(tz)
     quiet_before = _cutoff(today, QUIET_DAYS)
     stuck_before = _cutoff(today, STUCK_DAYS)
@@ -53,6 +59,8 @@ def attention(conn: sqlite3.Connection, today: Optional[str] = None,
         if reasons:
             out.append({"org": orgs.get(conn, r["id"]), "reasons": reasons})
     out.sort(key=lambda x: (-len(x["reasons"]), x["org"]["name"].lower()))
+    for p in people.quiet(conn, _cutoff(today, PERSON_QUIET_DAYS)):
+        out.append({"contact": p, "reasons": ["quiet_connector"]})
     return out
 
 

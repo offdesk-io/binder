@@ -12,6 +12,8 @@ from .contacts import IS_REFERRER
 
 # Over `contacts c JOIN organisations o ON o.id = c.org_id`.
 KEY = "(c.connector = 1 OR %s)" % IS_REFERRER
+# Who Needs attention nudges: a starred contact, or a referrer's person while the referrer is active.
+NUDGED = "(c.connector = 1 OR (%s AND o.status = 'active'))" % IS_REFERRER
 # When we last logged anything with them: a log naming them, or, for a referrer's person, any log on the
 # referrer, since the referrer is them.
 LAST_CONTACT = ("(SELECT max(i.happened_at) FROM interactions i WHERE "
@@ -50,3 +52,11 @@ def list_(conn: sqlite3.Connection, q: Optional[str] = None) -> List[Dict[str, A
         args += [like(q)] * 3
     sql = SELECT + "WHERE %s ORDER BY c.name COLLATE NOCASE, c.id" % " AND ".join(where)
     return [_out(r) for r in conn.execute(sql, args)]
+
+
+def quiet(conn: sqlite3.Connection, before: str) -> List[Dict[str, Any]]:
+    """Key people to nudge (NUDGED) whose last log, or when they were added if there is none, is before
+    `before` (a UTC time as db.now() writes it). A to Z."""
+    sql = SELECT + "WHERE %s AND coalesce(%s, c.created_at) < ? ORDER BY c.name COLLATE NOCASE, c.id" % (
+        NUDGED, LAST_CONTACT)
+    return [_out(r) for r in conn.execute(sql, (before,))]

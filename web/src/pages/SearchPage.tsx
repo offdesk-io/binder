@@ -20,9 +20,9 @@ const GROUPS: { kind: SearchHit['kind']; title: string }[] = [
 export function hitLink(h: SearchHit): string {
   if (h.kind === 'contact') return `/c/${h.id}`
   // A log with no organisation lives on its person's page.
-  if (h.kind === 'interaction') return h.org_slug ? `/o/${h.org_slug}#i-${h.id}` : `/c/${h.contact_id}`
-  if (h.kind === 'research') return h.contact_id ? `/c/${h.contact_id}#research` : `/o/${h.org_slug}#research`
-  return `/o/${h.org_slug}`
+  if (h.kind === 'interaction') return h.org_slug ? `/o/${h.org_slug}#i-${h.id}` : h.contact_id ? `/c/${h.contact_id}` : '/search'
+  if (h.kind === 'research') return h.contact_id ? `/c/${h.contact_id}#research` : h.org_slug ? `/o/${h.org_slug}#research` : '/search'
+  return h.org_slug ? `/o/${h.org_slug}` : '/search'
 }
 
 /** The API wraps each match in \u0002 and \u0003, which never occur in typed text. */

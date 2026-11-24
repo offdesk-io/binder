@@ -115,7 +115,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>
         ))}
       </dl>
-      <IntroducedBy org={org} setOrg={setOrg} />
+      <IntroducedBy org={org} setOrg={setOrg} onReload={reloadOrg} />
     </Section>
   )
 

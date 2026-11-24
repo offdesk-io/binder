@@ -33,14 +33,14 @@ function Choice({ org, busy, onPick }: { org: Org; busy: boolean; onPick: (value
   const [people, partners] = lists.data
   const options: DropdownOption[] = [
     { value: '', label: 'Nobody' },
-    ...people.map((p) => ({ value: `c:${p.id}`, label: p.name, group: 'People' })),
+    ...people.map((p) => ({ value: `c:${p.id}`, label: p.org_name ? `${p.name} · ${p.org_name}` : p.name, group: 'People' })),
     ...partners.filter((p) => p.id !== org.id).map((p) => ({ value: `o:${p.id}`, label: p.name, group: 'Partners' })),
   ]
   return <Dropdown aria-label="Introduced by" value={introducerValue(org)} onChange={onPick} disabled={busy} options={options} />
 }
 
 /** Who brought the organisation in, as a link, and a picker to change it. A pick saves at once. */
-export function IntroducedBy({ org, setOrg }: { org: Org; setOrg: (o: Org) => void }) {
+export function IntroducedBy({ org, setOrg, onReload }: { org: Org; setOrg: (o: Org) => void; onReload: () => void }) {
   const [choosing, setChoosing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
@@ -65,6 +65,7 @@ export function IntroducedBy({ org, setOrg }: { org: Org; setOrg: (o: Org) => vo
     } catch (e) {
       setError(saveErrorText(e))
       if (e instanceof ApiError && e.status === 409 && e.current) setOrg(e.current as Org)
+      else onReload()
     } finally {
       setBusy(false)
     }
@@ -79,7 +80,11 @@ export function IntroducedBy({ org, setOrg }: { org: Org; setOrg: (o: Org) => vo
         ) : (
           <span className="tn-custom-faint">Nobody yet</span>
         )}
-        {!choosing && <Button size="sm" variant="ghost" onClick={() => setChoosing(true)}>Change</Button>}
+        {choosing ? (
+          <Button size="sm" variant="ghost" onClick={() => { setChoosing(false); setError(undefined) }}>Cancel</Button>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={() => setChoosing(true)}>Change</Button>
+        )}
       </div>
       {choosing && <Choice org={org} busy={busy} onPick={(v) => void pick(v)} />}
       {error && <Alert tone="error">{error}</Alert>}

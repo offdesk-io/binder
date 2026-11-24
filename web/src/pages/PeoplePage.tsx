@@ -44,7 +44,9 @@ export function PeoplePage() {
   const who: Who = params.get('who') === 'everyone' ? 'everyone' : 'connectors'
   const [find, setFind] = useState('')
   const [adding, setAdding] = useState(false)
-  const people = useApi(() => api.people(), [])
+  // The checklist has its own list: the people are not loaded for it. Bumped to reload the checklist after a new person.
+  const [thanksKey, setThanksKey] = useState(0)
+  const people = useApi(() => (view === 'thanks' ? Promise.resolve([] as Person[]) : api.people()), [view])
 
   // The view and the filter live in the address, replaced in place so Back leaves the page.
   const put = (key: string, value: string) => {
@@ -78,7 +80,7 @@ export function PeoplePage() {
         </div>
       </div>
       {view === 'thanks' ? (
-        <ThanksView />
+        <ThanksView key={thanksKey} />
       ) : (
         <>
           <div className="tn-custom-filterbar">
@@ -141,7 +143,7 @@ export function PeoplePage() {
                       <td>{p.role}</td>
                       <td><OrgName p={p} /></td>
                       <td>{shortDay(p.last_contact)}</td>
-                      <td>{introduced(p.introduced_count)}</td>
+                      <td>{p.introduced_count > 0 ? p.introduced_count : ''}</td>
                       <td><ReachButtons c={p} /></td>
                     </tr>
                   ))}
@@ -160,6 +162,7 @@ export function PeoplePage() {
         onSaved={() => {
           setAdding(false)
           people.reload()
+          setThanksKey((k) => k + 1)
         }}
       />
     </div>

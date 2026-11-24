@@ -91,3 +91,7 @@ test('a person with no organisation shows no organisation or status, and a conne
   expect(screen.queryByText(/·/)).toBeNull()
   expect(container.querySelector('.tenon-tag')).toBeNull()
 })
+
+test('a hit with neither an organisation nor a person links back to search', () => {
+  expect(hitLink(hit({ kind: 'interaction', id: 7, ...ON_THEIR_OWN, contact_id: null }))).toBe('/search')
+})

@@ -47,7 +47,7 @@ test('a row has the star, last touched, introduced, and reach buttons only where
   renderApp(<PeoplePage />, '/people')
   expect(await screen.findByRole('img', { name: 'Key connector' })).toBeInTheDocument()
   expect(screen.getByText('12 Oct')).toBeInTheDocument()
-  expect(screen.getByText('Introduced 2')).toBeInTheDocument()
+  expect(screen.getByRole('cell', { name: '2' })).toBeInTheDocument()
   expect(screen.getByText('No organisation')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Email Marta' })).toHaveAttribute('href', 'mailto:marta@example.com')
   expect(screen.getByRole('link', { name: 'Call Marta' })).toHaveAttribute('href', 'tel:+351 000 000 000')
@@ -103,4 +103,29 @@ test('Thanks is a view of the same page', async () => {
   await user.click(screen.getByRole('radio', { name: 'Thanks' }))
   expect(await screen.findByText('at /people?view=thanks')).toBeInTheDocument()
   await waitFor(() => expect(calls.some((c) => c.key === `GET /api/thanks?year=${year}`)).toBe(true))
+})
+
+test('the Thanks view does not load the people list', async () => {
+  const year = new Date().getFullYear()
+  const calls = stubFetch({ 'GET /api/people': () => [marta], [`GET /api/thanks?year=${year}`]: () => [] })
+  renderApp(<PeoplePage />, '/people?view=thanks')
+  await screen.findByText(/No key connectors yet/)
+  expect(calls.some((c) => c.key === 'GET /api/people')).toBe(false)
+})
+
+test('a person added from the Thanks view shows up in the checklist', async () => {
+  const user = userEvent.setup()
+  const year = new Date().getFullYear()
+  const calls = stubFetch({
+    'GET /api/people': () => [],
+    'GET /api/orgs?sort=name': () => [],
+    [`GET /api/thanks?year=${year}`]: () => [],
+    'POST /api/contacts': () => marta,
+  })
+  renderApp(<PeoplePage />, '/people?view=thanks')
+  await screen.findByText(/No key connectors yet/)
+  await user.click(screen.getByRole('button', { name: 'New person' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Marta')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.filter((c) => c.key === `GET /api/thanks?year=${year}`)).toHaveLength(2))
 })

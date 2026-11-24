@@ -1,5 +1,5 @@
 import { Alert, ColumnEmpty, Dropdown, Input } from '@tiagopedras/tenon'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { api } from '../../api/endpoints'
@@ -27,25 +27,40 @@ function ThanksLine({ year, row, onSaved }: LineProps) {
   const t = row.thanks
   const [what, setWhat] = useState(t?.what ?? '')
   const [note, setNote] = useState(t?.note ?? '')
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
+  // A change made while a save is in flight waits here and goes out after it, on the row the save returned.
+  const inflight = useRef(false)
+  const pending = useRef<Omit<ThanksPut, 'updated_at'>>({})
+  const stamp = useRef<string | null>(null)
+  if (!inflight.current) stamp.current = t?.updated_at ?? null
 
   async function save(change: Omit<ThanksPut, 'updated_at'>) {
-    if (busy) return
-    setBusy(true)
+    pending.current = { ...pending.current, ...change }
+    if (inflight.current) return
+    inflight.current = true
     setError(undefined)
     try {
-      onSaved(await api.putThanks(c.id, year, { ...change, updated_at: t?.updated_at ?? null }))
-    } catch (e) {
-      setError(saveErrorText(e))
-      if (e instanceof ApiError && e.status === 409) {
-        const current = (e.current ?? null) as Thanks | null
-        onSaved(current)
-        setWhat(current?.what ?? '')
-        setNote(current?.note ?? '')
+      while (Object.keys(pending.current).length > 0) {
+        const next = pending.current
+        pending.current = {}
+        try {
+          const saved = await api.putThanks(c.id, year, { ...next, updated_at: stamp.current })
+          stamp.current = saved.updated_at
+          onSaved(saved)
+        } catch (e) {
+          pending.current = {}
+          setError(saveErrorText(e))
+          if (e instanceof ApiError && e.status === 409) {
+            const current = (e.current ?? null) as Thanks | null
+            stamp.current = current?.updated_at ?? null
+            onSaved(current)
+            setWhat(current?.what ?? '')
+            setNote(current?.note ?? '')
+          }
+        }
       }
     } finally {
-      setBusy(false)
+      inflight.current = false
     }
   }
 
@@ -68,7 +83,7 @@ function ThanksLine({ year, row, onSaved }: LineProps) {
       <Input aria-label={`What for ${c.name}`} placeholder="What" value={what}
         onChange={(e) => setWhat(e.target.value)} onBlur={() => leave('what', what)} />
       <label className="tn-custom-check">
-        <input type="checkbox" aria-label={`Sent to ${c.name}`} checked={!!t?.sent_on} disabled={busy}
+        <input type="checkbox" aria-label={`Sent to ${c.name}`} checked={!!t?.sent_on}
           onChange={(e) => void save({ sent_on: e.target.checked ? todayIso() : null })} />
         Sent
       </label>

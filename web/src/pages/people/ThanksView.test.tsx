@@ -82,3 +82,54 @@ test('another year loads that year', async () => {
   expect(await screen.findByText(/No key connectors yet/)).toBeInTheDocument()
   expect(calls.map((c) => c.key)).toContain(`GET /api/thanks?year=${Y - 1}`)
 })
+
+test('a change made while a save is in flight is sent after it, with the new updated_at', async () => {
+  const user = userEvent.setup()
+  let release!: (t: unknown) => void
+  let n = 0
+  const calls = stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`PUT /api/thanks/9/${Y}`]: () =>
+      ++n === 1
+        ? new Promise((r) => { release = r })
+        : { ...beaSent, what: 'Port wine!', sent_on: null, updated_at: '2026-12-12T00:00:00.000000+00:00' },
+  })
+  renderApp(<ThanksView />)
+  await user.type(await screen.findByLabelText('What for Bea'), '!')
+  await user.tab()
+  await waitFor(() => expect(n).toBe(1))
+  await user.click(screen.getByLabelText('Sent to Bea'))
+  expect(n).toBe(1)
+  release({ ...beaSent, what: 'Port wine!', updated_at: '2026-12-11T00:00:00.000000+00:00' })
+  await waitFor(() => expect(n).toBe(2))
+  const puts = calls.filter((c) => c.key.startsWith('PUT'))
+  expect(puts[0].body).toEqual({ what: 'Port wine!', updated_at: beaSent.updated_at })
+  expect(puts[1].body).toEqual({ sent_on: null, updated_at: '2026-12-11T00:00:00.000000+00:00' })
+})
+
+test('unticking Sent sends sent_on null with the row’s updated_at', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`PUT /api/thanks/9/${Y}`]: () => ({ ...beaSent, sent_on: null }),
+  })
+  renderApp(<ThanksView />)
+  await user.click(await screen.findByLabelText('Sent to Bea'))
+  await waitFor(() => expect(screen.getByText('0 of 2 sent')).toBeInTheDocument())
+  expect(calls.find((c) => c.key.startsWith('PUT'))!.body).toEqual({ sent_on: null, updated_at: beaSent.updated_at })
+})
+
+test('a stale save where the row is gone leaves the line empty', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`PUT /api/thanks/8/${Y}`]: () =>
+      new Response(JSON.stringify({ detail: 'Changed', current: null }), { status: 409, headers: { 'Content-Type': 'application/json' } }),
+  })
+  renderApp(<ThanksView />)
+  await user.type(await screen.findByLabelText('What for Marta'), 'Wine')
+  await user.tab()
+  expect(await screen.findByText(/Someone changed this/)).toBeInTheDocument()
+  expect(screen.getByLabelText('What for Marta')).toHaveValue('')
+  expect(screen.getByLabelText('Sent to Marta')).not.toBeChecked()
+})

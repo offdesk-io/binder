@@ -65,7 +65,7 @@ describe('relationship, due date and attention', () => {
   })
 
   test('a missed next step is urgent, and going quiet or stuck is a warning', () => {
-    expect(REASON_TONE).toEqual({ overdue: 'urgent', quiet: 'warning', stuck: 'warning' })
+    expect(REASON_TONE).toEqual({ overdue: 'urgent', quiet: 'warning', stuck: 'warning', quiet_connector: 'warning' })
   })
 })
 

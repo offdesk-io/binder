@@ -234,9 +234,13 @@ what the item is, and the pair (`kind`, `id`) identifies it: an interaction and
 a status change can share an `id`.
 
 - **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
-  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `title`, `snippet`
-  (each match wrapped in the control characters `\u0002` and `\u0003`), and
-  `contact_id`: the person a research brief is about, null otherwise.
+  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the
+  organisation's current status; all four null for a person or a log with no
+  organisation), `title`, `snippet` (each match wrapped in the control
+  characters `\u0002` and `\u0003`), `contact_id` (the person a research brief
+  is about, or the first person on a log with no organisation; null
+  otherwise) and `connector` (true for a person who is a key connector).
+  Partners are found like any organisation.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**
   (`/api/activity?limit=`): `kind` (`interaction` or `status`), `id`,
   `org_id`, `at`, `by_email`. Interaction items add `type` and `summary`;
@@ -247,8 +251,11 @@ a status change can share an `id`.
   email) and `url`. Timeline interaction items
   also carry the interaction's other fields; activity items carry `org_name`
   and `org_slug`.
-- **Needs attention** (`/api/attention`): `{org, reasons}`, where `org` is an
-  organisation and `reasons` is a list of `overdue`, `quiet` and `stuck`.
+- **Needs attention** (`/api/attention`): first `{org, reasons}`, where `org`
+  is an organisation and `reasons` is a list of `overdue`, `quiet` and
+  `stuck`; then `{contact, reasons: ["quiet_connector"]}` for each key
+  connector with no log in 90 days (counted from when they were added if they
+  have none), A to Z. Activity lists only logs that have an organisation.
 
 ### Summarise
 

@@ -4,6 +4,7 @@ import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { Star } from '../components/Star'
 import { StatusTag } from '../components/StatusTag'
 import { openInPlace } from '../lib/openInPlace'
 import { useApi } from '../lib/useApi'
@@ -18,7 +19,8 @@ const GROUPS: { kind: SearchHit['kind']; title: string }[] = [
 
 export function hitLink(h: SearchHit): string {
   if (h.kind === 'contact') return `/c/${h.id}`
-  if (h.kind === 'interaction') return `/o/${h.org_slug}#i-${h.id}`
+  // A log with no organisation lives on its person's page.
+  if (h.kind === 'interaction') return h.org_slug ? `/o/${h.org_slug}#i-${h.id}` : `/c/${h.contact_id}`
   if (h.kind === 'research') return h.contact_id ? `/c/${h.contact_id}#research` : `/o/${h.org_slug}#research`
   return `/o/${h.org_slug}`
 }
@@ -54,20 +56,24 @@ export function SearchPage() {
         return (
           <Column key={g.kind} titleAs="h2" title={g.title}>
             <ul className="tn-custom-rows">
-              {list.map((h) => (
-                <li key={`${h.kind}${h.id}`}>
-                  <div className="tn-cluster">
-                    {h.kind === 'org' ? (
-                      <Link to={hitLink(h)} data-org-open={h.org_slug} onClick={(e) => openInPlace(e, () => drawer.open(h.org_slug))}>{h.title}</Link>
-                    ) : (
-                      <Link to={hitLink(h)}>{h.title}</Link>
-                    )}
-                    {h.kind !== 'org' && <span className="tn-custom-faint">· {h.org_name}</span>}
-                    <StatusTag status={h.org_status} />
-                  </div>
-                  <div><Snippet text={h.snippet} /></div>
-                </li>
-              ))}
+              {list.map((h) => {
+                const slug = h.org_slug
+                return (
+                  <li key={`${h.kind}${h.id}`}>
+                    <div className="tn-cluster">
+                      {h.kind === 'org' && slug ? (
+                        <Link to={hitLink(h)} data-org-open={slug} onClick={(e) => openInPlace(e, () => drawer.open(slug))}>{h.title}</Link>
+                      ) : (
+                        <Link to={hitLink(h)}>{h.title}</Link>
+                      )}
+                      {h.connector && <Star />}
+                      {h.kind !== 'org' && h.org_name && <span className="tn-custom-faint">· {h.org_name}</span>}
+                      {h.org_status && <StatusTag status={h.org_status} />}
+                    </div>
+                    <div><Snippet text={h.snippet} /></div>
+                  </li>
+                )
+              })}
             </ul>
           </Column>
         )

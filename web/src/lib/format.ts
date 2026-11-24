@@ -1,4 +1,4 @@
-import type { Reason } from '../api/types'
+import type { PersonReason, Reason } from '../api/types'
 
 /** `in_conversation` → `In conversation`. */
 export function label(code: string): string {
@@ -6,10 +6,11 @@ export function label(code: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export const REASON_TEXT: Record<Reason, string> = {
+export const REASON_TEXT: Record<Reason | PersonReason, string> = {
   overdue: 'Next step overdue',
   quiet: 'No contact in 14 days',
   stuck: 'Same stage for 30 days',
+  quiet_connector: 'No contact in 90 days',
 }
 
 export function statusLine(from: string | null, to: string): string {

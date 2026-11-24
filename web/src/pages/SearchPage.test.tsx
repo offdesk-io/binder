@@ -7,8 +7,10 @@ import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
 const hit = (o: Partial<SearchHit>): SearchHit => ({
-  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
+  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio',
+  contact_id: null, connector: false, ...o,
 })
+const ON_THEIR_OWN = { org_id: null, org_name: null, org_slug: null, org_status: null }
 
 test('each kind of hit links to its page', () => {
   expect(hitLink(hit({}))).toBe('/o/acme')
@@ -72,4 +74,20 @@ test('an organisation hit opens its drawer; contact and anchored hits stay links
   expect(await screen.findByRole('link', { name: 'Research brief' })).not.toHaveAttribute('data-org-open')
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})
+
+
+test('a log with no organisation links to its person', () => {
+  expect(hitLink(hit({ kind: 'interaction', id: 7, ...ON_THEIR_OWN, contact_id: 8 }))).toBe('/c/8')
+})
+
+test('a person with no organisation shows no organisation or status, and a connector shows the star', async () => {
+  stubFetch({
+    'GET /api/search?q=marta': () => [hit({ kind: 'contact', id: 8, title: 'Marta', snippet: '\u0002Marta\u0003', connector: true, ...ON_THEIR_OWN })],
+  })
+  const { container } = renderApp(<SearchPage />, '/search?q=marta')
+  expect(await screen.findByRole('link', { name: 'Marta' })).toHaveAttribute('href', '/c/8')
+  expect(screen.getByRole('img', { name: 'Key connector' })).toBeInTheDocument()
+  expect(screen.queryByText(/·/)).toBeNull()
+  expect(container.querySelector('.tenon-tag')).toBeNull()
 })

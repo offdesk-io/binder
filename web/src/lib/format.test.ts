@@ -94,3 +94,8 @@ test('shortDay is the day and month, for when someone was last in touch', () => 
   expect(shortDay(null)).toBe('')
   expect(shortDay('nonsense')).toBe('')
 })
+
+
+test('a quiet connector reads as 90 days without contact', () => {
+  expect(REASON_TEXT.quiet_connector).toBe('No contact in 90 days')
+})

@@ -171,23 +171,36 @@ export interface ActivityItem {
 export interface SearchHit {
   kind: 'org' | 'contact' | 'interaction' | 'research'
   id: number
-  org_id: number
-  org_name: string
-  org_slug: string
+  /** Null for a person or a log with no organisation, as are org_name, org_slug and org_status. */
+  org_id: number | null
+  org_name: string | null
+  org_slug: string | null
   /** The organisation's current status, which sets the stage colour the hit shows. */
-  org_status: string
+  org_status: string | null
   title: string
   snippet: string
-  /** The person a research brief is about; null for every other hit. */
+  /** The person a research brief is about, or the first person on a log with no organisation; null otherwise. */
   contact_id: number | null
+  /** True for a person who is a key connector. */
+  connector: boolean
 }
 
 export type Reason = 'overdue' | 'quiet' | 'stuck'
+export type PersonReason = 'quiet_connector'
 
-export interface AttentionItem {
+export interface OrgAttention {
   org: Org
   reasons: Reason[]
 }
+
+/** A key connector with no log in 90 days. */
+export interface PersonAttention {
+  contact: Contact
+  reasons: PersonReason[]
+}
+
+/** Organisations come first, then people. */
+export type AttentionItem = OrgAttention | PersonAttention
 
 export interface Meta {
   kinds: Kind[]

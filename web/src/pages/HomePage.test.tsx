@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
-import { activity, org } from '../test/fixtures'
+import { activity, contact, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { HomePage } from './HomePage'
 
@@ -78,4 +78,21 @@ test('a card under Needs attention opens the drawer', async () => {
   renderApp(<HomePage />)
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog')).toBeInTheDocument()
+})
+
+
+test('a quiet connector is listed after the organisations, with a link to the person', async () => {
+  stubFetch({
+    'GET /api/orgs': () => [],
+    'GET /api/attention': () => [
+      { org: org({ next_step: 'Send the deck', next_step_due: '2000-01-01' }), reasons: ['overdue'] },
+      { contact: contact({ id: 8, name: 'Marta', connector: true, org_id: null, org_name: null, org_slug: null }), reasons: ['quiet_connector'] },
+    ],
+    'GET /api/activity?limit=30': () => [],
+  })
+  renderApp(<HomePage />)
+  expect(await screen.findByRole('link', { name: 'Marta' })).toHaveAttribute('href', '/c/8')
+  expect(screen.getByText('No contact in 90 days')).toHaveClass('tenon-tag--warning')
+  expect(screen.getByRole('img', { name: 'Key connector' })).toBeInTheDocument()
+  expect(screen.getByText('1 with a missed next step')).toBeInTheDocument()
 })

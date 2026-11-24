@@ -1,4 +1,4 @@
-import { Alert, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
+import { Alert, Card, Column, ColumnEmpty, Stat, Tag } from '@tiagopedras/tenon'
 import { Link } from 'react-router-dom'
 import { api } from '../api/endpoints'
 import type { ActivityItem, Org } from '../api/types'
@@ -7,6 +7,7 @@ import { ColourDot, DueDate } from '../components/ColourTag'
 import { Loading } from '../components/Loading'
 import { OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { Star } from '../components/Star'
 import { REASON_TONE, stageColour, typeColour } from '../lib/colour'
 import { ago, label, money, person, REASON_TEXT, statusLine } from '../lib/format'
 import { useApi } from '../lib/useApi'
@@ -37,7 +38,7 @@ export function HomePage() {
   const activity = useApi(() => api.activity(30), [])
   const orgs = useApi(() => api.orgs(), [])
   const drawer = useOrgDrawer()
-  const overdue = attention.data?.filter((a) => a.reasons.includes('overdue')).length ?? 0
+  const overdue = attention.data?.filter((a) => 'org' in a && a.reasons.includes('overdue')).length ?? 0
   const figures = orgs.data && attention.data ? headline(orgs.data, meta.open_lead_statuses, overdue, attention.data.length) : undefined
   return (
     <div className="tn-stack">
@@ -66,19 +67,33 @@ export function HomePage() {
           ) : attention.data.length === 0 ? (
             <ColumnEmpty boxed>Nothing needs you today.</ColumnEmpty>
           ) : (
-            attention.data.map((a) => (
-              <OrgCard
-                key={a.org.id}
-                org={a.org}
-                onOpen={(o) => drawer.open(o.slug)}
-                footer={
-                  <span className="tn-custom-chiprow">
-                    {a.org.next_step_due && <DueDate due={a.org.next_step_due} />}
-                    {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
-                  </span>
-                }
-              />
-            ))
+            attention.data.map((a) =>
+              'org' in a ? (
+                <OrgCard
+                  key={`org${a.org.id}`}
+                  org={a.org}
+                  onOpen={(o) => drawer.open(o.slug)}
+                  footer={
+                    <span className="tn-custom-chiprow">
+                      {a.org.next_step_due && <DueDate due={a.org.next_step_due} />}
+                      {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
+                    </span>
+                  }
+                />
+              ) : (
+                <Card
+                  key={`contact${a.contact.id}`}
+                  titleAs="h3"
+                  title={<span className="tn-cluster"><Star /><Link to={`/c/${a.contact.id}`}>{a.contact.name}</Link></span>}
+                  summary={a.contact.org_name ? <span className="tn-custom-muted">{a.contact.org_name}</span> : undefined}
+                  footer={
+                    <span className="tn-custom-chiprow">
+                      {a.reasons.map((r) => <Tag key={r} tone={REASON_TONE[r]}>{REASON_TEXT[r]}</Tag>)}
+                    </span>
+                  }
+                />
+              ),
+            )
           )}
         </Column>
         <Column className="tn-col-4" titleAs="h2" title="Recent activity">

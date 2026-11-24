@@ -169,6 +169,8 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
             Who to talk to
           </label>
         </div>
+        <Field label="Postal address" multiline rows={3} maxLength={1000} value={form.postal_address}
+          onChange={set('postal_address')} hint="For the year-end thanks" />
         <Field label="Notes" multiline rows={3} value={form.notes} onChange={set('notes')} />
       </form>
     </Modal>

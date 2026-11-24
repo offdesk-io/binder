@@ -39,15 +39,6 @@ export function day(value: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? '' : DAY.format(d)
 }
 
-const SHORT_DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })
-
-/** A day without its year, `12 Oct`, for when someone was last in touch. Empty when there is none. */
-export function shortDay(value: string | null | undefined): string {
-  if (!value) return ''
-  const d = parse(value)
-  return Number.isNaN(d.getTime()) ? '' : SHORT_DAY.format(d)
-}
-
 /** The time of day, `09:30`, for something read a moment ago. */
 export function clock(value: string | null | undefined): string {
   if (!value) return ''

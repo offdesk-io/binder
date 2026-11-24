@@ -333,3 +333,12 @@ a.tenon-button:hover { text-decoration: none; }
 @media (max-width: 767px) {
   .tn-custom-reach > * { flex: 1 1 100%; justify-content: center; }
 }
+/* The Thanks checklist: who and where, what, sent, and a note on one line; stacked on a phone. */
+.tn-custom-thanks-line {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) auto minmax(0, 2fr);
+  align-items: center; gap: var(--tenon-dimension-100);
+}
+.tn-custom-thanks-line > .tenon-alert { grid-column: 1 / -1; }
+@media (max-width: 767px) {
+  .tn-custom-thanks-line { grid-template-columns: minmax(0, 1fr); }
+}

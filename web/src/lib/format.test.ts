@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
-  ago, day, fromLocalInput, initials, label, money, moneyShort, person, REASON_TEXT, shortDay, statusLine,
+  ago, day, fromLocalInput, initials, label, money, moneyShort, person, REASON_TEXT, statusLine,
   toLocalInput, todayIso, safeHref, usd,
 } from './format'
 
@@ -87,11 +87,4 @@ test('initials come from the name part of an email', () => {
   expect(initials('ana.example@example.com')).toBe('AE')
   expect(initials('rui@example.com')).toBe('R')
   expect(initials(null)).toBe('')
-})
-
-test('shortDay is the day and month, for when someone was last in touch', () => {
-  expect(shortDay('2026-10-12T10:00:00.000000+00:00')).toMatch(/^1[12] Oct$/) // the day in the browser's zone
-  expect(shortDay('2026-10-12')).toBe('12 Oct')
-  expect(shortDay(null)).toBe('')
-  expect(shortDay('nonsense')).toBe('')
 })

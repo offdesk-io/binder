@@ -276,7 +276,7 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 `BINDER_OWNERS`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
 it an active client, and a client never goes back to a lead through a status.
-A partner moves freely between `identified`, `in_talks`, `terms_sent`,
+A partner moves freely between `identified`, `contacted`, `in_talks`, `terms_sent`,
 `active` and `paused`, and a referrer between the same steps without
 `terms_sent`.
 

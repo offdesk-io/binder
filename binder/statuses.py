@@ -17,8 +17,8 @@ INTRODUCER_KINDS = ("partner", "referrer")
 LEAD_STATUSES = ("lead", "contacted", "in_conversation", "proposal_sent", "won", "lost", "parked")
 OPEN_LEAD_STATUSES = ("lead", "contacted", "in_conversation", "proposal_sent")
 CLIENT_STATUSES = ("active", "paused", "past")
-PARTNER_STATUSES = ("identified", "in_talks", "terms_sent", "active", "paused")
-REFERRER_STATUSES = ("identified", "in_talks", "active", "paused")
+PARTNER_STATUSES = ("identified", "contacted", "in_talks", "terms_sent", "active", "paused")
+REFERRER_STATUSES = ("identified", "contacted", "in_talks", "active", "paused")
 INTERACTION_TYPES = ("call", "email", "meeting", "note")
 RELATIONSHIPS = ("cold", "warm", "strong")  # a contact's relationship may also be null
 # An organisation's sector, or null. What they do in their own words goes in `description`.

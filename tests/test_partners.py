@@ -32,14 +32,14 @@ def test_partner_and_referrer_start_identified():
     assert initial_status("referrer") == "identified"
 
 
-@pytest.mark.parametrize("kind,steps", [("partner", ("paused", "terms_sent", "identified", "active", "in_talks")),
-                                        ("referrer", ("paused", "identified", "active", "in_talks"))])
+@pytest.mark.parametrize("kind,steps", [("partner", ("paused", "terms_sent", "identified", "contacted", "active", "in_talks")),
+                                        ("referrer", ("paused", "identified", "contacted", "active", "in_talks"))])
 def test_partner_and_referrer_steps_are_unordered(kind, steps):
     for s in steps:
         assert check_transition(kind, s) == (kind, s)
 
 
-@pytest.mark.parametrize("kind,status", [("partner", "won"), ("partner", "contacted"), ("referrer", "lead"),
+@pytest.mark.parametrize("kind,status", [("partner", "won"), ("referrer", "lead"),
                                          ("partner", "past"), ("referrer", "past"), ("referrer", "terms_sent"),
                                          ("client", "in_talks"), ("lead", "in_talks"), ("client", "identified")])
 def test_statuses_stay_within_their_kind(kind, status):
@@ -75,8 +75,8 @@ def test_unknown_kind_on_create_is_422(client):
 def test_meta_serves_the_new_kinds(client):
     m = client.get("/api/meta").json()
     assert m["kinds"] == ["lead", "client", "partner", "referrer"]
-    assert m["partner_statuses"] == ["identified", "in_talks", "terms_sent", "active", "paused"]
-    assert m["referrer_statuses"] == ["identified", "in_talks", "active", "paused"]
+    assert m["partner_statuses"] == ["identified", "contacted", "in_talks", "terms_sent", "active", "paused"]
+    assert m["referrer_statuses"] == ["identified", "contacted", "in_talks", "active", "paused"]
 
 
 def test_list_by_kind(client):
@@ -200,7 +200,7 @@ def test_kind_change_with_a_status_for_the_new_kind(client):
     r = _patch(client, lead, kind="partner", status="active").json()
     assert (r["kind"], r["status"]) == ("partner", "active")
     assert _history(client, lead)[0] == ("lead", "active")
-    assert _patch(client, _new(client, "B"), kind="partner", status="contacted").status_code == 422
+    assert _patch(client, _new(client, "B"), kind="partner", status="won").status_code == 422
 
 
 def test_same_kind_is_no_change(client):

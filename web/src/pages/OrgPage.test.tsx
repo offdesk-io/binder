@@ -226,7 +226,7 @@ test('a referrer that has introduced nobody says so, and its status picker is it
   page()
   expect(await screen.findByText('Nobody introduced yet.')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Status' }))
-  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'Contacted', 'In talks', 'Active', 'Paused'])
 })
 
 async function deleteFromPage(kind: 'lead' | 'client' | 'partner' | 'referrer') {

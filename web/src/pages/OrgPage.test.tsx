@@ -137,7 +137,7 @@ test('deleting a person reloads the timeline, and the log no longer offers them'
   const withBo = { ...interaction({ contact_ids: [5] }), kind: 'interaction', at: acme.updated_at, by_email: 'ana@example.com' }
   const calls = stubs({
     'GET /api/orgs/1/contacts': () => (gone ? [] : [contact()]),
-    'GET /api/orgs/1/timeline': () => [withBo],
+    'GET /api/orgs/1/timeline': () => [gone ? { ...withBo, contact_ids: [] } : withBo],
     'DELETE /api/contacts/5': () => { gone = true; return undefined },
     'PATCH /api/interactions/7': () => interaction(),
   })
@@ -153,7 +153,6 @@ test('deleting a person reloads the timeline, and the log no longer offers them'
   await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/interactions/7')).toBe(true))
   expect(calls.find((c) => c.key === 'PATCH /api/interactions/7')!.body).toEqual({
     next_step: 'Send rates',
-    contact_ids: [],
     updated_at: withBo.updated_at,
   })
 })

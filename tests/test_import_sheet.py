@@ -60,6 +60,7 @@ def test_reapply_keeps_a_correction_and_adds_a_new_contact(conn):
 @pytest.mark.parametrize("patch,msg", [
     ({"status": "bogus"}, "not a lead status"),
     ({"kind": "client", "status": "lead"}, "not a client status"),
+    ({"kind": "partner", "status": "won"}, "not a partner status"),
     ({"owner_email": "nobody"}, "not an email"),
     ({"next_step_due": "soon"}, "YYYY-MM-DD"),
     ({"slug": ""}, "required"),
@@ -83,3 +84,9 @@ def test_read_sheet_round_trip(tmp_path):
         w.writeheader()
         w.writerow(ROW)
     assert imp.read_sheet(str(p)) == [ROW]
+
+
+def test_a_partner_row_with_a_partner_status_is_imported(conn):
+    imp.apply_rows(conn, [dict(CLIENT, slug="north", name="North", kind="partner", status="prospect")], by="import@local")
+    o = orgs.get_by_slug(conn, "north")
+    assert (o["kind"], o["status"]) == ("partner", "prospect")

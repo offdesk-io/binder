@@ -123,3 +123,25 @@ test('shows the postal address and what they introduced', async () => {
   expect(await screen.findByRole('link', { name: 'Bolt' })).toHaveAttribute('href', '/o/bolt')
   expect(screen.getByText('Clients worth €4,000')).toBeInTheDocument()
 })
+
+test('a log with no organisation can be edited and deleted from the person’s page', async () => {
+  const user = userEvent.setup()
+  const solo = contact({ org_id: null, org_name: null, org_slug: null })
+  const log = interaction({ org_id: null, contact_ids: [5] })
+  const calls = stubs(solo, {
+    'GET /api/contacts/5/interactions': () => [log],
+    'PATCH /api/interactions/7': () => ({ ...log, summary: 'Changed' }),
+    'DELETE /api/interactions/7': () => undefined,
+  })
+  page()
+  await user.click(await screen.findByRole('button', { name: /^Edit Call on/ }))
+  const text = await screen.findByLabelText(/What happened/)
+  await user.clear(text)
+  await user.type(text, 'Changed')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/interactions/7')).toBe(true))
+  await user.click(await screen.findByRole('button', { name: /^Edit Call on/ }))
+  await user.click(await screen.findByRole('button', { name: 'Delete' }))
+  await user.click(screen.getByRole('button', { name: 'Delete this log' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'DELETE /api/interactions/7')).toBe(true))
+})

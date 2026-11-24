@@ -86,6 +86,8 @@ export function QuickLog({ open, orgId, personId, contacts, initial, preselect, 
   const people = contacts ?? []
   const [base, setBase] = useState(initial)
   const [form, setForm] = useState(() => logForm(initial, preselect, new Date(), first))
+  // People on the log being edited who are not in the list: shown as a chip, so they can be unticked on purpose.
+  const others = base ? base.contact_ids.filter((id) => !people.some((c) => c.id === id)) : []
   const [error, setError] = useState<string>()
   const [fieldErrors, setFieldErrors] = useState<{ when?: string; summary?: string }>({})
   const [busy, setBusy] = useState(false)
@@ -152,9 +154,10 @@ export function QuickLog({ open, orgId, personId, contacts, initial, preselect, 
     const body = logBody(form, base)
     // A person deleted since the log was written has no chip to untick, so drop them now,
     // against the list as it stands. While it is still loading, keep everyone.
+    // People already on the log stay: they may belong to another organisation, or have no chip here.
     if (contacts) {
-      const known = new Set(contacts.map((c) => c.id))
-      body.contact_ids = body.contact_ids.filter((id) => known.has(id))
+      const keep = new Set([...contacts.map((c) => c.id), ...(base?.contact_ids ?? [])])
+      body.contact_ids = body.contact_ids.filter((id) => keep.has(id))
     }
     setBusy(true)
     setError(undefined)
@@ -244,7 +247,7 @@ export function QuickLog({ open, orgId, personId, contacts, initial, preselect, 
           />
         </div>
         <Field label="When" type="datetime-local" required error={fieldErrors.when} value={form.when} onChange={set('when')} />
-        {people.length > 0 && (
+        {(people.length > 0 || others.length > 0) && (
           <div className="tenon-field">
             <span className="tenon-field__label">With</span>
             <div className="tn-cluster" role="group" aria-label="With">
@@ -256,6 +259,11 @@ export function QuickLog({ open, orgId, personId, contacts, initial, preselect, 
                   onClick={() => toggle(c.id)}
                 >
                   {c.name}
+                </ToggleChip>
+              ))}
+              {others.map((id) => (
+                <ToggleChip key={`other${id}`} pressed={form.contact_ids.includes(id)} onClick={() => toggle(id)}>
+                  Someone else
                 </ToggleChip>
               ))}
             </div>

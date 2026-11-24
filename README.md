@@ -220,6 +220,8 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `{name, role, contact_id, why}`, where `contact_id` is null for someone not
   yet in Binder), `recent_news` (each `{headline, date, url}`),
   `likely_needs`, `offdesk_angle` and `open_questions`.
+  `POST /api/contacts/{id}/research` answers 422 for a person with no
+  organisation.
   `POST` to either list starts a run and answers 202 with the running row. A
   record can have one run going at a time: a second `POST` gets 409 with
   `current`, the running row. Poll until `status` is no longer `running`.

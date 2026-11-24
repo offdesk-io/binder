@@ -10,7 +10,7 @@ import { ResearchSection } from './ResearchSection'
 
 function Section({ pollMs }: { pollMs?: number }) {
   const people = useApi(() => api.contacts(1), [])
-  return <ResearchSection subject={{ kind: 'org', id: 1 }} orgId={1} people={people} pollMs={pollMs} />
+  return <ResearchSection subject={{ kind: 'org', id: 1 }} people={people} pollMs={pollMs} />
 }
 
 const withPeople = brief({
@@ -203,4 +203,20 @@ test('the Add? button is replaced by the link as soon as the contact is created,
   expect(await screen.findByRole('link', { name: 'Sam Example' })).toHaveAttribute('href', '/c/6')
   expect(screen.queryByRole('button', { name: 'Add Sam Example' })).not.toBeInTheDocument()
   release()
+})
+
+test('Add files a suggested person at the organisation the run was for, not the one the page is at now', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({
+    'GET /api/contacts/5/research': () => [research({ org_id: 1, contact_id: 5, brief: withPeople })],
+    'GET /api/orgs/2/contacts': () => [],
+    'POST /api/orgs/1/contacts': () => contact({ id: 6, name: 'Sam Example' }),
+  })
+  function Moved() {
+    const people = useApi(() => api.contacts(2), [])
+    return <ResearchSection subject={{ kind: 'contact', id: 5 }} people={people} />
+  }
+  renderApp(<Moved />)
+  await user.click(await screen.findByRole('button', { name: 'Add Sam Example' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'POST /api/orgs/1/contacts')).toBe(true))
 })

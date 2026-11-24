@@ -174,7 +174,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
           {introduced}
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} limit={5} moreHref={`/o/${org.slug}`} />
-          <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
+          <ResearchSection subject={{ kind: 'org', id: org.id }} people={contacts} />
           {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
         </div>
         {forms}
@@ -207,7 +207,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           <div className="tn-col-8 tn-stack">
             {overview}
             <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
-            <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
+            <ResearchSection subject={{ kind: 'org', id: org.id }} people={contacts} />
           </div>
           <div className="tn-col-4 tn-stack">
             <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />

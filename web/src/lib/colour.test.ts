@@ -5,7 +5,7 @@ import {
 } from './colour'
 
 const { meta } = SESSION
-const statuses = [...meta.lead_statuses, ...meta.client_statuses]
+const statuses = [...new Set([...meta.lead_statuses, ...meta.client_statuses, ...meta.partner_statuses])]
 
 describe('stage colour', () => {
   test('every lead and client status has its own entry, and no entry is left over', () => {
@@ -25,6 +25,7 @@ describe('stage colour', () => {
     expect(STAGE.paused.tone).toBe('warning')
     expect(STAGE.parked.tone).toBe('neutral')
     expect(STAGE.past.tone).toBe('neutral')
+    expect(STAGE.prospect.chart).toBeDefined()
   })
 
   test('an unknown status is neutral rather than missing', () => {

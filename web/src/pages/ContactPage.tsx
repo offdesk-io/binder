@@ -3,7 +3,7 @@ import { Fragment, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
-import type { Contact } from '../api/types'
+import type { Contact, Interaction } from '../api/types'
 import { ContactForm } from '../components/ContactForm'
 import { InteractionEntry } from '../components/InteractionEntry'
 import { IntroducedSection } from '../components/IntroducedSection'
@@ -13,7 +13,7 @@ import { ResearchSection } from '../components/ResearchSection'
 import { Star } from '../components/Star'
 import { useSession } from '../app/session'
 import { relationshipTone } from '../lib/colour'
-import { label, safeHref } from '../lib/format'
+import { day, label, safeHref } from '../lib/format'
 import { saveErrorText } from '../lib/forms'
 import { useApi } from '../lib/useApi'
 
@@ -34,6 +34,8 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
   const people = useApi(() => (c.org_id === null ? Promise.resolve([c]) : api.contacts(c.org_id)), [c.org_id])
   const [editing, setEditing] = useState(false)
   const [logging, setLogging] = useState(false)
+  // A log from the history being edited; any of them, with or without an organisation.
+  const [editingLog, setEditingLog] = useState<Interaction | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string>()
 
@@ -112,6 +114,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
                       type={i.type} at={i.happened_at} by={i.author_email} summary={i.summary}
                       next_step={i.next_step} next_step_due={i.next_step_due}
                       people={i.contact_ids.filter((p) => p !== c.id).map((p) => names.get(p)).filter((n): n is string => !!n)}
+                      action={<Button size="sm" variant="ghost" onClick={() => setEditingLog(i)} aria-label={`Edit ${label(i.type)} on ${day(i.happened_at)}`}>Edit</Button>}
                     />
                   </li>
                 ))}
@@ -119,7 +122,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
             )}
           </Column>
           {/* Research needs the organisation: the server refuses a person who has none. */}
-          {c.org_id !== null && <ResearchSection subject={{ kind: 'contact', id: c.id }} orgId={c.org_id} people={people} />}
+          {c.org_id !== null && <ResearchSection subject={{ kind: 'contact', id: c.id }} people={people} />}
         </div>
         <div className="tn-col-4 tn-stack">
           <Column titleAs="h2" title="Details">
@@ -146,14 +149,16 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
         onDeleted={() => navigate(c.org_slug ? `/o/${c.org_slug}` : '/people')}
       />
       <QuickLog
-        open={logging}
-        orgId={c.org_id}
+        open={logging || editingLog !== null}
+        orgId={editingLog ? editingLog.org_id : c.org_id}
         personId={c.id}
         contacts={people.data}
+        initial={editingLog ?? undefined}
         preselect={[c.id]}
-        onClose={() => setLogging(false)}
+        onClose={() => { setLogging(false); setEditingLog(null) }}
         onSaved={() => {
           setLogging(false)
+          setEditingLog(null)
           history.reload()
         }}
       />

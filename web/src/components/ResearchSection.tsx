@@ -21,7 +21,6 @@ export interface Subject {
 
 interface Props {
   subject: Subject
-  orgId: number
   people: Loaded<Contact[]>
   /** How often to check a running run. Tests make it short. */
   pollMs?: number
@@ -34,7 +33,7 @@ export function runLine(r: Research): string {
   return [day(r.run_at), person(r.author_email), label(r.status), usd(r.cost_usd)].filter(Boolean).join(' · ')
 }
 
-export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Props) {
+export function ResearchSection({ subject, people, pollMs = POLL_MS }: Props) {
   const { meta } = useSession()
   const { hash } = useLocation()
   const runs = useApi(() => load(subject), [subject.kind, subject.id])
@@ -115,7 +114,7 @@ export function ResearchSection({ subject, orgId, people, pollMs = POLL_MS }: Pr
             </Alert>
           )}
           {shown?.brief ? (
-            <BriefView run={shown} orgId={orgId} people={people} />
+            <BriefView run={shown} orgId={shown.org_id} people={people} />
           ) : (
             !running && latest?.status !== 'failed' && (
               <ColumnEmpty boxed>

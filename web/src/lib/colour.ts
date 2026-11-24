@@ -26,6 +26,7 @@ export const STAGE: Record<string, Colour> = {
   contacted: chart(1),
   in_conversation: chart(5),
   proposal_sent: chart(7),
+  prospect: chart(3),
   won: tone('success', 'var(--tenon-text-success)'),
   active: tone('success', 'var(--tenon-text-success)'),
   lost: tone('error', 'var(--tenon-text-error)'),

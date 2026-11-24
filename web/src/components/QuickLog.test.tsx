@@ -81,17 +81,6 @@ test('a conflict loads their version into the form and says so', async () => {
   expect(screen.getByLabelText('Next step')).toHaveValue('')
 })
 
-test('opening a log drops people who no longer exist', async () => {
-  const user = userEvent.setup()
-  const i = interaction({ contact_ids: [5, 99] })
-  const calls = stubFetch({ 'PATCH /api/interactions/7': () => i })
-  renderApp(<QuickLog open orgId={1} contacts={[contact()]} initial={i} onClose={() => {}} onSaved={() => {}} />)
-  expect(screen.getByRole('button', { name: 'Bo' })).toHaveAttribute('aria-pressed', 'true')
-  await user.click(screen.getByRole('button', { name: 'Save' }))
-  await waitFor(() => expect(calls).toHaveLength(1))
-  expect(calls[0].body).toEqual({ contact_ids: [5], updated_at: i.updated_at })
-})
-
 test('people are sent in id order', async () => {
   const user = userEvent.setup()
   const calls = stubFetch({ 'POST /api/orgs/1/interactions': () => interaction() })
@@ -213,4 +202,30 @@ test('on a person’s own log their chip is ticked and cannot be unticked', () =
   renderApp(<QuickLog open orgId={null} personId={5} contacts={[solo]} preselect={[5]} onClose={() => {}} onSaved={() => {}} />)
   const chip = screen.getByRole('button', { name: 'Bo', pressed: true })
   expect(chip).toBeDisabled()
+})
+
+test('editing a log keeps a person who is not in the list, and they can be unticked on purpose', async () => {
+  const user = userEvent.setup()
+  const log = interaction({ contact_ids: [5, 99], summary: 'Coffee' })
+  const calls = stubFetch({ 'PATCH /api/interactions/7': () => log })
+  const onSaved = vi.fn()
+  renderApp(<QuickLog open orgId={null} contacts={[contact()]} initial={log} onClose={() => {}} onSaved={onSaved} />)
+  const other = screen.getByRole('button', { name: 'Someone else', pressed: true })
+  await user.type(screen.getByLabelText(/What happened/), '!')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls[0].body).toEqual({ summary: 'Coffee!', updated_at: log.updated_at })
+  expect(other).toBeInTheDocument()
+})
+
+test('unticking the person who is not in the list removes them from the log', async () => {
+  const user = userEvent.setup()
+  const log = interaction({ contact_ids: [5, 99] })
+  const calls = stubFetch({ 'PATCH /api/interactions/7': () => log })
+  const onSaved = vi.fn()
+  renderApp(<QuickLog open orgId={null} contacts={[contact()]} initial={log} onClose={() => {}} onSaved={onSaved} />)
+  await user.click(screen.getByRole('button', { name: 'Someone else' }))
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls[0].body).toEqual({ contact_ids: [5], updated_at: log.updated_at })
 })

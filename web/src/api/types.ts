@@ -46,6 +46,8 @@ export interface Org {
   introduced_by: Introducer | null
   /** Sorted by name. Always empty on a lead or client. */
   introduced: Introduced[]
+  /** When the record was last moved to `won`, or null if it never was. */
+  won_at: string | null
   last_contact: string | null
   created_at: string
   updated_at: string
@@ -166,8 +168,8 @@ export interface Meta {
   lead_statuses: string[]
   open_lead_statuses: string[]
   client_statuses: string[]
-  /** Shared by partners and referrers. */
   partner_statuses: string[]
+  referrer_statuses: string[]
   interaction_types: string[]
   relationships: string[]
   /** False when the server has no AI: research and summarise are hidden. */

@@ -148,12 +148,19 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   `id`, `slug`, `name`, `kind` (`lead`, `client`, `partner` or `referrer`),
   `status`, `website`, `sector`, `size`, `location`, `owner_email`, `source`,
   `value_estimate`, `tags` (list), `summary`, `next_step`, `next_step_due`,
-  `introduced_by_id`, `introduced_by`, `introduced`, `last_contact`,
-  `created_at`, `updated_at`, `updated_by`. `introduced_by` is the partner or
+  `introduced_by_id`, `introduced_by`, `introduced`, `won_at`, `last_contact`,
+  `created_at`, `updated_at`, `updated_by`. `won_at` is when the record was
+  last moved to `won`, or null if it never was. `introduced_by` is the partner or
   referrer who introduced a lead or client, as `{id, slug, name, kind}`, or
   null. `introduced` lists the leads and clients a partner or referrer
   introduced, each `{id, slug, name, kind, status}`, sorted by name; it is
   always empty on a lead or client.
+  `GET /api/orgs` filters by `kind`, `status`, `owner`, `tag`, `q` (part of
+  the name) and `won` (`true` keeps records ever moved to `won`, `false`
+  those never were), and sorts by `sort`: `updated` (the default), `name`,
+  `last_contact`, `value` or `won` (newest won first, the default when
+  `won=true`). The Pipeline's Won column asks for `kind=client&won=true`, which
+  has no time limit.
 - **Contact** (`/api/orgs/{id}/contacts`, `/api/contacts/{id}`): `id`,
   `org_id`, `org_name`, `org_slug`, `name`, `role`, `email`, `phone`,
   `linkedin_url`, `notes`, `is_primary` (bool), `relationship` (or null),
@@ -205,7 +212,7 @@ anything else is 422.
 
 A PATCH with a different `kind` refiles the record, so one filed as the wrong
 kind can be fixed. It takes the new kind's first status (`lead`, `active` for
-a client, `in_talks` for a partner or referrer), or the `status` sent in the
+a client, `identified` for a partner or referrer), or the `status` sent in the
 same PATCH if that is one of the new kind's, and status history records the
 move. Becoming a partner or referrer clears `introduced_by_id`. A partner or
 referrer that becomes a lead or client stops introducing: the records it
@@ -245,13 +252,14 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 ### Vocabularies
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
-`client_statuses`, `partner_statuses` (shared by partners and referrers),
+`client_statuses`, `partner_statuses`, `referrer_statuses`,
 `interaction_types` and `relationships`, from
 `binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
 it an active client, and a client never goes back to a lead through a status.
-Partners and referrers move freely between `in_talks`, `active`, `paused` and
-`past`.
+A partner moves freely between `identified`, `in_talks`, `terms_sent`,
+`active` and `paused`, and a referrer between the same steps without
+`terms_sent`.
 
 ### Saves and errors
 

@@ -27,19 +27,21 @@ def _get(client, o):
 # Statuses
 
 
-def test_partner_and_referrer_start_in_talks():
-    assert initial_status("partner") == "in_talks"
-    assert initial_status("referrer") == "in_talks"
+def test_partner_and_referrer_start_identified():
+    assert initial_status("partner") == "identified"
+    assert initial_status("referrer") == "identified"
 
 
-@pytest.mark.parametrize("kind", ["partner", "referrer"])
-def test_partner_statuses_are_unordered(kind):
-    for s in ("active", "paused", "past", "in_talks"):
+@pytest.mark.parametrize("kind,steps", [("partner", ("paused", "terms_sent", "identified", "active", "in_talks")),
+                                        ("referrer", ("paused", "identified", "active", "in_talks"))])
+def test_partner_and_referrer_steps_are_unordered(kind, steps):
+    for s in steps:
         assert check_transition(kind, s) == (kind, s)
 
 
 @pytest.mark.parametrize("kind,status", [("partner", "won"), ("partner", "contacted"), ("referrer", "lead"),
-                                         ("client", "in_talks"), ("lead", "in_talks")])
+                                         ("partner", "past"), ("referrer", "past"), ("referrer", "terms_sent"),
+                                         ("client", "in_talks"), ("lead", "in_talks"), ("client", "identified")])
 def test_statuses_stay_within_their_kind(kind, status):
     with pytest.raises(Invalid):
         check_transition(kind, status)
@@ -52,12 +54,18 @@ def test_unknown_kind_is_invalid():
 
 def test_create_partner_and_move_its_status(client):
     p = _new(client, "Northwind Agency", kind="partner")
-    assert (p["kind"], p["status"]) == ("partner", "in_talks")
-    r = _patch(client, p, status="active")
-    assert r.status_code == 200 and r.json()["status"] == "active"
+    assert (p["kind"], p["status"]) == ("partner", "identified")
+    r = _patch(client, p, status="terms_sent")
+    assert r.status_code == 200 and r.json()["status"] == "terms_sent"
     assert _patch(client, r.json(), status="won").status_code == 422
     hist = client.get("/api/orgs/%d/status-history" % p["id"]).json()
-    assert [(h["from_status"], h["to_status"]) for h in hist] == [("in_talks", "active"), (None, "in_talks")]
+    assert [(h["from_status"], h["to_status"]) for h in hist] == [("identified", "terms_sent"), (None, "identified")]
+
+
+def test_referrer_has_no_terms_sent_step(client):
+    ref = _new(client, "Rita Reis", kind="referrer")
+    assert ref["status"] == "identified"
+    assert _patch(client, ref, status="terms_sent").status_code == 422
 
 
 def test_unknown_kind_on_create_is_422(client):
@@ -67,7 +75,8 @@ def test_unknown_kind_on_create_is_422(client):
 def test_meta_serves_the_new_kinds(client):
     m = client.get("/api/meta").json()
     assert m["kinds"] == ["lead", "client", "partner", "referrer"]
-    assert m["partner_statuses"] == ["in_talks", "active", "paused", "past"]
+    assert m["partner_statuses"] == ["identified", "in_talks", "terms_sent", "active", "paused"]
+    assert m["referrer_statuses"] == ["identified", "in_talks", "active", "paused"]
 
 
 def test_list_by_kind(client):
@@ -169,15 +178,15 @@ def test_lead_becomes_referrer(client):
     lead = _patch(client, lead, status="contacted").json()
     r = _patch(client, lead, kind="referrer")
     assert r.status_code == 200
-    assert (r.json()["kind"], r.json()["status"]) == ("referrer", "in_talks")
-    assert _history(client, lead)[0] == ("contacted", "in_talks")
+    assert (r.json()["kind"], r.json()["status"]) == ("referrer", "identified")
+    assert _history(client, lead)[0] == ("contacted", "identified")
 
 
 def test_partner_becomes_lead(client):
     p = _new(client, "Partner Co", kind="partner")
     r = _patch(client, p, kind="lead").json()
     assert (r["kind"], r["status"]) == ("lead", "lead")
-    assert _history(client, p)[0] == ("in_talks", "lead")
+    assert _history(client, p)[0] == ("identified", "lead")
 
 
 def test_client_can_be_refiled_as_a_lead(client):
@@ -282,6 +291,64 @@ def test_search_finds_partners_with_their_kind(client):
     assert client.get("/api/search?q=rita").json()[0]["org_kind"] == "lead"
 
 
+# Won clients, for the Pipeline's Won column
+
+
+def _set_won_at(client, o, at):
+    _db(client).execute("UPDATE status_history SET at = ? WHERE org_id = ? AND to_status = 'won'", (at, o["id"]))
+
+
+def test_won_at_is_null_until_won(client):
+    lead = _new(client, "Acme")
+    assert lead["won_at"] is None
+    assert _new(client, "Straight In", kind="client")["won_at"] is None
+    won = _patch(client, lead, status="won").json()
+    hist = client.get("/api/orgs/%d/status-history" % lead["id"]).json()
+    assert won["won_at"] == hist[0]["at"] and hist[0]["to_status"] == "won"
+
+
+def test_won_at_is_the_latest_win(client):
+    lead = _new(client, "Acme")
+    won = _patch(client, lead, status="won").json()
+    _set_won_at(client, won, "2026-01-01T00:00:00.000000+00:00")
+    back = _patch(client, _get(client, won), kind="lead").json()  # refiled, then won again
+    again = _patch(client, back, status="won").json()
+    assert again["won_at"] > "2026-01-01T00:00:00.000000+00:00"
+    assert again["won_at"] == client.get("/api/orgs/%d/status-history" % lead["id"]).json()[0]["at"]
+
+
+def test_won_clients_list_newest_won_first(client):
+    old = _patch(client, _new(client, "Old Win"), status="won").json()
+    new = _patch(client, _new(client, "New Win"), status="won").json()
+    _set_won_at(client, old, "2026-01-01T00:00:00.000000+00:00")
+    _set_won_at(client, new, "2026-10-01T00:00:00.000000+00:00")
+    paused = _patch(client, _get(client, old), status="paused").json()  # still a won client, whatever its status
+    _new(client, "Straight In", kind="client")
+    _new(client, "Open Lead")
+    got = client.get("/api/orgs?kind=client&won=true").json()
+    assert [(o["name"], o["won_at"]) for o in got] == [
+        ("New Win", "2026-10-01T00:00:00.000000+00:00"), ("Old Win", "2026-01-01T00:00:00.000000+00:00")]
+    assert paused["status"] == "paused"
+    assert [o["name"] for o in client.get("/api/orgs?kind=client&won=false").json()] == ["Straight In"]
+    assert [o["name"] for o in client.get("/api/orgs?kind=client&won=true&sort=name").json()] == ["New Win", "Old Win"]
+
+
+def test_won_clients_have_no_time_limit(client):
+    won = _patch(client, _new(client, "Ancient"), status="won").json()
+    _set_won_at(client, won, "2019-03-01T00:00:00.000000+00:00")
+    assert [o["name"] for o in client.get("/api/orgs?kind=client&won=true").json()] == ["Ancient"]
+
+
+def test_a_won_client_refiled_as_a_lead_leaves_the_won_list(client):
+    won = _patch(client, _new(client, "Acme"), status="won").json()
+    _patch(client, won, kind="lead")
+    assert client.get("/api/orgs?kind=client&won=true").json() == []
+
+
+def test_bad_won_value_is_422(client):
+    assert client.get("/api/orgs?won=maybe").status_code == 422
+
+
 # Migration 006
 
 
@@ -330,7 +397,7 @@ def test_migration_006_keeps_rows_children_and_search(tmp_path, monkeypatch):
 
     # The rebuilt table takes the new kinds, still refuses unknown ones, and its triggers still feed search.
     conn.execute("INSERT INTO organisations(slug,name,kind,status,created_at,updated_at,updated_by)"
-                 " VALUES ('p','Partner Co','partner','in_talks','t','t','u')")
+                 " VALUES ('p','Partner Co','partner','identified','t','t','u')")
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute("INSERT INTO organisations(slug,name,kind,status,created_at,updated_at,updated_by)"
                      " VALUES ('s','S','supplier','x','t','t','u')")

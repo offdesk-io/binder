@@ -21,6 +21,14 @@ test('query strings leave out empty filters and encode the rest', async () => {
   ])
 })
 
+test('the won filter is sent as true or false, and left out when unset', async () => {
+  const calls = capture()
+  await api.orgs({ kind: 'client', won: true })
+  await api.orgs({ kind: 'client', won: false })
+  await api.orgs({ kind: 'client' })
+  expect(calls()).toEqual(['GET /api/orgs?kind=client&won=true', 'GET /api/orgs?kind=client&won=false', 'GET /api/orgs?kind=client'])
+})
+
 test('writes go to the right place with the right method', async () => {
   const calls = capture()
   await api.patchOrg(3, { updated_at: 'x', status: 'contacted' })

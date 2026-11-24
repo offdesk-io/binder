@@ -19,7 +19,10 @@ INTRODUCED_BY = ("(SELECT json_object('id', b.id, 'slug', b.slug, 'name', b.name
                  "FROM organisations b WHERE b.id = o.introduced_by_id)")
 INTRODUCED = ("(SELECT json_group_array(json_object('id', x.id, 'slug', x.slug, 'name', x.name, 'kind', x.kind, "
               "'status', x.status)) FROM organisations x WHERE x.introduced_by_id = o.id)")
-COLUMNS = "o.*, %s AS last_contact, %s AS introduced_by, %s AS introduced" % (LAST_CONTACT, INTRODUCED_BY, INTRODUCED)
+# When the record was last moved to `won`, so the Pipeline can show won clients.
+WON_AT = "(SELECT max(at) FROM status_history h WHERE h.org_id = o.id AND h.to_status = 'won')"
+COLUMNS = "o.*, %s AS last_contact, %s AS won_at, %s AS introduced_by, %s AS introduced" % (
+    LAST_CONTACT, WON_AT, INTRODUCED_BY, INTRODUCED)
 
 
 def slugify(text: str) -> str:
@@ -158,7 +161,9 @@ def delete(conn: sqlite3.Connection, org_id: int) -> None:
 
 def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional[str] = None,
           owner: Optional[str] = None, tag: Optional[str] = None, q: Optional[str] = None,
-          sort: str = "updated") -> List[Dict[str, Any]]:
+          won: Optional[bool] = None, sort: Optional[str] = None) -> List[Dict[str, Any]]:
+    """`won` keeps only records that were ever moved to `won` (true) or never were
+    (false). The default order is newest won first with `won`, else last updated."""
     where, args = [], []  # type: List[str], List[Any]
     if kind:
         where.append("o.kind = ?"); args.append(kind)
@@ -171,9 +176,13 @@ def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional
     if q:
         escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         where.append("o.name LIKE ? ESCAPE '\\'"); args.append("%" + escaped + "%")
+    if won is not None:
+        where.append("%s %s NULL" % (WON_AT, "IS NOT" if won else "IS"))
+    sort = sort or ("won" if won else "updated")
     order = {"updated": "o.updated_at DESC", "name": "o.name COLLATE NOCASE",
              "last_contact": "last_contact IS NULL, last_contact DESC",
-             "value": "o.value_estimate IS NULL, o.value_estimate DESC"}.get(sort, "o.updated_at DESC")
+             "value": "o.value_estimate IS NULL, o.value_estimate DESC",
+             "won": "won_at IS NULL, won_at DESC, o.name COLLATE NOCASE"}.get(sort, "o.updated_at DESC")
     sql = "SELECT %s FROM organisations o %s ORDER BY %s" % (
         COLUMNS, ("WHERE " + " AND ".join(where)) if where else "", order)
     return [_out(r) for r in conn.execute(sql, args)]

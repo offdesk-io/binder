@@ -23,6 +23,7 @@ def meta(request: Request):
         "open_lead_statuses": list(statuses.OPEN_LEAD_STATUSES),
         "client_statuses": list(statuses.CLIENT_STATUSES),
         "partner_statuses": list(statuses.PARTNER_STATUSES),
+        "referrer_statuses": list(statuses.REFERRER_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
         "ai": request.app.state.ai is not None,

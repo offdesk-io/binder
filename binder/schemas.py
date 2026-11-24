@@ -174,6 +174,17 @@ class InteractionPatch(_Body):
     _due = field_validator("next_step_due")(iso_date)
 
 
+class ThanksPut(_Body):
+    """Creates or changes one person's thanks for one year. `updated_at` is the
+    row's as it was loaded, left out (or null) when there was no row yet."""
+    updated_at: Optional[str] = None
+    what: Optional[str] = Field(default=None, max_length=200)
+    sent_on: Optional[str] = None
+    note: Optional[str] = None
+
+    _sent = field_validator("sent_on")(iso_date)
+
+
 def not_blank(v: str) -> str:
     if not v.strip():
         raise ValueError("cannot be empty")

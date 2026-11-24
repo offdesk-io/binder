@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 import { Layout } from '../app/Layout'
-import { AT, org } from '../test/fixtures'
+import { AT, keyPerson, org, thanks } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { PipelinePage } from './PipelinePage'
 
@@ -581,12 +581,12 @@ const segmentRoutes = {
   'GET /api/orgs?kind=referrer': () => [rui],
 }
 
-test('Leads, Partners and Referrers sit beside the view switch, Leads first', async () => {
+test('Leads, Partners, Referrers and People sit beside the view switch, Leads first', async () => {
   stubFetch(routes)
   renderApp(<PipelinePage />)
   await screen.findByRole('link', { name: 'Acme' })
   const kind = within(screen.getByRole('radiogroup', { name: 'Kind' }))
-  expect(kind.getAllByRole('radio').map((r) => r.textContent)).toEqual(['Leads', 'Partners', 'Referrers'])
+  expect(kind.getAllByRole('radio').map((r) => r.textContent)).toEqual(['Leads', 'Partners', 'Referrers', 'People'])
   expect(kind.getByRole('radio', { name: 'Leads' })).toHaveAttribute('aria-checked', 'true')
   expect(within(screen.getByRole('radiogroup', { name: 'View' })).getAllByRole('radio').map((r) => r.textContent)).toEqual(['List', 'Board'])
 })
@@ -645,7 +645,7 @@ test('the kind choice and the view choice are remembered separately, and a partn
   expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Identified', 'Contacted', 'In talks', 'Terms sent', 'Active', 'Paused'])
 })
 
-test('a stored kind that is not one of the three falls back to Leads', async () => {
+test('a stored kind that is not one of the four falls back to Leads', async () => {
   localStorage.setItem('binder.pipeline.kind', 'client')
   stubFetch(routes)
   renderApp(<PipelinePage />)
@@ -804,4 +804,82 @@ test('a move that fails after switching segment shows no alert on the other segm
   await new Promise((r) => setTimeout(r, 50))
   expect(screen.queryByText('Server on fire')).toBeNull()
   expect(screen.queryByRole('link', { name: 'Acme' })).toBeNull()
+})
+
+
+// People: key people and the year-end thanks
+
+const marta = keyPerson({ id: 8, name: 'Marta Example', role: 'Head of ops', org_name: 'Acme', org_slug: 'acme' })
+const ritaPerson = keyPerson({
+  id: 9, name: 'Rita Example', connector: false, org_name: 'Rita Example', org_slug: 'rita',
+  referrer: { id: 14, slug: 'rita', name: 'Rita Example', status: 'active' },
+})
+const THIS_YEAR = new Date().getFullYear()
+const peopleRoutes = {
+  ...routes,
+  'GET /api/people': () => [marta, ritaPerson],
+  [`GET /api/thanks?year=${THIS_YEAR}`]: () => [{ person: marta, thanks: null }],
+  [`GET /api/thanks?year=${THIS_YEAR - 1}`]: () => [{ person: marta, thanks: thanks({ contact_id: 8, year: THIS_YEAR - 1, sent_on: `${THIS_YEAR - 1}-12-20` }) }],
+}
+
+test('People lists the key people, and the view switch reads People and Thanks there', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch(peopleRoutes)
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Acme' })
+  await user.click(screen.getByRole('radio', { name: 'People' }))
+  expect(await screen.findByRole('link', { name: 'Marta Example' })).toHaveAttribute('href', '/c/8')
+  expect(screen.getByRole('table', { name: 'Key people' })).toBeInTheDocument()
+  const view = within(screen.getByRole('radiogroup', { name: 'View' }))
+  expect(view.getAllByRole('radio').map((r) => r.textContent)).toEqual(['People', 'Thanks'])
+  expect(view.getByRole('radio', { name: 'People' })).toHaveAttribute('aria-checked', 'true')
+  // Handled by and adding an organisation belong to the organisation lists.
+  expect(screen.queryByRole('button', { name: 'Handled by' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '+ Add organisation' })).toBeNull()
+  expect(calls.map((c) => c.key)).not.toContain('GET /api/orgs?kind=people')
+})
+
+test('the People filter box narrows by name, role or organisation', async () => {
+  const user = userEvent.setup()
+  stubFetch(peopleRoutes)
+  localStorage.setItem('binder.pipeline.kind', 'people')
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Marta Example' })
+  await user.type(screen.getByRole('searchbox', { name: 'Filter people' }), 'ops')
+  expect(screen.queryByRole('link', { name: 'Rita Example' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Marta Example' })).toBeInTheDocument()
+})
+
+test('Thanks shows this year, offers the two before, and the choice of view is remembered', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch(peopleRoutes)
+  localStorage.setItem('binder.pipeline.kind', 'people')
+  const first = renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Marta Example' })
+  await user.click(screen.getByRole('radio', { name: 'Thanks' }))
+  expect(await screen.findByText('0 of 1 sent')).toBeInTheDocument()
+  expect(screen.queryByRole('searchbox', { name: 'Filter people' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Year' }))
+  expect(screen.getAllByRole('menuitemradio').map((r) => r.textContent)).toEqual(
+    [String(THIS_YEAR), String(THIS_YEAR - 1), String(THIS_YEAR - 2)])
+  await user.click(screen.getByRole('menuitemradio', { name: String(THIS_YEAR - 1) }))
+  expect(await screen.findByText('1 of 1 sent')).toBeInTheDocument()
+  expect(calls.map((c) => c.key)).toContain(`GET /api/thanks?year=${THIS_YEAR - 1}`)
+  expect(localStorage.getItem('binder.people.view')).toBe('thanks')
+  first.unmount()
+  renderApp(<PipelinePage />)
+  expect(await screen.findByText('0 of 1 sent')).toBeInTheDocument()
+  // The organisation segments keep their own List and Board choice.
+  expect(localStorage.getItem('binder.pipeline.view')).toBeNull()
+})
+
+test('leaving People goes back to the organisation views', async () => {
+  const user = userEvent.setup()
+  stubFetch(peopleRoutes)
+  localStorage.setItem('binder.pipeline.kind', 'people')
+  renderApp(<PipelinePage />)
+  await screen.findByRole('link', { name: 'Marta Example' })
+  await user.click(screen.getByRole('radio', { name: 'Leads' }))
+  expect(await screen.findByRole('link', { name: 'Acme' })).toBeInTheDocument()
+  expect(within(screen.getByRole('radiogroup', { name: 'View' })).getAllByRole('radio').map((r) => r.textContent)).toEqual(['List', 'Board'])
 })

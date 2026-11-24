@@ -103,8 +103,10 @@ def apply_rows(conn: sqlite3.Connection, rows: List[Dict[str, str]], by: str) ->
         try:
             org = orgs.get_by_slug(conn, slug)
         except NotFound:  # the first row with this slug creates it
-            org = orgs.create(conn, {"name": r["name"] or r["title"], "slug": slug,
-                                     "owner_email": owners[r["task_key"]]}, by)
+            data = {"name": r["name"] or r["title"], "slug": slug}
+            if owners[r["task_key"]]:  # left out when unknown, so the importer is the owner; null would mean nobody
+                data["owner_email"] = owners[r["task_key"]]
+            org = orgs.create(conn, data, by)
             if r["status"] != org["status"]:
                 org = orgs.update(conn, org["id"], {"status": r["status"], "updated_at": org["updated_at"]}, by)
         key = "(%s)" % r["task_key"]

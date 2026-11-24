@@ -42,7 +42,9 @@ require.
     old behaviour (cascade); the organisation delete confirmation says so.
     Deleting an organisation still deletes its logs and research; its people
     stay. A person who moves to another organisation keeps the research made
-    for the old one, and stays on the logs they were already on.
+    for the old one, and stays on the logs they were already on. A log
+    against a person with no organisation stays without one, even if other
+    people on it have an organisation.
   - New `connector INTEGER NOT NULL DEFAULT 0 CHECK (connector IN (0,1))`
     and `postal_address TEXT`.
   - The one-primary index stays `ON contacts(org_id) WHERE is_primary = 1`;

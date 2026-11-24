@@ -100,3 +100,18 @@ def test_the_year_defaults_to_this_one(client):
 def test_writes_need_the_header(make_client):
     from tests.conftest import TEAM
     assert make_client().put("/api/thanks/1/2026", json={}, headers=TEAM).status_code == 403
+
+
+def test_only_key_connectors_are_on_the_thanks_list(client):
+    r = client.post("/api/contacts", json={"name": "Not a connector"})
+    c = r.json()
+    r = put(client, c, what="Wine")
+    assert r.status_code == 422
+    assert "key connectors" in r.text
+    assert client.get("/api/thanks?year=2026").json() == []
+
+
+def test_a_note_is_capped(client):
+    m = connector(client, "Marta")
+    assert put(client, m, note="x" * 2001).status_code == 422
+    assert put(client, m, note="x" * 2000).status_code == 200

@@ -140,5 +140,11 @@ def update(conn: sqlite3.Connection, interaction_id: int, patch: Dict[str, Any],
 
 
 def delete(conn: sqlite3.Connection, interaction_id: int) -> None:
-    if conn.execute("DELETE FROM interactions WHERE id = ?", (interaction_id,)).rowcount == 0:
-        raise NotFound("No interaction %d" % interaction_id)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        if conn.execute("DELETE FROM interactions WHERE id = ?", (interaction_id,)).rowcount == 0:
+            raise NotFound("No interaction %d" % interaction_id)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise

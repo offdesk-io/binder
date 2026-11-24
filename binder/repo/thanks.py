@@ -4,7 +4,7 @@ import sqlite3
 from typing import Any, Dict, List, Optional
 
 from ..db import now
-from ..errors import Conflict, NotFound
+from ..errors import Conflict, Invalid, NotFound
 from . import contacts, row
 
 FIELDS = ("what", "sent_on", "note")
@@ -28,7 +28,8 @@ def put(conn: sqlite3.Connection, contact_id: int, year: int, data: Dict[str, An
     at = now()
     conn.execute("BEGIN IMMEDIATE")
     try:
-        contacts.get(conn, contact_id)  # 404 for an unknown person
+        if not contacts.get(conn, contact_id)["connector"]:  # 404 for an unknown person
+            raise Invalid("Only key connectors are on the thanks list")
         current = _get(conn, contact_id, year)
         if (current["updated_at"] if current else None) != expected:
             raise Conflict(current)

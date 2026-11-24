@@ -180,7 +180,7 @@ class ThanksPut(_Body):
     updated_at: Optional[str] = None
     what: Optional[str] = Field(default=None, max_length=200)
     sent_on: Optional[str] = None
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=2000)
 
     _sent = field_validator("sent_on")(iso_date)
 

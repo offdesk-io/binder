@@ -128,7 +128,7 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
     return get(conn, contact_id)
 
 
-def delete(conn: sqlite3.Connection, contact_id: int) -> None:
+def delete(conn: sqlite3.Connection, contact_id: int, by: str) -> None:
     conn.execute("BEGIN IMMEDIATE")
     try:
         # A log with no organisation is held by its people: one left with nobody goes with its last person.
@@ -138,6 +138,9 @@ def delete(conn: sqlite3.Connection, contact_id: int) -> None:
             "AND NOT EXISTS (SELECT 1 FROM interaction_contacts ic "
             "                WHERE ic.interaction_id = interactions.id AND ic.contact_id != ?)",
             (contact_id, contact_id))
+        # Say so on the organisations they introduced, so an open form sees a change.
+        conn.execute("UPDATE organisations SET introduced_by_contact_id = NULL, updated_at = ?, updated_by = ? "
+                     "WHERE introduced_by_contact_id = ?", (now(), by, contact_id))
         if conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,)).rowcount == 0:
             raise NotFound("No contact %d" % contact_id)
         conn.execute("COMMIT")

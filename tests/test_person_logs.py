@@ -92,3 +92,56 @@ def test_search_finds_partners_and_people_kept_after_their_organisation_goes(cli
 def test_other_hits_are_not_connectors(client, org):
     hits = client.get("/api/search?q=acme").json()
     assert hits and all(h["connector"] is False for h in hits)
+
+
+def test_a_moved_person_stays_on_their_old_organisations_logs(client, org):
+    rui = client.post("/api/orgs/%d/contacts" % org["id"], json={"name": "Rui"}).json()
+    bo = client.post("/api/orgs/%d/contacts" % org["id"], json={"name": "Bo"}).json()
+    other = client.post("/api/orgs", json={"name": "Other"}).json()
+    i = log_with(client, rui, summary="Lunch")
+    client.patch("/api/contacts/%d" % rui["id"], json={"updated_at": rui["updated_at"], "org_id": other["id"]})
+    r = client.patch("/api/interactions/%d" % i["id"],
+                     json={"updated_at": i["updated_at"], "contact_ids": [rui["id"], bo["id"]]})
+    assert r.status_code == 200, r.text
+    assert r.json()["contact_ids"] == sorted([rui["id"], bo["id"]])
+    # a person who was never on the log, and is elsewhere, is still refused
+    stranger = client.post("/api/orgs/%d/contacts" % other["id"], json={"name": "Zed"}).json()
+    r = client.patch("/api/interactions/%d" % i["id"],
+                     json={"updated_at": r.json()["updated_at"], "contact_ids": [stranger["id"]]})
+    assert r.status_code == 422
+
+
+def test_search_takes_underscore_and_backslash_literally(client):
+    client.post("/api/contacts", json={"name": "Ana_Maria"})
+    client.post("/api/contacts", json={"name": "AnaXMaria"})
+    client.post("/api/contacts", json={"name": "Back\\slash"})
+    client.post("/api/contacts", json={"name": "Backslash"})
+    assert [p["name"] for p in client.get("/api/people", params={"q": "a_m"}).json()] == ["Ana_Maria"]
+    assert [p["name"] for p in client.get("/api/people", params={"q": "k\\s"}).json()] == ["Back\\slash"]
+
+
+def test_deleting_an_organisation_keeps_the_person_in_search(client, org):
+    rui = client.post("/api/orgs/%d/contacts" % org["id"], json={"name": "Rui Kept"}).json()
+    client.delete("/api/orgs/%d" % org["id"])
+    conn = connect(client.app.state.settings.db_path)
+    rows = conn.execute("SELECT org_id FROM search WHERE kind = 'contact' AND ref_id = ?", (rui["id"],)).fetchall()
+    assert len(rows) == 1 and rows[0][0] is None
+
+
+def test_a_partner_cannot_move_to_lead(client):
+    p = client.post("/api/orgs", json={"name": "Northwind Partners", "kind": "partner"}).json()
+    r = client.patch("/api/orgs/%d" % p["id"], json={"updated_at": p["updated_at"], "status": "lead"})
+    assert r.status_code == 422
+
+
+def test_deleting_an_introducer_clears_and_touches_the_organisation(client, org):
+    partner = client.post("/api/orgs", json={"name": "Northwind Partners", "kind": "partner"}).json()
+    m = solo(client)
+    a = client.post("/api/orgs", json={"name": "ByPerson", "introduced_by_contact_id": m["id"]}).json()
+    b = client.post("/api/orgs", json={"name": "ByPartner", "introduced_by_org_id": partner["id"]}).json()
+    assert client.delete("/api/contacts/%d" % m["id"]).status_code == 204
+    assert client.delete("/api/orgs/%d" % partner["id"]).status_code == 204
+    for before in (a, b):
+        now = client.get("/api/orgs/%d" % before["id"]).json()
+        assert now["introduced_by"] is None
+        assert now["updated_at"] != before["updated_at"] and now["updated_by"] == "ana@example.com"

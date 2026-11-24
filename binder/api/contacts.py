@@ -46,8 +46,8 @@ def patch_contact(contact_id: int, body: ContactPatch, db: sqlite3.Connection = 
 
 
 @router.delete("/contacts/{contact_id}", status_code=204)
-def delete_contact(contact_id: int, db: sqlite3.Connection = Depends(get_db)):
-    contacts.delete(db, contact_id)
+def delete_contact(contact_id: int, db: sqlite3.Connection = Depends(get_db), who: Identity = Depends(guard)):
+    contacts.delete(db, contact_id, who.email)
     return Response(status_code=204)
 
 

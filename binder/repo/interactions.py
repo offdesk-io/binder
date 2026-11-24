@@ -16,7 +16,7 @@ def _with_contacts(conn, d: Dict[str, Any]) -> Dict[str, Any]:
     return d
 
 
-def _check(conn, org_id: Optional[int], data: Dict[str, Any]) -> None:
+def _check(conn, org_id: Optional[int], data: Dict[str, Any], interaction_id: Optional[int] = None) -> None:
     if "type" in data and data["type"] not in TYPES:
         raise Invalid("type must be one of %s" % ", ".join(TYPES))
     ids = data.get("contact_ids") or []
@@ -29,8 +29,11 @@ def _check(conn, org_id: Optional[int], data: Dict[str, Any]) -> None:
         if found != len(set(ids)):
             raise Invalid("Every person on the log must be in Binder")
         return
-    found = conn.execute("SELECT count(*) FROM contacts WHERE org_id = ? AND id IN (%s)" % marks,
-                         [org_id] + list(ids)).fetchone()[0]
+    # A person who has since moved on may stay on the logs they were already on.
+    found = conn.execute(
+        "SELECT count(*) FROM contacts WHERE id IN (%s) AND (org_id = ? OR id IN "
+        "(SELECT contact_id FROM interaction_contacts WHERE interaction_id = ?))" % marks,
+        list(ids) + [org_id, interaction_id]).fetchone()[0]
     if found != len(set(ids)):
         raise Invalid("Every contact must belong to this organisation")
 
@@ -120,7 +123,7 @@ def update(conn: sqlite3.Connection, interaction_id: int, patch: Dict[str, Any],
         current = get(conn, interaction_id)
         if current["updated_at"] != expected:
             raise Conflict(current)
-        _check(conn, current["org_id"], patch)
+        _check(conn, current["org_id"], patch, interaction_id)
         if current["org_id"] is None and patch.get("contact_ids") == []:
             raise Invalid(NEEDS_SOMEONE)
         sets = {k: v for k, v in patch.items() if k in FIELDS}

@@ -150,6 +150,8 @@ def delete(conn: sqlite3.Connection, org_id: int, by: str) -> None:
     try:
         conn.execute("UPDATE contacts SET org_id = NULL, is_primary = 0, updated_at = ?, updated_by = ? "
                      "WHERE org_id = ?", (now(), by, org_id))
+        conn.execute("UPDATE organisations SET introduced_by_org_id = NULL, updated_at = ?, updated_by = ? "
+                     "WHERE introduced_by_org_id = ?", (now(), by, org_id))
         if conn.execute("DELETE FROM organisations WHERE id = ?", (org_id,)).rowcount == 0:
             raise NotFound("No organisation %d" % org_id)
         conn.execute("COMMIT")

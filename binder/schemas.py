@@ -116,9 +116,16 @@ class ContactCreate(_Body):
     notes: Optional[str] = None
     is_primary: bool = False
     relationship: Optional[str] = None
+    connector: bool = False
+    postal_address: Optional[str] = None
 
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
+
+
+class PersonCreate(ContactCreate):
+    """A person added on their own: the organisation is optional."""
+    org_id: Optional[int] = None
 
 
 class ContactPatch(_Body):
@@ -131,8 +138,12 @@ class ContactPatch(_Body):
     notes: Optional[str] = None
     is_primary: Optional[bool] = None
     relationship: Optional[str] = None
+    connector: Optional[bool] = None
+    postal_address: Optional[str] = None
+    # Move the person to another organisation, or null for none.
+    org_id: Optional[int] = None
 
-    _name = field_validator("name")(not_null)
+    _required = field_validator("name", "is_primary", "connector")(not_null)
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
 

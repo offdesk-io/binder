@@ -54,7 +54,7 @@ def test_deleting_the_org_drops_its_links(tmp_path):
     conn = db(tmp_path)
     acme = orgs.create(conn, {"name": "Acme Studio"}, "ana@example.com")
     bench_links.replace(conn, "work", [LINK])
-    orgs.delete(conn, acme["id"])
+    orgs.delete(conn, acme["id"], "ana@example.com")
     assert conn.execute("SELECT count(*) FROM bench_links").fetchone()[0] == 0
 
 

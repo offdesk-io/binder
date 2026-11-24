@@ -41,8 +41,8 @@ def patch_org(org_id: int, body: OrgPatch, db: sqlite3.Connection = Depends(get_
 
 
 @router.delete("/{org_id}", status_code=204)
-def delete_org(org_id: int, db: sqlite3.Connection = Depends(get_db)):
-    orgs.delete(db, org_id)
+def delete_org(org_id: int, db: sqlite3.Connection = Depends(get_db), who: Identity = Depends(guard)):
+    orgs.delete(db, org_id, who.email)
     return Response(status_code=204)
 
 

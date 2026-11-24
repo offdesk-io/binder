@@ -142,9 +142,20 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
     return get(conn, org_id)
 
 
-def delete(conn: sqlite3.Connection, org_id: int) -> None:
-    if conn.execute("DELETE FROM organisations WHERE id = ?", (org_id,)).rowcount == 0:
-        raise NotFound("No organisation %d" % org_id)
+def delete(conn: sqlite3.Connection, org_id: int, by: str) -> None:
+    """Deletes the organisation with its log, research and Bench links. Its
+    people stay, without an organisation, and none of them is the one to talk
+    to any more (a person with no organisation cannot be)."""
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        conn.execute("UPDATE contacts SET org_id = NULL, is_primary = 0, updated_at = ?, updated_by = ? "
+                     "WHERE org_id = ?", (now(), by, org_id))
+        if conn.execute("DELETE FROM organisations WHERE id = ?", (org_id,)).rowcount == 0:
+            raise NotFound("No organisation %d" % org_id)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
 
 
 def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional[str] = None,

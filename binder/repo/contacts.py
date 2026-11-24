@@ -1,20 +1,32 @@
 import sqlite3
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
 from ..statuses import RELATIONSHIPS
-from . import orgs, row
+from . import like, orgs, row
 
-FIELDS = ("name", "role", "email", "phone", "linkedin_url", "notes", "is_primary", "relationship")
+FIELDS = ("name", "role", "email", "phone", "linkedin_url", "notes", "is_primary", "relationship",
+          "connector", "postal_address")
+FLAGS = ("is_primary", "connector")  # stored as 0 or 1, read as booleans
 SELECT = ("SELECT c.*, o.name AS org_name, o.slug AS org_slug FROM contacts c "
-          "JOIN organisations o ON o.id = c.org_id ")
+          "LEFT JOIN organisations o ON o.id = c.org_id ")
+# When someone was last on a log, through the people each log was with.
+LAST_TOUCH = ("(SELECT max(i.happened_at) FROM interactions i JOIN interaction_contacts ic "
+              "ON ic.interaction_id = i.id WHERE ic.contact_id = c.id)")
+INTRODUCED_COUNT = "(SELECT count(*) FROM organisations x WHERE x.introduced_by_contact_id = c.id)"
+NO_ORG_PRIMARY = "Only someone at an organisation can be the one to talk to"
 
 
 def _out(r) -> Dict[str, Any]:
     d = row(r)
-    d["is_primary"] = bool(d["is_primary"])
+    for k in FLAGS:
+        d[k] = bool(d[k])
     return d
+
+
+def _value(k: str, v: Any) -> Any:
+    return int(v) if k in FLAGS else v
 
 
 def _check(data: Dict[str, Any]) -> None:
@@ -35,23 +47,48 @@ def list_for_org(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:
         SELECT + "WHERE c.org_id = ? ORDER BY c.is_primary DESC, c.name COLLATE NOCASE", (org_id,))]
 
 
+def connectors(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
+    """Every key connector, A to Z."""
+    return [_out(r) for r in conn.execute(SELECT + "WHERE c.connector = 1 ORDER BY c.name COLLATE NOCASE")]
+
+
+def people(conn: sqlite3.Connection, connector: bool = False, q: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Everyone, with or without an organisation: connectors first, then A to Z.
+    Each carries `last_contact` (their newest log) and `introduced_count`."""
+    where, args = [], []  # type: List[str], List[Any]
+    if connector:
+        where.append("c.connector = 1")
+    if q:
+        where.append("(c.name LIKE ? ESCAPE '\\' OR o.name LIKE ? ESCAPE '\\')")
+        args += [like(q), like(q)]
+    sql = ("SELECT c.*, o.name AS org_name, o.slug AS org_slug, %s AS last_contact, %s AS introduced_count "
+           "FROM contacts c LEFT JOIN organisations o ON o.id = c.org_id %s "
+           "ORDER BY c.connector DESC, c.name COLLATE NOCASE") % (
+        LAST_TOUCH, INTRODUCED_COUNT, ("WHERE " + " AND ".join(where)) if where else "")
+    return [_out(r) for r in conn.execute(sql, args)]
+
+
 def _clear_primary(conn, org_id: int, keep: int) -> None:
     conn.execute("UPDATE contacts SET is_primary = 0 WHERE org_id = ? AND id != ?", (org_id, keep))
 
 
-def create(conn: sqlite3.Connection, org_id: int, data: Dict[str, Any], by: str) -> Dict[str, Any]:
+def create(conn: sqlite3.Connection, org_id: Optional[int], data: Dict[str, Any], by: str) -> Dict[str, Any]:
+    """A person at `org_id`, or on their own when it is None."""
     _check(data)
+    if org_id is None and data.get("is_primary"):
+        raise Invalid(NO_ORG_PRIMARY)
     at = now()
     cols = [f for f in FIELDS if f in data]
     conn.execute("BEGIN IMMEDIATE")
     try:
-        orgs.get(conn, org_id)  # checked under the write lock, so the org cannot vanish before the insert
-        if data.get("is_primary"):
-            _clear_primary(conn, org_id, 0)  # before the insert: a unique index allows one primary
+        if org_id is not None:
+            orgs.get(conn, org_id)  # checked under the write lock, so the org cannot vanish before the insert
+            if data.get("is_primary"):
+                _clear_primary(conn, org_id, 0)  # before the insert: a unique index allows one primary
         cur = conn.execute(
             "INSERT INTO contacts(org_id, created_at, updated_at, updated_by, %s) VALUES (?,?,?,?,%s)"
             % (", ".join(cols), ", ".join("?" * len(cols))),
-            [org_id, at, at, by] + [int(data[c]) if c == "is_primary" else data[c] for c in cols])
+            [org_id, at, at, by] + [_value(c, data[c]) for c in cols])
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -67,10 +104,21 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
         current = get(conn, contact_id)
         if current["updated_at"] != expected:
             raise Conflict(current)
-        sets = {k: (int(v) if k == "is_primary" else v) for k, v in patch.items() if k in FIELDS}
+        sets = {k: _value(k, v) for k, v in patch.items() if k in FIELDS}
+        org_id = current["org_id"]
+        if "org_id" in patch and patch["org_id"] != org_id:
+            org_id = patch["org_id"]
+            if org_id is not None and conn.execute(
+                    "SELECT 1 FROM organisations WHERE id = ?", (org_id,)).fetchone() is None:
+                raise Invalid("No organisation %d" % org_id)
+            sets["org_id"] = org_id
+            # Being the one to talk to belongs to the old organisation, unless this save says otherwise.
+            sets.setdefault("is_primary", 0)
+        if sets.get("is_primary", int(current["is_primary"])) and org_id is None:
+            raise Invalid(NO_ORG_PRIMARY)
+        if sets.get("is_primary"):
+            _clear_primary(conn, org_id, contact_id)  # before the update, see create()
         sets["updated_at"], sets["updated_by"] = now(), by
-        if patch.get("is_primary"):
-            _clear_primary(conn, current["org_id"], contact_id)  # before the update, see create()
         conn.execute("UPDATE contacts SET %s WHERE id = ?" % ", ".join("%s = ?" % k for k in sets),
                      list(sets.values()) + [contact_id])
         conn.execute("COMMIT")
@@ -81,5 +129,11 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
 
 
 def delete(conn: sqlite3.Connection, contact_id: int) -> None:
-    if conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,)).rowcount == 0:
-        raise NotFound("No contact %d" % contact_id)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        if conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,)).rowcount == 0:
+            raise NotFound("No contact %d" % contact_id)
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise

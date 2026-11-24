@@ -8,7 +8,7 @@ import sqlite3
 from typing import Any, Dict, List, Optional
 
 from ..db import now
-from ..errors import Conflict, NotFound
+from ..errors import Conflict, Invalid, NotFound
 from ..pricing import cost_usd
 from . import contacts, interactions, orgs, row
 
@@ -61,6 +61,8 @@ def start(conn: sqlite3.Connection, by: str, org_id: Optional[int] = None,
     try:
         if contact_id is not None:
             org_id = contacts.get(conn, contact_id)["org_id"]
+            if org_id is None:
+                raise Invalid("Add this person to an organisation before researching them")
         else:
             orgs.get(conn, org_id)
         busy = _running(conn, org_id, contact_id)

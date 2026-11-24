@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client'
 import { api } from '../../api/endpoints'
 import type { Org, TimelineInteraction } from '../../api/types'
 import { useSession } from '../../app/session'
+import { IntroducedSection } from '../../components/IntroducedSection'
 import { NextStep } from '../../components/OrgCard'
 import { OrgForm } from '../../components/OrgForm'
 import { QuickLog } from '../../components/QuickLog'
@@ -17,6 +18,7 @@ import { saveErrorText } from '../../lib/forms'
 import { useApi } from '../../lib/useApi'
 import { useIsPhone } from '../../lib/useIsPhone'
 import { PeopleSection } from './PeopleSection'
+import { IntroducedBy } from './IntroducedBy'
 import { FrameContext, Section, type Frame } from './Section'
 import { TimelineSection } from './TimelineSection'
 import { WorkSection } from './WorkSection'
@@ -113,8 +115,14 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>
         ))}
       </dl>
+      <IntroducedBy org={org} setOrg={setOrg} />
     </Section>
   )
+
+  // What a partner brought in. Leads and clients have no such list, and do not ask for one.
+  const introduced = org.kind === 'partner'
+    ? <IntroducedSection load={() => api.orgIntroduced(org.id)} subject={`org:${org.id}`} />
+    : null
 
   const forms = (
     <>
@@ -127,7 +135,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           setOrg(o)
           timeline.reload()
         }}
-        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/list'))}
+        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate(org.kind === 'partner' ? '/partners' : '/list'))}
       />
       <QuickLog
         open={log !== undefined}
@@ -164,6 +172,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh: ${refreshError}`}</Alert>}
           {overview}
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
+          {introduced}
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} limit={5} moreHref={`/o/${org.slug}`} />
           <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
           {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
@@ -202,6 +211,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           </div>
           <div className="tn-col-4 tn-stack">
             <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
+            {introduced}
             {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
           </div>
         </div>

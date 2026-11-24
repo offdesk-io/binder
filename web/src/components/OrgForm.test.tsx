@@ -86,3 +86,13 @@ test('a new organisation can start as a partner, and the kinds come from meta', 
   await waitFor(() => expect(onSaved).toHaveBeenCalled())
   expect(calls[0].body).toMatchObject({ name: 'Northwind', kind: 'partner' })
 })
+
+
+test('the second click on Delete says the people are kept', async () => {
+  const user = userEvent.setup()
+  stubFetch({})
+  renderApp(<OrgForm open org={org()} onClose={() => {}} onSaved={() => {}} onDeleted={() => {}} />)
+  expect(screen.queryByText(/people are kept/)).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Delete' }))
+  expect(screen.getByText('Its people are kept; its logs and research are deleted.')).toBeInTheDocument()
+})

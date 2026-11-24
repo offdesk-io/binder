@@ -147,7 +147,9 @@ export function OrgForm({ open, org, kind = 'lead', onClose, onSaved, onDeleted 
       onSubmit={() => void save()}
       footer={
         <>
-          {base && onDeleted && <ConfirmDelete what="organisation" onConfirm={() => void remove()} />}
+          {base && onDeleted && (
+            <ConfirmDelete what="organisation" note="Its people are kept; its logs and research are deleted." onConfirm={() => void remove()} />
+          )}
           <span className="tn-custom-grow" />
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" form="org-form" disabled={busy}>Save</Button>

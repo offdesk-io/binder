@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-import { AT, contact, interaction, org, research } from '../test/fixtures'
+import { AT, contact, interaction, org, person, research } from '../test/fixtures'
 import { renderApp, SESSION, stubFetch } from '../test/render'
 import { OrgPage } from './OrgPage'
 
@@ -183,4 +183,60 @@ test('with Bench off the Work section is not shown and Work is not asked for', a
   await screen.findByRole('heading', { level: 1, name: 'Acme' })
   expect(screen.queryByRole('heading', { name: 'Work' })).toBeNull()
   expect(calls.some((c) => c.key === 'GET /api/orgs/1/work')).toBe(false)
+})
+
+
+test('introduced by: nobody yet, then Change picks a person and sends only what changed', async () => {
+  const user = userEvent.setup()
+  const marta = person({ id: 8, name: 'Marta', org_id: null, org_name: null, org_slug: null, connector: true })
+  const northwind = org({ id: 10, slug: 'northwind', name: 'Northwind', kind: 'partner', status: 'active' })
+  const calls = stubs({
+    'GET /api/people': () => [marta],
+    'GET /api/orgs?kind=partner&sort=name': () => [northwind],
+    'PATCH /api/orgs/1': () => ({
+      ...acme, introduced_by_contact_id: 8, introduced_by: { type: 'contact', id: 8, name: 'Marta' },
+      updated_at: '2026-11-12T00:00:00.000000+00:00',
+    }),
+  })
+  page()
+  expect(await screen.findByText('Nobody yet')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Change' }))
+  await user.click(await screen.findByRole('button', { name: 'Introduced by' }))
+  expect(screen.getByRole('menuitemradio', { name: 'Northwind' })).toBeInTheDocument()
+  await user.click(screen.getByRole('menuitemradio', { name: 'Marta' }))
+  expect(await screen.findByRole('link', { name: 'Marta' })).toHaveAttribute('href', '/c/8')
+  expect(calls.find((c) => c.key === 'PATCH /api/orgs/1')!.body).toEqual({ updated_at: acme.updated_at, introduced_by_contact_id: 8 })
+})
+
+test('introduced by a partner links to the partner, and a lead has no Introduced section', async () => {
+  const calls = stubs({
+    'GET /api/orgs/by-slug/acme': () => ({
+      ...acme, introduced_by_org_id: 10, introduced_by: { type: 'partner', id: 10, name: 'Northwind', slug: 'northwind' },
+    }),
+  })
+  page()
+  expect(await screen.findByRole('link', { name: 'Northwind' })).toHaveAttribute('href', '/o/northwind')
+  expect(screen.queryByRole('heading', { name: /^Introduced$|^Introduced \d/ })).toBeNull()
+  expect(calls.some((c) => c.key.endsWith('/introduced'))).toBe(false)
+})
+
+test('a partner lists what it introduced and what those clients are worth', async () => {
+  const northwind = org({ id: 10, slug: 'northwind', name: 'Northwind', kind: 'partner', status: 'active' })
+  stubFetch({
+    'GET /api/orgs/by-slug/northwind': () => northwind,
+    'GET /api/orgs/10/contacts': () => [contact({ id: 8, name: 'Marta', org_id: 10, connector: true })],
+    'GET /api/orgs/10/timeline': () => [],
+    'GET /api/orgs/10/research': () => [],
+    'GET /api/orgs/10/work': () => ({ tasks: [], fetched_at: AT, error: null, refreshing: false }),
+    'GET /api/orgs/10/introduced': () => ({
+      orgs: [{ id: 1, name: 'Acme', slug: 'acme', kind: 'client', status: 'active', value_estimate: 4000 }],
+      client_value: 4000,
+    }),
+  })
+  renderApp(<Routes><Route path="/o/:slug" element={<OrgPage />} /></Routes>, '/o/northwind')
+  expect(await screen.findByRole('link', { name: 'Acme' })).toHaveAttribute('href', '/o/acme')
+  expect(screen.getByText('Clients worth €4,000')).toBeInTheDocument()
+  expect(await screen.findByRole('img', { name: 'Key connector' })).toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Prospect', 'Active', 'Past'])
 })

@@ -1,6 +1,6 @@
 import { AppHeader, Button } from '@tiagopedras/tenon'
 import { useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
 import { isEmbedded } from '../lib/embedded'
 import { useIsPhone } from '../lib/useIsPhone'
@@ -41,6 +41,8 @@ export function Layout() {
   const [creating, setCreating] = useState<Kind | null>(null)
   // A page that lists organisations registers here what to do with a new one; with none, it gets its own page.
   const created = useRef<((org: Org) => void) | null>(null)
+  // On the Partners tab, New starts a partner.
+  const onPartners = useLocation().pathname.startsWith('/partners')
   const context: NewOrgContext = { open: (kind: Kind = 'lead') => setCreating(kind), created }
   return (
     <>
@@ -54,7 +56,7 @@ export function Layout() {
         search={<SearchBox />}
         actions={
           <>
-            <Button size="sm" variant="secondary" onClick={() => setCreating('lead')}>New</Button>
+            <Button size="sm" variant="secondary" onClick={() => setCreating(onPartners ? 'partner' : 'lead')}>New</Button>
             {!embedded && !phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
             {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
             {!embedded && (

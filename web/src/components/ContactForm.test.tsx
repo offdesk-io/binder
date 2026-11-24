@@ -86,7 +86,7 @@ test('taking a person out of their organisation sends only org_id', async () => 
   expect(screen.queryByLabelText('Who to talk to')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/contacts/5')).toBe(true))
-  expect(calls.find((c) => c.key === 'PATCH /api/contacts/5')!.body).toEqual({ org_id: null, updated_at: bo.updated_at })
+  expect(calls.find((c) => c.key === 'PATCH /api/contacts/5')!.body).toEqual({ org_id: null, is_primary: false, updated_at: bo.updated_at })
 })
 
 test('on an organisation, the form does not offer a choice of organisation', () => {
@@ -95,4 +95,33 @@ test('on an organisation, the form does not offer a choice of organisation', () 
   expect(screen.queryByRole('button', { name: 'Organisation' })).toBeNull()
   expect(screen.getByLabelText('Key connector')).not.toBeChecked()
   expect(calls).toHaveLength(0)
+})
+
+test('moving a primary contact to another organisation unticks Who to talk to and sends is_primary false', async () => {
+  const user = userEvent.setup()
+  const bo = contact({ is_primary: true })
+  const calls = stubFetch({
+    'GET /api/orgs?sort=name': () => [org(), org({ id: 2, name: 'Bolt', slug: 'bolt' })],
+    'PATCH /api/contacts/5': () => ({ ...bo, org_id: 2, is_primary: false }),
+  })
+  renderApp(<ContactForm open orgId={1} chooseOrg contact={bo} onClose={() => {}} onSaved={() => {}} />)
+  expect(screen.getByLabelText('Who to talk to')).toBeChecked()
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Organisation' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: 'Organisation' }))
+  await user.click(screen.getByRole('menuitemradio', { name: 'Bolt' }))
+  expect(screen.getByLabelText('Who to talk to')).not.toBeChecked()
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls.some((c) => c.key === 'PATCH /api/contacts/5')).toBe(true))
+  expect(calls.find((c) => c.key === 'PATCH /api/contacts/5')!.body).toEqual({ org_id: 2, is_primary: false, updated_at: bo.updated_at })
+})
+
+test('an edit with the organisation choice on and nothing changed sends nothing', async () => {
+  const user = userEvent.setup()
+  const bo = contact()
+  const onSaved = vi.fn()
+  const calls = stubFetch({ 'GET /api/orgs?sort=name': () => [org()] })
+  renderApp(<ContactForm open orgId={1} chooseOrg contact={bo} onClose={() => {}} onSaved={onSaved} />)
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls.some((c) => c.key.startsWith('PATCH'))).toBe(false)
 })

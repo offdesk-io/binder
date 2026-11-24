@@ -133,7 +133,11 @@ export function ContactForm({ open, orgId, chooseOrg = false, connectorDefault =
       let saved: Contact
       if (base) {
         const patch: ContactPatch = { ...changed<ContactFields>(base, body), updated_at: base.updated_at }
-        if (chooseOrg && org !== base.org_id) patch.org_id = org
+        if (chooseOrg && org !== base.org_id) {
+          patch.org_id = org
+          // A move clears the one to talk to unless the same save sets it; say so outright.
+          patch.is_primary = hasOrg && form.is_primary
+        }
         // updated_at alone means nothing changed: send nothing.
         saved = Object.keys(patch).length === 1 ? base : await api.patchContact(base.id, patch)
       } else if (orgId !== null && !chooseOrg) {
@@ -187,7 +191,7 @@ export function ContactForm({ open, orgId, chooseOrg = false, connectorDefault =
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
         <Field label="Role" value={form.role} onChange={set('role')} />
-        {open && chooseOrg && <OrgChoice value={form.org_id} onChange={(org_id) => setForm((f) => ({ ...f, org_id }))} />}
+        {open && chooseOrg && <OrgChoice value={form.org_id} onChange={(org_id) => setForm((f) => ({ ...f, org_id, is_primary: false }))} />}
         <Field label="Email" type="email" value={form.email} onChange={set('email')} />
         <Field label="Phone" type="tel" value={form.phone} onChange={set('phone')} />
         <Field label="LinkedIn" type="url" value={form.linkedin_url} onChange={set('linkedin_url')} />

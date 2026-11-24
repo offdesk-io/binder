@@ -52,6 +52,7 @@ function ContactView({ c, setContact }: { c: Contact; setContact: (c: Contact) =
   }
 
   const linkedin = safeHref(c.linkedin_url)
+  // For someone with no organisation the list is just them, so other people on a shared log are not named here.
   const names = new Map((people.data ?? []).map((p) => [p.id, p.name]))
   const details: [string, ReactNode][] = (
     [

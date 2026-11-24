@@ -249,7 +249,12 @@ export function QuickLog({ open, orgId, personId, contacts, initial, preselect, 
             <span className="tenon-field__label">With</span>
             <div className="tn-cluster" role="group" aria-label="With">
               {people.map((c) => (
-                <ToggleChip key={c.id} pressed={form.contact_ids.includes(c.id)} onClick={() => toggle(c.id)}>
+                <ToggleChip
+                  key={c.id}
+                  pressed={form.contact_ids.includes(c.id)}
+                  disabled={!base && c.id === personId}
+                  onClick={() => toggle(c.id)}
+                >
                   {c.name}
                 </ToggleChip>
               ))}

@@ -199,3 +199,15 @@ test('People is a tab', () => {
   app()
   expect(screen.getByRole('link', { name: 'People' })).toHaveAttribute('href', '/people')
 })
+
+test('New on the Partners tab opens the form as a partner, elsewhere as a lead', async () => {
+  const user = userEvent.setup()
+  stubFetch({})
+  const { unmount } = app('/partners')
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  expect(screen.getByRole('radio', { name: 'Partner' })).toBeChecked()
+  unmount()
+  app('/pipeline')
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  expect(screen.getByRole('radio', { name: 'Lead' })).toBeChecked()
+})

@@ -206,3 +206,11 @@ test('a log against a person goes to that person', async () => {
   expect(calls[0].key).toBe('POST /api/contacts/5/interactions')
   expect(calls[0].body).toMatchObject({ summary: 'Coffee', contact_ids: [5] })
 })
+
+test('on a person’s own log their chip is ticked and cannot be unticked', () => {
+  stubFetch({})
+  const solo = contact({ org_id: null, org_name: null, org_slug: null })
+  renderApp(<QuickLog open orgId={null} personId={5} contacts={[solo]} preselect={[5]} onClose={() => {}} onSaved={() => {}} />)
+  const chip = screen.getByRole('button', { name: 'Bo', pressed: true })
+  expect(chip).toBeDisabled()
+})

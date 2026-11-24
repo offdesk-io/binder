@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSession } from '../../app/session'
 import type { Org } from '../../api/types'
-import { ColourDot, DueDate } from '../../components/ColourTag'
+import { ColourDot } from '../../components/ColourTag'
 import { SectorLabel } from '../../components/SectorLabel'
 import { stageColour } from '../../lib/colour'
 import { ago, label, money, moneyShort } from '../../lib/format'
@@ -87,9 +87,7 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
               <div className="tn-custom-stage-line">{name(o)} <SectorLabel sector={o.sector} /></div>
               <div className="tn-custom-stage-line tn-custom-stage-sub">
                 {[
-                  o.next_step && <span key="step">{o.next_step}</span>,
-                  // In a plain span, so the separator dot sits outside the Tag's chip.
-                  o.next_step_due && <span key="due"><DueDate due={o.next_step_due} /></span>,
+                  o.description?.trim() && <span key="description">{o.description}</span>,
                   o.value_estimate != null && <span key="value">{money(o.value_estimate)}</span>,
                   <span key="owner">{ownerName(owners, o.owner_email)}</span>,
                 ]}
@@ -101,9 +99,7 @@ export function StageGroup({ stage, phone, columns, forceOpen = false, onOpen }:
             <td>{name(o)}</td>
             <td><SectorLabel sector={o.sector} /></td>
             <td className="tn-custom-stage-step">
-              {o.next_step}
-              {o.next_step && o.next_step_due && ' '}
-              {o.next_step_due && <DueDate due={o.next_step_due} />}
+              {o.description}
             </td>
             <td data-numeric className="tn-numeric">{money(o.value_estimate)}</td>
             <td>{ownerName(owners, o.owner_email)}</td>

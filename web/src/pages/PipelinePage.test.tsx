@@ -143,9 +143,9 @@ test('rows within a stage run by due date, overdue first, then undated by name',
   expect(names).toEqual(['Overdue', 'Earlier name', 'Later', 'Alpha', 'beta'])
 })
 
-test('a row shows sector, next step with its due date, value, owner and last contact', async () => {
+test('a row shows sector, description, value, owner and last contact', async () => {
   const full = org({
-    id: 1, name: 'Acme', slug: 'acme', sector: 'retail_ecommerce', next_step: 'Send the proposal', next_step_due: '2099-01-01',
+    id: 1, name: 'Acme', slug: 'acme', sector: 'retail_ecommerce', description: 'Sells kilns', next_step: 'Send the proposal', next_step_due: '2099-01-01',
     value_estimate: 12000, owner_email: 'rui@example.com', last_contact: null,
   })
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [full] })
@@ -153,11 +153,11 @@ test('a row shows sector, next step with its due date, value, owner and last con
   const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
   const cells = within(row).getAllByRole('cell').map((c) => c.textContent)
   expect(cells[1]).toBe('Retail and e-commerce')
-  expect(cells[2]).toContain('Send the proposal')
+  expect(cells[2]).toBe('Sells kilns')
   expect(cells[3]).toBe('€12,000')
   expect(cells[4]).toBe('Rui')
   expect(cells[5]).toBe('never')
-  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'Sector', 'Next step', 'Value', 'Handled by', 'Last contact'])
+  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Name', 'Sector', 'Description', 'Value', 'Handled by', 'Last contact'])
 })
 
 test('the pipeline has a visually hidden title', async () => {
@@ -248,7 +248,7 @@ test('a client opened by its link and edited in the drawer shows no notice', asy
 
 test('on a phone, rows are two-line items under the same stages, with no stage switcher', async () => {
   phone()
-  const full = org({ ...a, sector: 'Retail', next_step: 'Send the proposal', owner_email: 'rui@example.com' })
+  const full = org({ ...a, sector: 'Retail', description: 'Sells kilns', next_step: 'Send the proposal', owner_email: 'rui@example.com' })
   stubFetch({ ...routes, 'GET /api/orgs?kind=lead': () => [full, b] })
   renderApp(<PipelinePage />)
   const row = (await screen.findByRole('link', { name: 'Acme' })).closest('tr')!
@@ -256,7 +256,7 @@ test('on a phone, rows are two-line items under the same stages, with no stage s
   expect(cells).toHaveLength(1)
   expect(cells[0].children).toHaveLength(2)
   expect(cells[0].children[0]).toHaveTextContent('Acme Retail')
-  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Send the proposal', '€12,000', 'Rui'])
+  expect(Array.from(cells[0].children[1].children).map((c) => c.textContent)).toEqual(['Sells kilns', '€12,000', 'Rui'])
   expect(screen.queryAllByRole('columnheader')).toHaveLength(0)
   expect(screen.getByRole('button', { name: /^Lead/ })).toBeInTheDocument()
   expect(screen.queryByRole('radiogroup', { name: 'Stage' })).toBeNull()

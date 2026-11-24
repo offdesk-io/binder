@@ -143,7 +143,7 @@ export function PipelinePage() {
       : stages(shown, statusesOf(meta, segment))
   const locked = segment === 'lead' ? 'won' : undefined
   const heads = [
-    { name: 'Name' }, { name: 'Sector' }, { name: 'Next step' }, { name: 'Value', numeric: true }, { name: 'Handled by' },
+    { name: 'Name' }, { name: 'Sector' }, { name: 'Description' }, { name: 'Value', numeric: true }, { name: 'Handled by' },
     { name: 'Last contact' },
   ]
   const columns = phone ? 1 : heads.length

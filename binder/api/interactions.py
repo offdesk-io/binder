@@ -34,6 +34,12 @@ def contact_interactions(contact_id: int, db: sqlite3.Connection = Depends(get_d
     return interactions.list_for_contact(db, contact_id)
 
 
+@router.post("/contacts/{contact_id}/interactions", status_code=201)
+def log_with_person(contact_id: int, body: InteractionCreate, db: sqlite3.Connection = Depends(get_db),
+                    who: Identity = Depends(guard)):
+    return interactions.create_for_contact(db, contact_id, body.model_dump(), who.email)
+
+
 @router.patch("/interactions/{interaction_id}")
 def patch_interaction(interaction_id: int, body: InteractionPatch, db: sqlite3.Connection = Depends(get_db),
                       who: Identity = Depends(guard)):

@@ -41,3 +41,20 @@ def test_status_change_writes_history(client, org):
 def test_bad_status_is_422(client, org):
     r = client.patch("/api/orgs/%d" % org["id"], json={"updated_at": org["updated_at"], "status": "active"})
     assert r.status_code == 422
+
+
+def test_partner_starts_as_prospect_and_keeps_its_kind():
+    assert initial_status("partner") == "prospect"
+    assert check_transition("partner", "active") == ("partner", "active")
+    assert check_transition("partner", "past") == ("partner", "past")
+
+
+def test_partner_cannot_take_a_lead_or_client_only_status():
+    for status in ("won", "contacted", "paused"):
+        with pytest.raises(Invalid):
+            check_transition("partner", status)
+
+
+def test_client_cannot_take_a_partner_only_status():
+    with pytest.raises(Invalid):
+        check_transition("client", "prospect")

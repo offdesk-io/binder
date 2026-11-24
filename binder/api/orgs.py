@@ -51,6 +51,12 @@ def history(org_id: int, db: sqlite3.Connection = Depends(get_db)):
     return orgs.status_history(db, org_id)
 
 
+@router.get("/{org_id}/introduced")
+def introduced_list(org_id: int, db: sqlite3.Connection = Depends(get_db)):
+    orgs.get(db, org_id)  # 404 for an unknown organisation
+    return orgs.introduced(db, "introduced_by_org_id", org_id)
+
+
 @router.get("/{org_id}/work")
 def work(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db)):
     refresher = request.app.state.bench_refresher

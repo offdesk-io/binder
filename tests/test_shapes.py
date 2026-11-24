@@ -43,6 +43,7 @@ def test_meta_lists_the_vocabularies(client):
         "lead_statuses": list(statuses.LEAD_STATUSES),
         "open_lead_statuses": list(statuses.OPEN_LEAD_STATUSES),
         "client_statuses": list(statuses.CLIENT_STATUSES),
+        "partner_statuses": list(statuses.PARTNER_STATUSES),
         "interaction_types": list(statuses.INTERACTION_TYPES),
         "relationships": list(statuses.RELATIONSHIPS),
         "ai": False,

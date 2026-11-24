@@ -5,14 +5,22 @@ import unicodedata
 from typing import Any, Dict, List, Optional
 
 from ..db import now
-from ..errors import Conflict, NotFound
+from ..errors import Conflict, Invalid, NotFound
 from ..statuses import check_transition, initial_status
-from . import row
+from . import like, row
 
 FIELDS = ("name", "website", "sector", "size", "location", "owner_email", "source",
-          "value_estimate", "tags", "summary", "next_step", "next_step_due")
+          "value_estimate", "tags", "summary", "next_step", "next_step_due",
+          "introduced_by_contact_id", "introduced_by_org_id")
+# Who brought an organisation in: a person, or a partner. At most one is set.
+INTRODUCED_BY = ("introduced_by_contact_id", "introduced_by_org_id")
 
 LAST_CONTACT = "(SELECT max(happened_at) FROM interactions i WHERE i.org_id = o.id)"
+# Every read of an organisation carries the name of who introduced it, and a partner's slug for the link.
+SELECT = ("SELECT o.*, %s AS last_contact, ibc.name AS ib_contact_name, ibo.name AS ib_org_name, "
+          "ibo.slug AS ib_org_slug FROM organisations o "
+          "LEFT JOIN contacts ibc ON ibc.id = o.introduced_by_contact_id "
+          "LEFT JOIN organisations ibo ON ibo.id = o.introduced_by_org_id " % LAST_CONTACT)
 
 
 def slugify(text: str) -> str:
@@ -30,8 +38,16 @@ def _unique_slug(conn: sqlite3.Connection, base: str) -> str:
 
 def _out(r: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
     d = row(r)
-    if d is not None:
-        d["tags"] = json.loads(d["tags"])
+    if d is None:
+        return d
+    d["tags"] = json.loads(d["tags"])
+    contact_name, org_name, org_slug = d.pop("ib_contact_name"), d.pop("ib_org_name"), d.pop("ib_org_slug")
+    if d["introduced_by_contact_id"] is not None:
+        d["introduced_by"] = {"type": "contact", "id": d["introduced_by_contact_id"], "name": contact_name}
+    elif d["introduced_by_org_id"] is not None:
+        d["introduced_by"] = {"type": "partner", "id": d["introduced_by_org_id"], "name": org_name, "slug": org_slug}
+    else:
+        d["introduced_by"] = None
     return d
 
 
@@ -40,9 +56,24 @@ def _history(conn, org_id: int, frm: Optional[str], to: str, by: str, at: str) -
                  (org_id, frm, to, at, by))
 
 
+def _check_introducer(conn: sqlite3.Connection, org_id: Optional[int], contact_id: Optional[int],
+                      partner_id: Optional[int]) -> None:
+    """One person or one partner, at most, and a partner that is not the
+    organisation itself. Runs inside the caller's write transaction."""
+    if contact_id is not None and partner_id is not None:
+        raise Invalid("Introduced by one person or one partner, not both")
+    if contact_id is not None and conn.execute("SELECT 1 FROM contacts WHERE id = ?", (contact_id,)).fetchone() is None:
+        raise Invalid("No person %d" % contact_id)
+    if partner_id is not None:
+        if partner_id == org_id:
+            raise Invalid("An organisation cannot introduce itself")
+        r = conn.execute("SELECT kind FROM organisations WHERE id = ?", (partner_id,)).fetchone()
+        if r is None or r["kind"] != "partner":
+            raise Invalid("Only a partner can introduce an organisation")
+
+
 def get(conn: sqlite3.Connection, org_id: int) -> Dict[str, Any]:
-    d = _out(conn.execute("SELECT o.*, %s AS last_contact FROM organisations o WHERE o.id = ?" % LAST_CONTACT,
-                          (org_id,)).fetchone())
+    d = _out(conn.execute(SELECT + "WHERE o.id = ?", (org_id,)).fetchone())
     if d is None:
         raise NotFound("No organisation %d" % org_id)
     return d
@@ -67,6 +98,7 @@ def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str) -> Dict[str,
     cols = [f for f in FIELDS if f in data]
     conn.execute("BEGIN IMMEDIATE")  # slug lookup and insert under one write lock
     try:
+        _check_introducer(conn, None, data.get("introduced_by_contact_id"), data.get("introduced_by_org_id"))
         slug = _unique_slug(conn, slugify(requested_slug or data["name"]))
         cur = conn.execute(
             "INSERT INTO organisations(slug, kind, status, created_at, updated_at, updated_by, %s) "
@@ -87,6 +119,10 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
         current = get(conn, org_id)
         if current["updated_at"] != expected:
             raise Conflict(current)
+        if any(k in patch for k in INTRODUCED_BY):
+            # The pair as it will be after this save: a field left out keeps its stored value.
+            after = {k: patch[k] if k in patch else current[k] for k in INTRODUCED_BY}
+            _check_introducer(conn, org_id, after["introduced_by_contact_id"], after["introduced_by_org_id"])
         at = now()
         sets: Dict[str, Any] = {k: v for k, v in patch.items() if k in FIELDS}
         if "tags" in sets:
@@ -124,14 +160,25 @@ def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional
     if tag:
         where.append("EXISTS (SELECT 1 FROM json_each(o.tags) WHERE value = ?)"); args.append(tag)
     if q:
-        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        where.append("o.name LIKE ? ESCAPE '\\'"); args.append("%" + escaped + "%")
+        where.append("o.name LIKE ? ESCAPE '\\'"); args.append(like(q))
     order = {"updated": "o.updated_at DESC", "name": "o.name COLLATE NOCASE",
              "last_contact": "last_contact IS NULL, last_contact DESC",
              "value": "o.value_estimate IS NULL, o.value_estimate DESC"}.get(sort, "o.updated_at DESC")
-    sql = "SELECT o.*, %s AS last_contact FROM organisations o %s ORDER BY %s" % (
-        LAST_CONTACT, ("WHERE " + " AND ".join(where)) if where else "", order)
+    sql = SELECT + "%s ORDER BY %s" % (("WHERE " + " AND ".join(where)) if where else "", order)
     return [_out(r) for r in conn.execute(sql, args)]
+
+
+def introduced(conn: sqlite3.Connection, column: str, ref_id: int) -> Dict[str, Any]:
+    """What one person (`introduced_by_contact_id`) or one partner
+    (`introduced_by_org_id`) brought in, A to Z, and what the clients among
+    them are worth."""
+    if column not in INTRODUCED_BY:
+        raise ValueError("not an introduced-by column: %r" % column)
+    found = [row(r) for r in conn.execute(
+        "SELECT id, name, slug, kind, status, value_estimate FROM organisations WHERE %s = ? "
+        "ORDER BY name COLLATE NOCASE" % column, (ref_id,))]
+    return {"orgs": found,
+            "client_value": sum(o["value_estimate"] or 0 for o in found if o["kind"] == "client")}
 
 
 def status_history(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:

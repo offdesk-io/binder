@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { Contact } from '../../api/types'
 import { ContactForm } from '../../components/ContactForm'
 import { Loading } from '../../components/Loading'
+import { Star } from '../../components/Star'
 import { relationshipTone } from '../../lib/colour'
 import { label } from '../../lib/format'
 import type { Loaded } from '../../lib/useApi'
@@ -34,7 +35,10 @@ export function PeopleSection({ orgId, contacts, onChanged }: { orgId: number; c
             {contacts.data.map((c) => (
               <li key={c.id}>
                 <div className="tn-cluster">
-                  <Link to={`/c/${c.id}`}>{c.name}</Link>
+                  <span className="tn-custom-person-name">
+                    {(c.connector || c.is_referrer) && <Star />}
+                    <Link to={`/c/${c.id}`}>{c.name}</Link>
+                  </span>
                   {c.is_primary && <Tag tone="accent">Talk to</Tag>}
                   {c.relationship && <Tag tone={relationshipTone(c.relationship)}>{label(c.relationship)}</Tag>}
                 </div>

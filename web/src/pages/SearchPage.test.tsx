@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import type { SearchHit } from '../api/types'
@@ -89,4 +89,17 @@ test('a partner or referrer hit carries its own kind chip, and a lead or client 
   expect(rows[1]).toContain('Referrer')
   expect(rows[1]).toContain('In talks')
   expect(rows[2]).not.toMatch(/Lead|Client|Partner|Referrer/)
+})
+
+test('a key person found by search has the star', async () => {
+  stubFetch({
+    'GET /api/search?q=bo': () => [
+      hit({ kind: 'contact', id: 5, title: 'Bo', key_person: true }),
+      hit({ kind: 'contact', id: 6, title: 'Bob' }),
+    ],
+  })
+  renderApp(<SearchPage />, '/search?q=bo')
+  const [bo, bob] = await screen.findAllByRole('listitem')
+  expect(within(bo).getByRole('img', { name: 'Key person' })).toBeInTheDocument()
+  expect(within(bob).queryByRole('img', { name: 'Key person' })).toBeNull()
 })

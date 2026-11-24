@@ -72,3 +72,17 @@ test('an empty name is refused with a message, even by Cmd+Enter', async () => {
   expect(calls).toHaveLength(0)
   expect(onSaved).not.toHaveBeenCalled()
 })
+
+
+test('a new organisation can start as a partner, and the kinds come from meta', async () => {
+  const user = userEvent.setup()
+  const calls = stubFetch({ 'POST /api/orgs': (b) => org({ name: (b as { name: string }).name, kind: 'partner' }) })
+  const onSaved = vi.fn()
+  renderApp(<OrgForm open kind="partner" onClose={() => {}} onSaved={onSaved} />)
+  for (const k of ['Lead', 'Client', 'Partner']) expect(screen.getByRole('radio', { name: k })).toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: 'Partner' })).toBeChecked()
+  await user.type(screen.getByLabelText(/^Name/), 'Northwind')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(calls[0].body).toMatchObject({ name: 'Northwind', kind: 'partner' })
+})

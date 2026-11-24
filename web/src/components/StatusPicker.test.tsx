@@ -21,3 +21,11 @@ test('a client picks from client statuses', async () => {
   await user.click(screen.getByRole('button', { name: 'Status' }))
   expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Active', 'Paused', 'Past'])
 })
+
+
+test('a partner picks from partner statuses', async () => {
+  const user = userEvent.setup()
+  renderApp(<StatusPicker org={org({ kind: 'partner', status: 'prospect' })} aria="Status" onChange={() => {}} />)
+  await user.click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Prospect', 'Active', 'Past'])
+})

@@ -68,7 +68,7 @@ export function PipelinePage() {
         <div className="tn-custom-filterbar-end">
           <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
             value={find} onChange={(e) => setFind(e.target.value)} />
-          <Button size="sm" variant="secondary" onClick={addOrganisation}>+ Add organisation</Button>
+          <Button size="sm" variant="secondary" onClick={() => addOrganisation()}>+ Add organisation</Button>
         </div>
       </div>
       {notice && <Alert tone="success">{notice}</Alert>}

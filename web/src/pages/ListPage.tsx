@@ -52,7 +52,9 @@ export function ListPage() {
   // `won` is never stored: a won lead is an active client.
   const leadStatuses = meta.lead_statuses.filter((s) => s !== 'won')
   const kindRaw = params.get('kind') ?? ''
-  const kind = (meta.kinds as string[]).includes(kindRaw) ? kindRaw : ''
+  // Partners have their own tab: the List is leads and clients.
+  const listKinds: string[] = meta.kinds.filter((k) => k !== 'partner')
+  const kind = listKinds.includes(kindRaw) ? kindRaw : ''
   const statuses = kind === 'client' ? meta.client_statuses : kind === 'lead' ? leadStatuses : [...leadStatuses, ...meta.client_statuses]
   const statusRaw = params.get('status') ?? ''
   const f: ListFilters = {
@@ -92,7 +94,7 @@ export function ListPage() {
   }
   useNewOrg(created)
 
-  const all = orgs.data ?? []
+  const all = (orgs.data ?? []).filter((o) => o.kind !== 'partner')
   const rows = filterOrgs(all, f).filter((o) => matchesText(o, find))
   const kindCounts = filterOrgs(all, { ...f, kind: '' }).filter((o) => matchesText(o, find))
 

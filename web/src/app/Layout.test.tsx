@@ -187,3 +187,9 @@ test('on its own the header is as before', () => {
   expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   vi.restoreAllMocks()
 })
+
+
+test('Partners is a tab', () => {
+  app()
+  expect(screen.getByRole('link', { name: 'Partners' })).toHaveAttribute('href', '/partners')
+})

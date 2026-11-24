@@ -4,7 +4,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { OrgForm } from '../components/OrgForm'
 import { isEmbedded } from '../lib/embedded'
 import { useIsPhone } from '../lib/useIsPhone'
-import type { Org } from '../api/types'
+import type { Kind, Org } from '../api/types'
 import type { NewOrgContext } from './newOrg'
 import { SearchBox } from './SearchBox'
 import { useSession } from './session'
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/', label: 'Home', end: true },
   { to: '/pipeline', label: 'Pipeline', end: false },
   { to: '/list', label: 'List', end: false },
+  { to: '/partners', label: 'Partners', end: false },
 ]
 
 /** On a phone the views are a tab bar at the foot of the screen; on a desktop they are the AppHeader's tabs. */
@@ -35,10 +36,11 @@ export function Layout() {
   // Inside the Offdesk shell, the shell shows the brand, the person and Sign out.
   const embedded = isEmbedded()
   const navigate = useNavigate()
-  const [creating, setCreating] = useState(false)
+  // The kind the New form starts from while it is open; null while it is shut.
+  const [creating, setCreating] = useState<Kind | null>(null)
   // A page that lists organisations registers here what to do with a new one; with none, it gets its own page.
   const created = useRef<((org: Org) => void) | null>(null)
-  const context: NewOrgContext = { open: () => setCreating(true), created }
+  const context: NewOrgContext = { open: (kind: Kind = 'lead') => setCreating(kind), created }
   return (
     <>
       <a className="tn-skip-link" href="#main">Skip to content</a>
@@ -51,7 +53,7 @@ export function Layout() {
         search={<SearchBox />}
         actions={
           <>
-            <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
+            <Button size="sm" variant="secondary" onClick={() => setCreating('lead')}>New</Button>
             {!embedded && !phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
             {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
             {!embedded && (
@@ -67,10 +69,11 @@ export function Layout() {
       </main>
       {phone && <Nav />}
       <OrgForm
-        open={creating}
-        onClose={() => setCreating(false)}
+        open={creating !== null}
+        kind={creating ?? 'lead'}
+        onClose={() => setCreating(null)}
         onSaved={(o) => {
-          setCreating(false)
+          setCreating(null)
           if (created.current) created.current(o)
           else navigate(`/o/${o.slug}`)
         }}

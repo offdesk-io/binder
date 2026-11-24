@@ -4,6 +4,7 @@ import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
 import type { Kind, Org, OrgFields, Who } from '../api/types'
 import { useSession } from '../app/session'
+import { label } from '../lib/format'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
 import { ConfirmDelete } from './ConfirmDelete'
 
@@ -23,11 +24,11 @@ export interface OrgFormState {
   next_step_due: string
 }
 
-/** The form's text for an organisation, or for a new one owned by `me`. */
-export function orgForm(org: Org | undefined, me: Who): OrgFormState {
+/** The form's text for an organisation, or for a new one of `kind` owned by `me`. */
+export function orgForm(org: Org | undefined, me: Who, kind: Kind = 'lead'): OrgFormState {
   return {
     name: text(org?.name),
-    kind: org?.kind ?? 'lead',
+    kind: org?.kind ?? kind,
     owner_email: org ? text(org.owner_email) : me.email,
     website: text(org?.website),
     sector: text(org?.sector),
@@ -64,16 +65,18 @@ interface Props {
   open: boolean
   /** Left out for a new organisation. */
   org?: Org
+  /** The kind a new organisation starts as. */
+  kind?: Kind
   onClose: () => void
   onSaved: (org: Org) => void
   /** Given only where deleting makes sense; the Delete button shows only then. */
   onDeleted?: () => void
 }
 
-export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
-  const { me } = useSession()
+export function OrgForm({ open, org, kind = 'lead', onClose, onSaved, onDeleted }: Props) {
+  const { me, meta } = useSession()
   const [base, setBase] = useState(org)
-  const [form, setForm] = useState(() => orgForm(org, me))
+  const [form, setForm] = useState(() => orgForm(org, me, kind))
   const [error, setError] = useState<string>()
   const [nameError, setNameError] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -81,10 +84,10 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   useEffect(() => {
     if (!open) return
     setBase(org)
-    setForm(orgForm(org, me))
+    setForm(orgForm(org, me, kind))
     setError(undefined)
     setNameError(undefined)
-  }, [open, org, me])
+  }, [open, org, me, kind])
 
   const set = (k: keyof OrgFormState) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -161,7 +164,7 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
               aria-label="Kind"
               value={form.kind}
               onChange={(kind) => setForm((f) => ({ ...f, kind }))}
-              options={[{ value: 'lead', label: 'Lead' }, { value: 'client', label: 'Client' }]}
+              options={meta.kinds.map((k) => ({ value: k, label: label(k) }))}
             />
           </div>
         )}

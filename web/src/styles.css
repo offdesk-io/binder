@@ -316,3 +316,7 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-figures { grid-template-columns: minmax(0, 1fr); }
   .tn-custom-figures > .tenon-stat + .tenon-stat { border-left: 0; border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
 }
+
+
+/* A key connector's star, wherever the person appears. */
+.tn-custom-star { color: var(--tenon-text-warning); }

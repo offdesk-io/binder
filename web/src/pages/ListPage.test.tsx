@@ -322,3 +322,14 @@ test('a new organisation lands in A to Z order, not at the top', async () => {
       .toEqual(['Acme', 'Mmm', 'Zed']),
   )
 })
+
+
+test('partners have their own tab and are not on the List', async () => {
+  const partner = org({ id: 3, name: 'Northwind', slug: 'northwind', kind: 'partner', status: 'active' })
+  stubFetch({ 'GET /api/orgs?sort=name': () => [lead, client, partner] })
+  renderApp(<ListPage />, '/list?kind=partner')
+  expect(await screen.findByRole('link', { name: 'Acme' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Bolt' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Northwind' })).toBeNull()
+  expect(screen.getByRole('button', { name: /^All/ })).toHaveTextContent('2')
+})

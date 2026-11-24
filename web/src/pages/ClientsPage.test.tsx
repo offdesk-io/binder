@@ -80,13 +80,13 @@ test('another sort goes in the address and Name takes it out again', async () =>
   expect(await screen.findByText('at /clients')).toBeInTheDocument()
 })
 
-test('the filter box narrows rows by name, sector and next step, and stays out of the address', async () => {
+test('the filter box narrows rows by name, sector and description, and stays out of the address', async () => {
   const user = userEvent.setup()
   const rows = [
     acme,
     bolt,
     org({ id: 3, name: 'Cobalt', slug: 'cobalt', kind: 'client', sector: 'Fintech' }),
-    org({ id: 4, name: 'Delta', slug: 'delta', kind: 'client', next_step: 'Send proposal' }),
+    org({ id: 4, name: 'Delta', slug: 'delta', kind: 'client', description: 'Sends proposals' }),
   ]
   stubFetch({ [NAME]: () => rows })
   renderApp(<><ClientsPage /><Where /></>, '/clients')

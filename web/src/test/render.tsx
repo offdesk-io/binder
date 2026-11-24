@@ -16,7 +16,7 @@ export const SESSION: Session = {
     referrer_statuses: ['identified', 'in_talks', 'active', 'paused'],
     interaction_types: ['call', 'email', 'meeting', 'note'],
     relationships: ['cold', 'warm', 'strong'],
-    sectors: ['manufacturing', 'consulting', 'technology', 'retail_ecommerce', 'healthcare', 'construction_installations'],
+    sectors: ['manufacturing', 'consulting', 'technology', 'retail_ecommerce', 'healthcare', 'construction_installations', 'finance'],
     owners: [{ email: 'ana@example.com', name: 'Ana' }, { email: 'rui@example.com', name: 'Rui' }],
     ai: true,
     bench: true,

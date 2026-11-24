@@ -23,7 +23,7 @@ INTERACTION_TYPES = ("call", "email", "meeting", "note")
 RELATIONSHIPS = ("cold", "warm", "strong")  # a contact's relationship may also be null
 # An organisation's sector, or null. What they do in their own words goes in `description`.
 SECTORS = ("manufacturing", "consulting", "technology", "retail_ecommerce", "healthcare",
-           "construction_installations")
+           "construction_installations", "finance")
 
 
 def statuses_for(kind: str) -> Tuple[str, ...]:

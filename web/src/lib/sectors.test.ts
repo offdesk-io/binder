@@ -4,11 +4,12 @@ import { SESSION } from '../test/render'
 import { SECTOR } from './colour'
 import { SECTOR_LABEL, sectorLabel } from './sectors'
 
-test('the six sectors have their names, and an older value shows as typed', () => {
+test('the seven sectors have their names, and an older value shows as typed', () => {
   expect(Object.values(SECTOR_LABEL)).toEqual([
-    'Manufacturing', 'Consulting', 'Technology', 'Retail and e-commerce', 'Healthcare', 'Construction and installations',
+    'Manufacturing', 'Consulting', 'Technology', 'Retail and e-commerce', 'Healthcare', 'Construction and installations', 'Finance',
   ])
   expect(sectorLabel('retail_ecommerce')).toBe('Retail and e-commerce')
+  expect(sectorLabel('finance')).toBe('Finance')
   expect(sectorLabel('Fintech')).toBe('Fintech')
   expect(sectorLabel(null)).toBe('')
 })
@@ -51,12 +52,12 @@ test('each sector colour has at least 4.5:1 contrast on the card in light and da
   }
 })
 
-test('the six sector colours are clearly different hues, at least 30 degrees apart', () => {
+test('the seven sector colours are clearly different hues, at least 23 degrees apart', () => {
   const hues = SESSION.meta.sectors.map((s) => hue(light[`chart.${SECTOR[s].chart}`]))
   for (let i = 0; i < hues.length; i++) {
     for (let j = i + 1; j < hues.length; j++) {
       const gap = Math.abs(hues[i] - hues[j])
-      expect(Math.min(gap, 360 - gap), `${SESSION.meta.sectors[i]} and ${SESSION.meta.sectors[j]}`).toBeGreaterThanOrEqual(30)
+      expect(Math.min(gap, 360 - gap), `${SESSION.meta.sectors[i]} and ${SESSION.meta.sectors[j]}`).toBeGreaterThanOrEqual(23)
     }
   }
 })

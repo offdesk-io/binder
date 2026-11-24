@@ -176,7 +176,7 @@ test('a new record is handled by nobody when I am not on the team list', async (
   expect(writes(calls)[0].body).toMatchObject({ owner_email: null })
 })
 
-test('Sector is a picker of the six sectors by name, plus None, and saves the key', async () => {
+test('Sector is a picker of the seven sectors by name, plus None, and saves the key', async () => {
   const user = userEvent.setup()
   const mine = org({ sector: null })
   const calls = stubFetch({ ...introducers, 'PATCH /api/orgs/1': () => org() })
@@ -184,7 +184,7 @@ test('Sector is a picker of the six sectors by name, plus None, and saves the ke
   expect(screen.queryByRole('textbox', { name: 'Sector' })).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Sector' }))
   expect(screen.getAllByRole('menuitemradio').map((r) => r.textContent)).toEqual([
-    'None', 'Manufacturing', 'Consulting', 'Technology', 'Retail and e-commerce', 'Healthcare', 'Construction and installations',
+    'None', 'Manufacturing', 'Consulting', 'Technology', 'Retail and e-commerce', 'Healthcare', 'Construction and installations', 'Finance',
   ])
   await user.click(screen.getByRole('menuitemradio', { name: 'Retail and e-commerce' }))
   await user.click(screen.getByRole('button', { name: 'Save' }))

@@ -94,8 +94,9 @@ export function taskTone(state: string): TagTone {
   return TASK_TONE[state] ?? 'neutral'
 }
 
-/** The six sectors, one Tenon chart colour each, picked so no two share a hue family: orange, green, teal, blue,
- * purple and magenta sit at least 30 degrees apart on the colour wheel, and none of them is the near-twin indigo.
+/** The seven sectors, one Tenon chart colour each, picked so no two share a hue family: red, orange, green, teal,
+ * blue, purple and magenta are the seven hue families the ten chart colours hold (indigo, brown and slate repeat
+ * the hue of blue or orange), and sit at least 23 degrees apart on the colour wheel, red and orange the closest pair.
  * Drawn as text on a raised card, where each chart colour reaches 4.5:1 in light and dark (checked in
  * colour.test.ts against the Tenon stylesheet). */
 export const SECTOR: Record<string, Colour> = {
@@ -105,10 +106,11 @@ export const SECTOR: Record<string, Colour> = {
   retail_ecommerce: chart(5), // magenta
   healthcare: chart(4), // green
   construction_installations: chart(6), // teal
+  finance: chart(9), // red
 }
 
 /**
- * A sector's colour, for the label at the top of a card. A value the six do not cover (an older free-text one) is
+ * A sector's colour, for the label at the top of a card. A value the seven do not cover (an older free-text one) is
  * hashed to one of Tenon's ten chart colours: the same name always lands on the same colour.
  */
 export function sectorColour(sector: string): Colour {

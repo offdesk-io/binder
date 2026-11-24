@@ -1,7 +1,15 @@
 /* Response and request shapes. The README's API section is the reference:
  * change the two together. */
 
-export type Kind = 'lead' | 'client'
+export type Kind = 'lead' | 'client' | 'partner'
+
+/** Who brought an organisation in: a person, or a partner (with its slug for the link). */
+export interface IntroducedBy {
+  type: 'contact' | 'partner'
+  id: number
+  name: string
+  slug?: string
+}
 
 export interface Org {
   id: number
@@ -21,6 +29,10 @@ export interface Org {
   next_step: string | null
   next_step_due: string | null
   last_contact: string | null
+  /** One person or one partner at most; the other is null. */
+  introduced_by_contact_id: number | null
+  introduced_by_org_id: number | null
+  introduced_by: IntroducedBy | null
   created_at: string
   updated_at: string
   updated_by: string
@@ -39,9 +51,50 @@ export interface Contact {
   notes: string | null
   is_primary: boolean
   relationship: string | null
+  /** A key connector: starred wherever they appear. */
+  connector: boolean
+  postal_address: string | null
   created_at: string
   updated_at: string
   updated_by: string
+}
+
+/** A row of GET /api/people: a contact with when they were last on a log and how many organisations they brought in. */
+export type Person = Contact & { last_contact: string | null; introduced_count: number }
+
+export interface IntroducedOrg {
+  id: number
+  name: string
+  slug: string
+  kind: Kind
+  status: string
+  value_estimate: number | null
+}
+
+/** What a person or a partner brought in, and the summed value of the clients among them. */
+export interface Introduced {
+  orgs: IntroducedOrg[]
+  client_value: number
+}
+
+/** One person's year-end thanks for one year. */
+export interface Thanks {
+  id: number
+  contact_id: number
+  year: number
+  what: string | null
+  /** The day it was sent, or null while it has not been. */
+  sent_on: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+  updated_by: string
+}
+
+/** A line of the Thanks checklist: a key connector and their row for the year, or null. */
+export interface ThanksRow {
+  contact: Contact
+  thanks: Thanks | null
 }
 
 export interface Interaction {
@@ -139,6 +192,7 @@ export interface Meta {
   lead_statuses: string[]
   open_lead_statuses: string[]
   client_statuses: string[]
+  partner_statuses: string[]
   interaction_types: string[]
   relationships: string[]
   /** False when the server has no AI: research and summarise are hidden. */
@@ -171,7 +225,12 @@ export interface OrgFields {
   next_step_due: string | null
 }
 export type OrgInput = Pick<OrgFields, 'name'> & Partial<OrgFields> & { kind?: Kind }
-export type OrgPatch = Partial<OrgFields> & { status?: string; updated_at: string }
+export type OrgPatch = Partial<OrgFields> & {
+  status?: string
+  introduced_by_contact_id?: number | null
+  introduced_by_org_id?: number | null
+  updated_at: string
+}
 
 export interface ContactFields {
   name: string
@@ -185,6 +244,16 @@ export interface ContactFields {
 }
 export type ContactInput = Pick<ContactFields, 'name'> & Partial<ContactFields>
 export type ContactPatch = Partial<ContactFields> & { updated_at: string }
+/** POST /api/contacts: a person with an organisation, or on their own. */
+export type PersonInput = ContactInput & { org_id?: number | null }
+
+/** PUT /api/thanks/{contact_id}/{year}: the fields that changed, and the row's updated_at (null when there is no row). */
+export interface ThanksPut {
+  what?: string | null
+  sent_on?: string | null
+  note?: string | null
+  updated_at: string | null
+}
 
 export interface InteractionFields {
   type: string

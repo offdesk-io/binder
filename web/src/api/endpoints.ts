@@ -1,7 +1,8 @@
 import { request } from './client'
 import type {
   ActivityItem, AttentionItem, Contact, ContactInput, ContactPatch, Interaction, InteractionInput,
-  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who, Work,
+  InteractionPatch, Introduced, Kind, Meta, Org, OrgInput, OrgPatch, Person, PersonInput, Research, SearchHit,
+  Summary, Thanks, ThanksPut, ThanksRow, TimelineItem, Who, Work,
 } from './types'
 
 export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value'
@@ -10,6 +11,11 @@ export interface OrgFilters {
   kind?: Kind | ''
   status?: string
   sort?: OrgSort
+}
+
+export interface PeopleFilters {
+  connector?: boolean
+  q?: string
 }
 
 function query(params: Record<string, string | undefined>): string {
@@ -33,17 +39,24 @@ export const api = {
   createOrg: (body: OrgInput) => request<Org>('POST', '/api/orgs', body),
   patchOrg: (id: number, body: OrgPatch) => request<Org>('PATCH', `/api/orgs/${id}`, body),
   deleteOrg: (id: number) => request<void>('DELETE', `/api/orgs/${id}`),
+  orgIntroduced: (orgId: number) => request<Introduced>('GET', `/api/orgs/${orgId}/introduced`),
 
   contacts: (orgId: number) => request<Contact[]>('GET', `/api/orgs/${orgId}/contacts`),
   contact: (id: number) => request<Contact>('GET', `/api/contacts/${id}`),
   createContact: (orgId: number, body: ContactInput) => request<Contact>('POST', `/api/orgs/${orgId}/contacts`, body),
+  createPerson: (body: PersonInput) => request<Contact>('POST', '/api/contacts', body),
   patchContact: (id: number, body: ContactPatch) => request<Contact>('PATCH', `/api/contacts/${id}`, body),
   deleteContact: (id: number) => request<void>('DELETE', `/api/contacts/${id}`),
+  contactIntroduced: (contactId: number) => request<Introduced>('GET', `/api/contacts/${contactId}/introduced`),
+  people: (f: PeopleFilters = {}) =>
+    request<Person[]>('GET', `/api/people${query({ connector: f.connector ? '1' : undefined, q: f.q })}`),
 
   timeline: (orgId: number) => request<TimelineItem[]>('GET', `/api/orgs/${orgId}/timeline`),
   contactInteractions: (contactId: number) => request<Interaction[]>('GET', `/api/contacts/${contactId}/interactions`),
   createInteraction: (orgId: number, body: InteractionInput) =>
     request<Interaction>('POST', `/api/orgs/${orgId}/interactions`, body),
+  logForPerson: (contactId: number, body: InteractionInput) =>
+    request<Interaction>('POST', `/api/contacts/${contactId}/interactions`, body),
   patchInteraction: (id: number, body: InteractionPatch) => request<Interaction>('PATCH', `/api/interactions/${id}`, body),
   deleteInteraction: (id: number) => request<void>('DELETE', `/api/interactions/${id}`),
   orgResearch: (orgId: number) => request<Research[]>('GET', `/api/orgs/${orgId}/research`),
@@ -53,4 +66,9 @@ export const api = {
   startContactResearch: (contactId: number) => request<Research>('POST', `/api/contacts/${contactId}/research`),
   work: (orgId: number) => request<Work>('GET', `/api/orgs/${orgId}/work`),
   summarise: (orgId: number, text: string) => request<Summary>('POST', '/api/summarise', { org_id: orgId, text }),
+
+  thanks: (year: number) => request<ThanksRow[]>('GET', `/api/thanks?year=${year}`),
+  putThanks: (contactId: number, year: number, body: ThanksPut) =>
+    request<Thanks>('PUT', `/api/thanks/${contactId}/${year}`, body),
+  deleteThanks: (contactId: number, year: number) => request<void>('DELETE', `/api/thanks/${contactId}/${year}`),
 }

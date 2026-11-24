@@ -46,3 +46,27 @@ test('research and summarise routes', async () => {
     'POST /api/summarise',
   ])
 })
+
+test('people, introduced and thanks routes', async () => {
+  const calls = capture()
+  await api.people()
+  await api.people({ connector: true, q: 'ma' })
+  await api.createPerson({ name: 'Marta' })
+  await api.orgIntroduced(3)
+  await api.contactIntroduced(5)
+  await api.logForPerson(5, { type: 'call', summary: 'Hi' })
+  await api.thanks(2026)
+  await api.putThanks(5, 2026, { what: 'Wine', updated_at: null })
+  await api.deleteThanks(5, 2026)
+  expect(calls()).toEqual([
+    'GET /api/people',
+    'GET /api/people?connector=1&q=ma',
+    'POST /api/contacts',
+    'GET /api/orgs/3/introduced',
+    'GET /api/contacts/5/introduced',
+    'POST /api/contacts/5/interactions',
+    'GET /api/thanks?year=2026',
+    'PUT /api/thanks/5/2026',
+    'DELETE /api/thanks/5/2026',
+  ])
+})

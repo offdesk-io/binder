@@ -1,4 +1,4 @@
-import type { ActivityItem, Brief, BenchTask, Contact, Interaction, Org, Research } from '../api/types'
+import type { ActivityItem, Brief, BenchTask, Contact, Interaction, Org, Person, Research, Thanks } from '../api/types'
 
 export const AT = '2026-11-10T12:00:00.000000+00:00'
 
@@ -7,6 +7,7 @@ export function org(o: Partial<Org> = {}): Org {
     id: 1, slug: 'acme', name: 'Acme', kind: 'lead', status: 'lead', website: null, sector: null,
     size: null, location: null, owner_email: 'ana@example.com', source: null, value_estimate: null,
     tags: [], summary: null, next_step: null, next_step_due: null, last_contact: null,
+    introduced_by_contact_id: null, introduced_by_org_id: null, introduced_by: null,
     created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
   }
 }
@@ -15,6 +16,19 @@ export function contact(o: Partial<Contact> = {}): Contact {
   return {
     id: 5, org_id: 1, org_name: 'Acme', org_slug: 'acme', name: 'Bo', role: null, email: null,
     phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null,
+    connector: false, postal_address: null,
+    created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
+  }
+}
+
+/** A row of the people list. */
+export function person(o: Partial<Person> = {}): Person {
+  return { ...contact(), last_contact: null, introduced_count: 0, ...o }
+}
+
+export function thanks(o: Partial<Thanks> = {}): Thanks {
+  return {
+    id: 1, contact_id: 5, year: 2026, what: null, sent_on: null, note: null,
     created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
   }
 }

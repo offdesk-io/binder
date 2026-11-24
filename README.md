@@ -145,10 +145,37 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
 ### Records
 
 - **Organisation** (`/api/orgs`, `/api/orgs/{id}`, `/api/orgs/by-slug/{slug}`):
-  `id`, `slug`, `name`, `kind` (`lead` or `client`), `status`, `website`,
-  `sector`, `size`, `location`, `owner_email`, `source`, `value_estimate`,
-  `tags` (list), `summary`, `next_step`, `next_step_due`, `last_contact`,
-  `created_at`, `updated_at`, `updated_by`.
+  `id`, `slug`, `name`, `kind` (`lead`, `client` or `partner`), `status`,
+  `website`, `sector`, `size`, `location`, `owner_email`, `source`,
+  `value_estimate`, `tags` (list), `summary`, `next_step`, `next_step_due`,
+  `last_contact`, `introduced_by_contact_id` and `introduced_by_org_id` (who
+  brought it in: one person or one partner, at most, so one of the two is
+  null), `introduced_by` (`{type: "contact", id, name}`,
+  `{type: "partner", id, name, slug}` or null), `created_at`, `updated_at`,
+  `updated_by`. `GET /api/orgs?kind=partner` lists the partners. A POST or
+  PATCH may set `introduced_by_org_id` only to a partner other than the
+  organisation itself, and never together with `introduced_by_contact_id`
+  (422). `DELETE` keeps the organisation's people, now without an
+  organisation, and none of them stays the one to talk to.
+- **Introduced** (`GET /api/orgs/{id}/introduced` for a partner,
+  `GET /api/contacts/{id}/introduced` for a person): `orgs`, the
+  organisations they brought in, A to Z, each `{id, name, slug, kind, status,
+  value_estimate}`, and `client_value`, the summed `value_estimate` of the
+  clients among them.
+- **Person** (`GET /api/people?connector=1&q=`): a contact, with or without an
+  organisation, plus `last_contact` (their newest log, or null) and
+  `introduced_count`. Key connectors come first, then everyone A to Z.
+  `connector=1` keeps only connectors; `q` matches the name or the
+  organisation's name.
+- **Thanks** (`GET /api/thanks?year=`, default this year in `BINDER_TZ`): one
+  line per key connector, A to Z, `{contact, thanks}`, where `thanks` is that
+  person's row for the year or null. A row: `id`, `contact_id`, `year`,
+  `what`, `sent_on` (a date, or null while not sent), `note`, `created_at`,
+  `updated_at`, `updated_by`. `PUT /api/thanks/{contact_id}/{year}` with any
+  of `what`, `sent_on` and `note` creates or changes the row; it carries the
+  row's `updated_at`, or null when there was no row, and anything else is a
+  409 with `current` (the row, or null). `DELETE` on the same path removes
+  it. One row per person and year.
 - **Contact** (`/api/orgs/{id}/contacts`, `/api/contacts/{id}`): `id`,
   `org_id`, `org_name`, `org_slug`, `name`, `role`, `email`, `phone`,
   `linkedin_url`, `notes`, `is_primary` (bool), `relationship` (or null),
@@ -189,7 +216,8 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   record can have one run going at a time: a second `POST` gets 409 with
   `current`, the running row. Poll until `status` is no longer `running`.
 
-A record's `kind` is `lead` or `client`, and only organisations have one.
+A record's `kind` is `lead`, `client` or `partner`, and only organisations
+have one.
 
 ### Feed items
 
@@ -225,10 +253,12 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 ### Vocabularies
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
-`client_statuses`, `interaction_types` and `relationships`, from
+`client_statuses`, `partner_statuses`, `interaction_types` and
+`relationships`, from
 `binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
-it an active client, and a client never goes back to a lead.
+it an active client, and a client never goes back to a lead. A partner starts
+as `prospect`, moves to any partner status and never changes kind.
 
 ### Saves and errors
 

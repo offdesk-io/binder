@@ -31,7 +31,7 @@ def _contacts(client, o):
 
 def test_meta_serves_the_sectors(client):
     assert client.get("/api/meta").json()["sectors"] == list(SECTORS) == [
-        "manufacturing", "consulting", "technology", "retail_ecommerce", "healthcare", "construction_installations"]
+        "manufacturing", "consulting", "technology", "retail_ecommerce", "healthcare", "construction_installations", "finance"]
 
 
 def test_sector_is_a_key_or_null(client):

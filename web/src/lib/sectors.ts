@@ -6,6 +6,7 @@ export const SECTOR_LABEL: Record<string, string> = {
   retail_ecommerce: 'Retail and e-commerce',
   healthcare: 'Healthcare',
   construction_installations: 'Construction and installations',
+  finance: 'Finance',
 }
 
 /** A sector's name for people. A value the list does not know (an older free-text one) shows as it is. */

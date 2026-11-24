@@ -21,3 +21,14 @@ test('a client picks from client statuses', async () => {
   await user.click(screen.getByRole('button', { name: 'Status' }))
   expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Active', 'Paused', 'Past'])
 })
+
+test('a partner picks from partner statuses, a referrer from its own shorter list', async () => {
+  const user = userEvent.setup()
+  const first = renderApp(<StatusPicker org={org({ kind: 'partner', status: 'identified' })} aria="Status" onChange={() => {}} />)
+  await user.click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Terms sent', 'Active', 'Paused'])
+  first.unmount()
+  renderApp(<StatusPicker org={org({ kind: 'referrer', status: 'identified' })} aria="Status" onChange={() => {}} />)
+  await user.click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
+})

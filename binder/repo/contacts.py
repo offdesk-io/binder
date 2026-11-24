@@ -35,6 +35,14 @@ def list_for_org(conn: sqlite3.Connection, org_id: int) -> List[Dict[str, Any]]:
         SELECT + "WHERE c.org_id = ? ORDER BY c.is_primary DESC, c.name COLLATE NOCASE", (org_id,))]
 
 
+def _keep_referrer_primary(conn, contact: Dict[str, Any]) -> None:
+    """A referrer's primary contact is the person it is: another can take over
+    as primary, but it cannot be unset or deleted on its own."""
+    if contact["is_primary"] and conn.execute(
+            "SELECT 1 FROM organisations WHERE id = ? AND kind = 'referrer'", (contact["org_id"],)).fetchone():
+        raise Invalid("This is the referrer's own contact: make someone else primary first")
+
+
 def _clear_primary(conn, org_id: int, keep: int) -> None:
     conn.execute("UPDATE contacts SET is_primary = 0 WHERE org_id = ? AND id != ?", (org_id, keep))
 
@@ -67,6 +75,8 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
         current = get(conn, contact_id)
         if current["updated_at"] != expected:
             raise Conflict(current)
+        if patch.get("is_primary") is False:
+            _keep_referrer_primary(conn, current)
         sets = {k: (int(v) if k == "is_primary" else v) for k, v in patch.items() if k in FIELDS}
         sets["updated_at"], sets["updated_by"] = now(), by
         if patch.get("is_primary"):
@@ -81,5 +91,11 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
 
 
 def delete(conn: sqlite3.Connection, contact_id: int) -> None:
-    if conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,)).rowcount == 0:
-        raise NotFound("No contact %d" % contact_id)
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        _keep_referrer_primary(conn, get(conn, contact_id))
+        conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise

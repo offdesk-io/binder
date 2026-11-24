@@ -11,9 +11,9 @@ import { useSession } from './session'
 import { Wordmark } from './Wordmark'
 
 const NAV = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/pipeline', label: 'Pipeline', end: false },
-  { to: '/list', label: 'List', end: false },
+  { to: '/', label: 'Overview', end: true },
+  { to: '/pipeline', label: 'Leads pipeline', end: false },
+  { to: '/clients', label: 'Clients', end: false },
 ]
 
 /** On a phone the views are a tab bar at the foot of the screen; on a desktop they are the AppHeader's tabs. */
@@ -49,16 +49,12 @@ export function Layout() {
           <NavLink to={tab.to} end={tab.end} className={className}>{children}</NavLink>
         )}
         search={<SearchBox />}
+        // nginx answers /auth/logout and ends the Offdesk sign-in.
+        signOut={!embedded}
         actions={
           <>
             <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>New</Button>
             {!embedded && !phone && <span className="tenon-caption tn-custom-me">{me.name}</span>}
-            {/* nginx answers /auth/logout and ends the Offdesk sign-in. */}
-            {!embedded && (
-              <form method="post" action="/auth/logout">
-                <Button size="sm" variant="ghost" type="submit">Sign out</Button>
-              </form>
-            )}
           </>
         }
       />

@@ -12,11 +12,17 @@ import { QuickLog } from '../../components/QuickLog'
 import { ResearchSection } from '../../components/ResearchSection'
 import { StatusPicker } from '../../components/StatusPicker'
 import { stageColour } from '../../lib/colour'
-import { ago, label, money, person, safeHref } from '../../lib/format'
+import { ago, label, money, safeHref } from '../../lib/format'
+import { ownerName } from '../../lib/owners'
+import { sectorLabel } from '../../lib/sectors'
 import { saveErrorText } from '../../lib/forms'
+import { SEGMENT_KEY } from '../../lib/pipeline'
+import { writeChoice } from '../../lib/remembered'
 import { useApi } from '../../lib/useApi'
 import { useIsPhone } from '../../lib/useIsPhone'
+import { IntroducedSection } from './IntroducedSection'
 import { PeopleSection } from './PeopleSection'
+import { PersonCard } from './PersonCard'
 import { FrameContext, Section, type Frame } from './Section'
 import { TimelineSection } from './TimelineSection'
 import { WorkSection } from './WorkSection'
@@ -27,7 +33,7 @@ function facts(org: Org): [string, ReactNode][] {
     ['Next step', org.next_step ? <NextStep org={org} /> : null],
     ['Value', org.value_estimate != null ? money(org.value_estimate) : null],
     ['Last contact', ago(org.last_contact)],
-    ['Sector', org.sector],
+    ['Sector', org.sector ? sectorLabel(org.sector) : null],
     ['Size', org.size],
     ['Location', org.location],
     ['Source', org.source],
@@ -98,12 +104,27 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
     }
   }
 
+  /** Back to where this kind of record lives: Clients for a client, the Pipeline for the rest, on the segment
+   * that holds its kind. */
+  function goAfterDelete() {
+    if (org.kind === 'client') return navigate('/clients')
+    writeChoice(SEGMENT_KEY, org.kind)
+    navigate('/pipeline')
+  }
+
   const caption = (
     <p className="tenon-caption tn-custom-faint">
-      {label(org.kind)} · owned by {person(org.owner_email)}
+      {label(org.kind)} · handled by {ownerName(meta.owners, org.owner_email)}
+      {org.introduced_by && <> · Introduced by <Link to={`/o/${org.introduced_by.slug}`}>{org.introduced_by.name}</Link></>}
       {org.website && <> · {siteLink}</>}
     </p>
   )
+
+  // What they do, under the name. A referrer's goes in its person card as "Works at".
+  const about = org.description && org.kind !== 'referrer'
+    ? <p className="tenon-body tn-custom-body">{org.description}</p>
+    : null
+  const isReferrer = org.kind === 'referrer'
 
   const overview = (
     <Section id="overview" title="Overview">
@@ -127,7 +148,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           setOrg(o)
           timeline.reload()
         }}
-        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/list'))}
+        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : goAfterDelete())}
       />
       <QuickLog
         open={log !== undefined}
@@ -162,8 +183,11 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           )}
           {caption}
           {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh: ${refreshError}`}</Alert>}
+          {about}
+          {isReferrer && <PersonCard org={org} />}
           {overview}
-          <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
+          <IntroducedSection org={org} />
+          {!isReferrer && <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />}
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} limit={5} moreHref={`/o/${org.slug}`} />
           <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
           {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
@@ -191,17 +215,20 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
             </div>
           </div>
           {caption}
+          {about}
           {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh this page: ${refreshError}`}</Alert>}
         </header>
 
         <div className="tn-grid tn-custom-split">
           <div className="tn-col-8 tn-stack">
+            {isReferrer && <PersonCard org={org} />}
             {overview}
+            <IntroducedSection org={org} />
             <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
             <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
           </div>
           <div className="tn-col-4 tn-stack">
-            <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
+            {!isReferrer && <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />}
             {meta.bench && <WorkSection orgId={org.id} slug={org.slug} />}
           </div>
         </div>

@@ -94,7 +94,7 @@ export function fromLocalInput(value: string): string {
 
 /** The name part of an email, which is how people are shown in v1. */
 export function person(email: string | null | undefined): string {
-  return email ? email.split('@')[0] : 'No owner'
+  return email ? email.split('@')[0] : 'Nobody'
 }
 
 /** Up to two capitals from the name part of an email, for an owner chip: ana.example@… is AE. */

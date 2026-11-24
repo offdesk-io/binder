@@ -4,6 +4,7 @@ import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { KindTag } from '../components/KindTag'
 import { StatusTag } from '../components/StatusTag'
 import { openInPlace } from '../lib/openInPlace'
 import { useApi } from '../lib/useApi'
@@ -63,6 +64,7 @@ export function SearchPage() {
                       <Link to={hitLink(h)}>{h.title}</Link>
                     )}
                     {h.kind !== 'org' && <span className="tn-custom-faint">· {h.org_name}</span>}
+                    {(h.org_kind === 'partner' || h.org_kind === 'referrer') && <KindTag kind={h.org_kind} />}
                     <StatusTag status={h.org_status} />
                   </div>
                   <div><Snippet text={h.snippet} /></div>

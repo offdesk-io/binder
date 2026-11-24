@@ -4,11 +4,14 @@ import type {
   InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who, Work,
 } from './types'
 
-export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value'
+export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value' | 'won'
 
 export interface OrgFilters {
   kind?: Kind | ''
   status?: string
+  /** True keeps only records ever moved to `won` (the Pipeline's Won column asks with kind "client"),
+   * newest won first unless `sort` says otherwise. False keeps those never won. */
+  won?: boolean
   sort?: OrgSort
 }
 
@@ -28,7 +31,8 @@ export const api = {
   attention: () => request<AttentionItem[]>('GET', '/api/attention'),
   activity: (limit = 30) => request<ActivityItem[]>('GET', `/api/activity?limit=${limit}`),
 
-  orgs: (f: OrgFilters = {}) => request<Org[]>('GET', `/api/orgs${query({ ...f })}`),
+  orgs: ({ won, ...f }: OrgFilters = {}) =>
+    request<Org[]>('GET', `/api/orgs${query({ ...f, won: won === undefined ? undefined : String(won) })}`),
   orgBySlug: (s: string) => request<Org>('GET', `/api/orgs/by-slug/${slug(s)}`),
   createOrg: (body: OrgInput) => request<Org>('POST', '/api/orgs', body),
   patchOrg: (id: number, body: OrgPatch) => request<Org>('PATCH', `/api/orgs/${id}`, body),

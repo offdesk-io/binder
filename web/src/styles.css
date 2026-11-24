@@ -45,10 +45,6 @@ a.tenon-button:hover { text-decoration: none; }
 /* Colour. A stage, type or due colour comes from a Tag or Card prop. These are the few places a prop cannot reach.
  * The stage and type colour arrives in --tn-stage and --tn-dot, set from lib/colour.ts. */
 
-/* The page sits on Tenon's recessed surface, so the raised cards read as cards: a tint in light, black in dark.
- * :root raises the rule's specificity above the body's own tn-shell background. */
-:root body { background: var(--tenon-background-sunken); }
-
 /* A categorical Tag. Tenon draws a chart colour as text on the neutral chip, and in light mode six of the ten
  * fail AA there. On the raised surface each reaches AA in both themes, so the chip sits on the raised surface
  * with a hairline edge and the colour stays in the text and the dot. */
@@ -315,4 +311,15 @@ a.tenon-button:hover { text-decoration: none; }
 @media (max-width: 767px) {
   .tn-custom-figures { grid-template-columns: minmax(0, 1fr); }
   .tn-custom-figures > .tenon-stat + .tenon-stat { border-left: 0; border-top: var(--tenon-dimension-012) solid var(--tenon-stroke-subtle); }
+}
+
+/* The Pipeline's Columns view: Tenon Columns side by side, scrolling across; stacked on a phone. */
+.tn-custom-pipeline-columns {
+  display: flex; align-items: flex-start; gap: var(--tenon-dimension-200); overflow-x: auto;
+  padding-bottom: var(--tenon-dimension-100);
+}
+.tn-custom-pipeline-columns > .tn-custom-pipeline-column { flex: 0 0 18rem; min-width: 0; }
+@media (max-width: 767px) {
+  .tn-custom-pipeline-columns { flex-direction: column; align-items: stretch; overflow-x: visible; }
+  .tn-custom-pipeline-columns > .tn-custom-pipeline-column { flex: none; }
 }

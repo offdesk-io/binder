@@ -85,7 +85,7 @@ test('winning a lead turns the page into a client with client statuses', async (
   await user.click(await screen.findByRole('button', { name: 'Status' }))
   await user.click(screen.getByRole('menuitemradio', { name: 'Won' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Active'))
-  expect(screen.getByText(/Client · owned by/)).toBeInTheDocument()
+  expect(screen.getByText(/Client · handled by/)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Status' }))
   expect(screen.getByRole('menuitemradio', { name: 'Paused' })).toBeInTheDocument()
   expect(screen.queryByRole('menuitemradio', { name: 'Won' })).toBeNull()
@@ -183,4 +183,126 @@ test('with Bench off the Work section is not shown and Work is not asked for', a
   await screen.findByRole('heading', { level: 1, name: 'Acme' })
   expect(screen.queryByRole('heading', { name: 'Work' })).toBeNull()
   expect(calls.some((c) => c.key === 'GET /api/orgs/1/work')).toBe(false)
+})
+
+test('a lead or client shows who introduced it, linking to that page', async () => {
+  const intro = { id: 8, slug: 'pixel', name: 'Pixel Partners', kind: 'partner' as const }
+  stubs({ 'GET /api/orgs/by-slug/acme': () => ({ ...acme, introduced_by_id: 8, introduced_by: intro }) })
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(screen.getByText(/Introduced by/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Pixel Partners' })).toHaveAttribute('href', '/o/pixel')
+  expect(screen.queryByRole('heading', { name: 'Introduced' })).toBeNull()
+})
+
+test('a lead with nobody behind it shows no Introduced by', async () => {
+  stubs()
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(screen.queryByText(/Introduced by/)).toBeNull()
+})
+
+test('a partner lists what it introduced, each linking to its page with its status', async () => {
+  const partner = org({
+    id: 1, slug: 'acme', name: 'Acme', kind: 'partner', status: 'active',
+    introduced: [
+      { id: 3, slug: 'bolt', name: 'Bolt', kind: 'lead', status: 'contacted' },
+      { id: 4, slug: 'cobalt', name: 'Cobalt', kind: 'client', status: 'paused' },
+    ],
+  })
+  stubs({ 'GET /api/orgs/by-slug/acme': () => partner })
+  page()
+  const section = (await screen.findByRole('heading', { name: 'Introduced' })).closest('.tenon-column')!
+  expect(within(section as HTMLElement).getByRole('link', { name: 'Bolt' })).toHaveAttribute('href', '/o/bolt')
+  expect(within(section as HTMLElement).getByRole('link', { name: 'Cobalt' })).toHaveAttribute('href', '/o/cobalt')
+  expect(section).toHaveTextContent('Contacted')
+  expect(section).toHaveTextContent('Paused')
+  expect(screen.getByText(/Partner · handled by/)).toBeInTheDocument()
+})
+
+test('a referrer that has introduced nobody says so, and its status picker is its own', async () => {
+  const user = userEvent.setup()
+  stubs({ 'GET /api/orgs/by-slug/acme': () => org({ id: 1, kind: 'referrer', status: 'identified' }) })
+  page()
+  expect(await screen.findByText('Nobody introduced yet.')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
+})
+
+async function deleteFromPage(kind: 'lead' | 'client' | 'partner' | 'referrer') {
+  const user = userEvent.setup()
+  stubs({
+    'GET /api/orgs/by-slug/acme': () => org({ id: 1, kind, status: kind === 'client' ? 'active' : kind === 'lead' ? 'lead' : 'identified' }),
+    'GET /api/orgs?kind=partner&sort=name': () => [],
+    'GET /api/orgs?kind=referrer&sort=name': () => [],
+    'DELETE /api/orgs/1': () => undefined,
+  })
+  renderApp(
+    <Routes>
+      <Route path="/o/:slug" element={<OrgPage />} />
+      <Route path="/pipeline" element={<p>pipeline page</p>} />
+      <Route path="/clients" element={<p>clients page</p>} />
+    </Routes>,
+    '/o/acme',
+  )
+  await user.click(await screen.findByRole('button', { name: 'Edit' }))
+  await user.click(screen.getByRole('button', { name: 'Delete' }))
+  await user.click(screen.getByRole('button', { name: 'Delete this organisation' }))
+}
+
+test('deleting a client from its page goes to Clients', async () => {
+  await deleteFromPage('client')
+  expect(await screen.findByText('clients page')).toBeInTheDocument()
+})
+
+test('deleting a lead from its page goes to the Pipeline, on the Leads segment', async () => {
+  localStorage.setItem('binder.pipeline.kind', 'partner')
+  await deleteFromPage('lead')
+  expect(await screen.findByText('pipeline page')).toBeInTheDocument()
+  expect(localStorage.getItem('binder.pipeline.kind')).toBe('lead')
+  localStorage.clear()
+})
+
+test.each(['partner', 'referrer'] as const)('deleting a %s from its page goes to the Pipeline with that segment selected', async (kind) => {
+  localStorage.clear()
+  await deleteFromPage(kind)
+  expect(await screen.findByText('pipeline page')).toBeInTheDocument()
+  expect(localStorage.getItem('binder.pipeline.kind')).toBe(kind)
+  localStorage.clear()
+})
+
+test('what they do shows under the name, and the sector and handler by name', async () => {
+  stubs({ 'GET /api/orgs/by-slug/acme': () => org({ id: 1, description: 'Makes industrial kilns', sector: 'manufacturing', owner_email: 'rui@example.com' }) })
+  page()
+  const title = await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  const text = screen.getByText('Makes industrial kilns')
+  expect(title.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.getByText('Manufacturing')).toBeInTheDocument()
+  expect(screen.getByText(/Lead · handled by Rui/)).toBeInTheDocument()
+})
+
+test('a referrer shows its details as a person card at the top and has no People section', async () => {
+  const rui = org({
+    id: 1, name: 'Rui Costa', kind: 'referrer', status: 'identified', description: 'Costa Kilns',
+    person: { contact_id: 4, email: 'rui@example.com', phone: '+351 900 000 000', linkedin_url: 'linkedin.com/in/rui' },
+  })
+  stubs({ 'GET /api/orgs/by-slug/acme': () => rui })
+  page()
+  const card = (await screen.findByRole('heading', { name: 'Contact details' })).closest('#person') as HTMLElement
+  expect(card).not.toBeNull()
+  expect(within(card).getByText('Costa Kilns')).toBeInTheDocument()
+  expect(within(card).getByRole('link', { name: 'rui@example.com' })).toHaveAttribute('href', 'mailto:rui@example.com')
+  expect(within(card).getByRole('link', { name: '+351 900 000 000' })).toHaveAttribute('href', 'tel:+351 900 000 000')
+  expect(within(card).getByRole('link', { name: 'linkedin.com/in/rui' })).toHaveAttribute('href', 'https://linkedin.com/in/rui')
+  expect(screen.queryByRole('heading', { name: 'People' })).toBeNull()
+  // Works at is in the card, not repeated under the name.
+  expect(screen.getAllByText('Costa Kilns')).toHaveLength(1)
+})
+
+test('a company still has its People section and no person card', async () => {
+  stubs()
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(await screen.findByRole('heading', { name: 'People' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Contact details' })).toBeNull()
 })

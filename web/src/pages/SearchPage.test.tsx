@@ -7,7 +7,7 @@ import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
 const hit = (o: Partial<SearchHit>): SearchHit => ({
-  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
+  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', org_kind: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
 })
 
 test('each kind of hit links to its page', () => {
@@ -72,4 +72,21 @@ test('an organisation hit opens its drawer; contact and anchored hits stay links
   expect(await screen.findByRole('link', { name: 'Research brief' })).not.toHaveAttribute('data-org-open')
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog', { name: 'Acme' })).toBeInTheDocument()
+})
+
+test('a partner or referrer hit carries its own kind chip, and a lead or client does not', async () => {
+  stubFetch({
+    'GET /api/search?q=x': () => [
+      hit({ id: 1, title: 'Pixel', org_slug: 'pixel', org_kind: 'partner', org_status: 'active' }),
+      hit({ id: 2, title: 'Rui', org_slug: 'rui', org_kind: 'referrer', org_status: 'in_talks' }),
+      hit({ id: 3, title: 'Lee', org_slug: 'lee', org_kind: 'lead', org_status: 'contacted' }),
+    ],
+  })
+  renderApp(<SearchPage />, '/search?q=x')
+  const rows = (await screen.findAllByRole('listitem')).map((li) => li.textContent)
+  expect(rows[0]).toContain('Partner')
+  expect(rows[0]).toContain('Active')
+  expect(rows[1]).toContain('Referrer')
+  expect(rows[1]).toContain('In talks')
+  expect(rows[2]).not.toMatch(/Lead|Client|Partner|Referrer/)
 })

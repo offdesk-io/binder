@@ -32,6 +32,9 @@ export const STAGE: Record<string, Colour> = {
   paused: tone('warning', 'var(--tenon-text-warning)'),
   parked: NEUTRAL,
   past: NEUTRAL,
+  identified: chart(2),
+  in_talks: chart(4),
+  terms_sent: chart(9),
 }
 
 /** A stage's colour. A status the map does not know is neutral, as it is on the board. */
@@ -91,13 +94,26 @@ export function taskTone(state: string): TagTone {
   return TASK_TONE[state] ?? 'neutral'
 }
 
+/** The six sectors, one Tenon chart colour each, picked so no two share a hue family: orange, green, teal, blue,
+ * purple and magenta sit at least 30 degrees apart on the colour wheel, and none of them is the near-twin indigo.
+ * Drawn as text on a raised card, where each chart colour reaches 4.5:1 in light and dark (checked in
+ * colour.test.ts against the Tenon stylesheet). */
+export const SECTOR: Record<string, Colour> = {
+  manufacturing: chart(2), // orange
+  consulting: chart(3), // purple
+  technology: chart(1), // blue
+  retail_ecommerce: chart(5), // magenta
+  healthcare: chart(4), // green
+  construction_installations: chart(6), // teal
+}
+
 /**
- * A sector's colour, for the label at the top of a card. The sector is free text, so
- * its name is hashed to one of Tenon's ten chart colours: the same name always lands on the same colour. Drawn as
- * text on a raised card, where each chart colour reaches AA in both themes (see .tn-custom-chart in styles.css).
+ * A sector's colour, for the label at the top of a card. A value the six do not cover (an older free-text one) is
+ * hashed to one of Tenon's ten chart colours: the same name always lands on the same colour.
  */
 export function sectorColour(sector: string): Colour {
   const name = sector.trim().toLowerCase()
+  if (SECTOR[name]) return SECTOR[name]
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
   return chart(((h % 10) + 1) as TagChart)

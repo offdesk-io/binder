@@ -83,3 +83,11 @@ def test_read_sheet_round_trip(tmp_path):
         w.writeheader()
         w.writerow(ROW)
     assert imp.read_sheet(str(p)) == [ROW]
+
+
+def test_sheet_sector_text_goes_to_description_and_a_key_stays_a_sector(conn):
+    imp.apply_rows(conn, [ROW, dict(CLIENT, sector="retail_ecommerce")], by="import@local")
+    a = orgs.get_by_slug(conn, "acme-tools")
+    assert (a["sector"], a["description"]) == (None, "Manufacturing")
+    b = orgs.get_by_slug(conn, "beta-shop")
+    assert (b["sector"], b["description"]) == ("retail_ecommerce", None)

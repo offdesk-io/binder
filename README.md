@@ -22,6 +22,8 @@ throwaway database (`npx playwright install chromium` once first).
 
 `BINDER_AUTH=header` is the server behind nginx, and needs `BINDER_DB` set to an absolute path; unset is local development. Binder listens on loopback only in both modes. `BINDER_TZ` (default `Europe/Lisbon`) decides what "today" means for the needs-attention feed.
 
+`BINDER_OWNERS` is who a record can be "Handled by": `email=Name` pairs separated by commas, set in `/etc/binder/binder.env` on the server rather than in the repo, because they are real people. A record created without one is handled by whoever creates it, when they are on the list. Unset, the list is empty and "nobody" is the only choice. Tests use made-up `@example.com` owners.
+
 Research and "Paste and summarise" call the Anthropic API from the server.
 `ANTHROPIC_API_KEY` turns them on; without it they are off, and the page hides
 their buttons. `BINDER_AI=fake` gives canned answers instead, for local
@@ -145,10 +147,38 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
 ### Records
 
 - **Organisation** (`/api/orgs`, `/api/orgs/{id}`, `/api/orgs/by-slug/{slug}`):
-  `id`, `slug`, `name`, `kind` (`lead` or `client`), `status`, `website`,
-  `sector`, `size`, `location`, `owner_email`, `source`, `value_estimate`,
-  `tags` (list), `summary`, `next_step`, `next_step_due`, `last_contact`,
-  `created_at`, `updated_at`, `updated_by`.
+  `id`, `slug`, `name`, `kind` (`lead`, `client`, `partner` or `referrer`),
+  `status`, `website`, `sector` (one of meta's `sectors`, or null),
+  `description` (what they do, or for a referrer where they work), `size`,
+  `location`, `owner_email` (one of meta's `owners` on write, or null for nobody; left out of a POST it is the creator when they are on the list; an older
+  value off the list stays until it is changed), `source`, `value_estimate`,
+  `tags` (list), `summary`, `next_step`, `next_step_due`, `introduced_by_id`,
+  `introduced_by`, `introduced`, `won_at`, `person`, `last_contact`,
+  `created_at`, `updated_at`, `updated_by`. `won_at` is when the record was
+  last moved to `won`, or null if it never was. `introduced_by` is the partner or
+  referrer who introduced a lead or client, as `{id, slug, name, kind}`, or
+  null. `introduced` lists the leads and clients a partner or referrer
+  introduced, each `{id, slug, name, kind, status}`, sorted by name; it is
+  always empty on a lead or client.
+  A referrer is a person, and its primary contact holds their details:
+  `person` is `{contact_id, email, phone, linkedin_url}` from that contact,
+  and null on every other kind. Creating a referrer, or refiling a record as
+  one, gives it a primary contact named after it when it has none. A `person`
+  object on POST or PATCH (any of `email`, `phone`, `linkedin_url`) is written
+  to that contact in the same save, renaming a referrer renames its own contact,
+  and the contact cannot be deleted or stop being primary while another has
+  not taken over. A referrer refuses `website`, `size` and `sector`, and any
+  other kind refuses `person` (422). Renaming a referrer renames only its own contact, the
+  one made for it or the primary when it became a referrer, whichever contact is
+  primary later. Refiling a record as a referrer clears its website, size and
+  sector and keeps its description, now where they work. An empty `person` is
+  the same as none. A record that stops being a referrer keeps its contacts.
+  `GET /api/orgs` filters by `kind`, `status`, `owner`, `tag`, `q` (part of
+  the name) and `won` (`true` keeps records ever moved to `won`, `false`
+  those never were), and sorts by `sort`: `updated` (the default), `name`,
+  `last_contact`, `value` or `won` (newest won first, the default when
+  `won=true`). The Pipeline's Won column asks for `kind=client&won=true`, which
+  has no time limit.
 - **Contact** (`/api/orgs/{id}/contacts`, `/api/contacts/{id}`): `id`,
   `org_id`, `org_name`, `org_slug`, `name`, `role`, `email`, `phone`,
   `linkedin_url`, `notes`, `is_primary` (bool), `relationship` (or null),
@@ -189,7 +219,22 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
   record can have one run going at a time: a second `POST` gets 409 with
   `current`, the running row. Poll until `status` is no longer `running`.
 
-A record's `kind` is `lead` or `client`, and only organisations have one.
+A record's `kind` is `lead`, `client`, `partner` or `referrer`, and only
+organisations have one. Leads and clients are the pipeline. A partner is an
+organisation OFFDESK has or seeks an agreement with; a referrer is a person who
+passes work on for a fee, kept as an organisation named after them. Partners
+and referrers never appear in needs attention or activity, and the Pipeline
+asks for leads only. `introduced_by_id` may be set, on create or PATCH, only
+on a lead or client, and only to a partner or referrer other than itself;
+anything else is 422.
+
+A PATCH with a different `kind` refiles the record, so one filed as the wrong
+kind can be fixed. It takes the new kind's first status (`lead`, `active` for
+a client, `identified` for a partner or referrer), or the `status` sent in the
+same PATCH if that is one of the new kind's, and status history records the
+move. Becoming a partner or referrer clears `introduced_by_id`. A partner or
+referrer that becomes a lead or client stops introducing: the records it
+introduced lose their link, and their `updated_at` moves on.
 
 ### Feed items
 
@@ -198,7 +243,7 @@ what the item is, and the pair (`kind`, `id`) identifies it: an interaction and
 a status change can share an `id`.
 
 - **Search** (`/api/search?q=`): `kind` (`org`, `contact`, `interaction` or
-  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `title`, `snippet`
+  `research`), `id`, `org_id`, `org_name`, `org_slug`, `org_status` (the organisation's current status), `org_kind`, `title`, `snippet`
   (each match wrapped in the control characters `\u0002` and `\u0003`), and
   `contact_id`: the person a research brief is about, null otherwise.
 - **Timeline** (`/api/orgs/{id}/timeline`) and **activity**
@@ -225,10 +270,15 @@ contact_ids}`. It saves nothing. Values the model got wrong are dropped:
 ### Vocabularies
 
 `GET /api/meta` returns `kinds`, `lead_statuses`, `open_lead_statuses`,
-`client_statuses`, `interaction_types` and `relationships`, from
-`binder/statuses.py`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
+`client_statuses`, `partner_statuses`, `referrer_statuses`,
+`interaction_types`, `relationships` and `sectors`, from
+`binder/statuses.py`, and `owners`, a list of `{email, name}` from
+`BINDER_OWNERS`. `ai` is true when the server can run research and summarise; when it is false, those routes answer 503. `bench` is true when Bench is connected; when it is false, the work route answers 404 and the Work section is hidden. Status moves are unordered within a kind: a lead can go
 to any lead status, a client to any client status. Moving a lead to `won` makes
-it an active client, and a client never goes back to a lead.
+it an active client, and a client never goes back to a lead through a status.
+A partner moves freely between `identified`, `in_talks`, `terms_sent`,
+`active` and `paused`, and a referrer between the same steps without
+`terms_sent`.
 
 ### Saves and errors
 

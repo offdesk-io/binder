@@ -128,3 +128,19 @@ def test_bench_file_is_for_local_development_only(tmp_path):
     with pytest.raises(ConfigError, match="BINDER_BENCH_FILE"):
         load_settings({"BINDER_AUTH": "header", "BINDER_DB": "/x/b.db", "BINDER_BENCH_FILE": "board.md",
                        "BINDER_BENCH_CORE": str(tmp_path)})
+
+
+def test_owners_default_to_none():
+    assert load_settings({}).owners == ()
+
+
+def test_owners_are_email_name_pairs():
+    s = load_settings({"BINDER_OWNERS": " Ana@Example.com=Ana , rui@example.com=Rui Sá,"})
+    assert s.owners == (("ana@example.com", "Ana"), ("rui@example.com", "Rui Sá"))
+
+
+@pytest.mark.parametrize("raw", ["ana@example.com", "ana@example.com=", "ana=Ana",
+                                 "ana@example.com=Ana,ana@example.com=Ana B"])
+def test_bad_owners_refuse_to_start(raw):
+    with pytest.raises(ConfigError, match="BINDER_OWNERS"):
+        load_settings({"BINDER_OWNERS": raw})

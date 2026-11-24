@@ -14,10 +14,11 @@ Read before changing anything:
 - Plan 4, Bench link and import (done): `docs/superpowers/plans/2026-11-12-binder-4-bench-link.md`
 - Plan 5, deploy: `docs/superpowers/plans/2026-11-16-binder-5-deploy.md`
 - Plan 6, UI consistency with Bench: `docs/superpowers/plans/2026-11-18-binder-6-ui-consistency.md`; follow-up: `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`
+- Plan 7, partners and people: spec `docs/superpowers/specs/2026-11-24-binder-7-partners-people-design.md`, plan `docs/superpowers/plans/2026-11-24-binder-7-partners-people.md`
 
 ## Where the work stands
 
-There are six plans, each one spec → plan → build → review:
+There are seven plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
@@ -32,6 +33,11 @@ There are six plans, each one spec → plan → build → review:
    list grouped by stage, kind chips and A to Z on the List, Owner
    dropdown; `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`):
    merged to `main` (PR #11) and live.
+7. Partners and people: partners as an organisation kind, contacts without
+   an organisation, key connectors with a People tab, who introduced a lead,
+   year-end thanks, and quiet connectors on Home
+   (`docs/superpowers/plans/2026-11-24-binder-7-partners-people.md`): in
+   review on `feature/binder-7-partners-people`.
 
 ## Run and test
 

@@ -24,8 +24,7 @@ must sit inside a lead or client, and a lead cannot say who brought it in.
 
 ## Data
 
-Migration `007_partners_people.sql` (the next free number after the files on
-`main`; check before writing). It rebuilds `organisations`, `contacts` and
+Migration `006_partners_people.sql`. It rebuilds `organisations`, `contacts` and
 `interactions`, so it recreates their indexes, the one-primary rule and every
 search trigger on those tables in the same file, as the migration rules
 require.

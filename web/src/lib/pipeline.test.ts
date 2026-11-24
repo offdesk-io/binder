@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { org } from '../test/fixtures'
-import { FOLDED_BY_DEFAULT, stages, undoMove } from './pipeline'
+import { FOLDED_BY_DEFAULT, stages, undoMove, undoWon, wonStage } from './pipeline'
 
 test('stages follow the given order, and an empty stage still appears', () => {
   const out = stages([org({ id: 1, status: 'contacted' }), org({ id: 2, status: 'lead' })], ['lead', 'contacted', 'lost'])
@@ -30,8 +30,24 @@ test('a stage totals its values, counting none as nothing', () => {
   expect(lead.total).toBe(12500)
 })
 
-test('lost and parked start folded', () => {
-  expect([...FOLDED_BY_DEFAULT].sort()).toEqual(['lost', 'parked'])
+test('lost, parked and paused start folded', () => {
+  expect([...FOLDED_BY_DEFAULT].sort()).toEqual(['lost', 'parked', 'paused'])
+})
+
+test('the Won stage keeps the order it is given and totals the values', () => {
+  const out = wonStage([org({ id: 2, value_estimate: 100 }), org({ id: 1, value_estimate: 50 }), org({ id: 3 })])
+  expect(out.status).toBe('won')
+  expect(out.orgs.map((o) => o.id)).toEqual([2, 1, 3])
+  expect(out.total).toBe(150)
+})
+
+test('undoWon brings the lead back only while the list holds the copy shown as won', () => {
+  const was = org({ id: 1, kind: 'lead', status: 'contacted' })
+  const shown = org({ id: 1, kind: 'client', status: 'active', won_at: 'now' })
+  expect(undoWon([shown], was, shown)).toEqual([was])
+  const changedSince = { ...shown, won_at: 'later' }
+  expect(undoWon([changedSince], was, shown)).toEqual([changedSince])
+  expect(undoWon([], was, shown)).toEqual([])
 })
 
 test('undoMove puts only the status back and keeps a newer copy of the rest', () => {

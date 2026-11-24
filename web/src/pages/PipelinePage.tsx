@@ -8,9 +8,11 @@ import { useSession } from '../app/session'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
 import { saveErrorText } from '../lib/forms'
+import { statusesOf } from '../lib/kinds'
 import { matchesText } from '../lib/matchesText'
 import { byOwner, ownerOptions, useOwnerFilter } from '../lib/ownerFilter'
-import { stages, undoMove } from '../lib/pipeline'
+import { stages, undoMove, undoWon, wonStage, type Stage } from '../lib/pipeline'
+import { readChoice, writeChoice } from '../lib/remembered'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
@@ -19,37 +21,43 @@ import { StageGroup } from './pipeline/StageGroup'
 
 type View = 'list' | 'columns'
 const VIEW_KEY = 'binder.pipeline.view'
+const VIEWS: readonly View[] = ['list', 'columns']
 
-function readView(): View {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'columns' ? 'columns' : 'list'
-  } catch {
-    return 'list' // Storage can be off (a private window); the default applies.
-  }
+/** Which records the page shows: leads (with the clients won from them), partners or referrers. */
+type Segment = 'lead' | 'partner' | 'referrer'
+const SEGMENT_KEY = 'binder.pipeline.kind'
+const SEGMENTS: readonly Segment[] = ['lead', 'partner', 'referrer']
+const SEGMENT_OPTIONS: { value: Segment; label: string }[] = [
+  { value: 'lead', label: 'Leads' },
+  { value: 'partner', label: 'Partners' },
+  { value: 'referrer', label: 'Referrers' },
+]
+const NOUN: Record<Segment, string> = { lead: 'leads', partner: 'partners', referrer: 'referrers' }
+const TITLE: Record<Segment, string> = { lead: 'Leads by stage', partner: 'Partners by stage', referrer: 'Referrers by stage' }
+
+/** A segment's records. Leads come with every client ever won, which has no time limit. */
+function load(segment: Segment): Promise<Org[]> {
+  if (segment !== 'lead') return api.orgs({ kind: segment })
+  return Promise.all([api.orgs({ kind: 'lead' }), api.orgs({ kind: 'client', won: true })]).then(([leads, won]) => [...leads, ...won])
 }
 
-function writeView(view: View) {
-  try {
-    localStorage.setItem(VIEW_KEY, view)
-  } catch {
-    // The view still switches, it just isn't remembered.
-  }
-}
-
-/** A saved lead replaces its old copy; one that is no longer a lead leaves. */
-function place(prev: Org[] | undefined, org: Org): Org[] {
+/** A saved record replaces its old copy; one that no longer belongs to the segment leaves. A client belongs to Leads
+ * only for having been won. */
+function place(prev: Org[] | undefined, org: Org, segment: Segment): Org[] {
   const rest = (prev ?? []).filter((o) => o.id !== org.id)
-  return org.kind === 'lead' ? [org, ...rest] : rest
+  const belongs = org.kind === segment || (segment === 'lead' && org.kind === 'client' && !!org.won_at)
+  return belongs ? [org, ...rest] : rest
 }
 
 export function PipelinePage() {
   const { meta, me } = useSession()
   const phone = useIsPhone()
-  const orgs = useApi(() => api.orgs({ kind: 'lead' }), [])
+  const [segment, setSegment] = useState<Segment>(() => readChoice(SEGMENT_KEY, SEGMENTS, 'lead'))
+  const orgs = useApi(() => load(segment), [segment])
   const [notice, setNotice] = useState<string>()
   const [owner, setOwner] = useOwnerFilter()
   const [find, setFind] = useState('')
-  const [view, setView] = useState<View>(readView)
+  const [view, setView] = useState<View>(() => readChoice(VIEW_KEY, VIEWS, 'list'))
   const [moveError, setMoveError] = useState<string>()
   const moving = useRef(new Set<number>())
   const drawer = useOrgDrawer()
@@ -57,44 +65,56 @@ export function PipelinePage() {
   function chooseView(v: View) {
     setView(v)
     setMoveError(undefined)
-    writeView(v)
+    writeChoice(VIEW_KEY, v)
+  }
+
+  function chooseSegment(s: Segment) {
+    if (s === segment) return
+    setSegment(s)
+    setNotice(undefined)
+    setMoveError(undefined)
+    writeChoice(SEGMENT_KEY, s)
   }
 
   // A failed move's message belongs to the board behind; opening a record moves on from it.
   useEffect(() => { if (drawer.slug) setMoveError(undefined) }, [drawer.slug])
 
   /** A card dropped on another stage: shown there at once, then saved with only the status. A failed save puts it
-   * back; a stale one (409) takes the server's current copy. */
+   * back; a stale one (409) takes the server's current copy. Dropped on Won, a lead is shown as the client it becomes. */
   async function moveTo(org: Org, status: string) {
-    if (status === org.status || moving.current.has(org.id)) return
+    if (status === org.status || org.kind === 'client' || moving.current.has(org.id)) return
     moving.current.add(org.id)
     setNotice(undefined)
     setMoveError(undefined)
-    orgs.setData((prev) => place(prev, { ...org, status }))
+    const won = segment === 'lead' && status === 'won'
+    const shown: Org = won
+      ? { ...org, kind: 'client', status: meta.client_statuses[0] ?? 'active', won_at: new Date().toISOString() }
+      : { ...org, status }
+    orgs.setData((prev) => place(prev, shown, segment))
     try {
       const saved = await api.patchOrg(org.id, { updated_at: org.updated_at, status })
-      orgs.setData((prev) => place(prev, saved))
+      orgs.setData((prev) => place(prev, saved, segment))
     } catch (e) {
       setMoveError(saveErrorText(e))
       const current = e instanceof ApiError && e.status === 409 ? (e.current as Org | undefined) : undefined
-      orgs.setData((prev) => (current ? place(prev, current) : undoMove(prev, org, status)))
+      orgs.setData((prev) => (current ? place(prev, current, segment) : won ? undoWon(prev, org, shown) : undoMove(prev, org, status)))
     } finally {
       moving.current.delete(org.id)
     }
   }
 
-  /** A record saved in the drawer goes to its stage. A lead that has just become a client leaves the Pipeline with a
-   * notice; later saves of that client (or of one opened by its link) say nothing. */
+  /** A record saved in the drawer goes to its stage. A lead that has just become a client moves to Won, or leaves with
+   * a notice if it was not won; later saves of that client (or of one opened by its link) say nothing. */
   function changed(saved: Org) {
     setNotice(undefined)
     const was = orgs.data?.find((o) => o.id === saved.id)
-    orgs.setData((prev) => place(prev, saved))
+    orgs.setData((prev) => place(prev, saved, segment))
     if (saved.kind === 'client' && was?.kind === 'lead') setNotice(`${saved.name} is now a client.`)
   }
 
   /** A new organisation goes under its stage and opens in the drawer, with the filters cleared enough to show its row. */
   function created(o: Org) {
-    orgs.setData((prev) => place(prev, o))
+    orgs.setData((prev) => place(prev, o, segment))
     setFind('')
     drawer.open(o.slug, byOwner([o], owner).length === 0 ? ['owner'] : [])
   }
@@ -104,8 +124,16 @@ export function PipelinePage() {
   if (orgs.error) return <Alert tone="error">{orgs.error.message}</Alert>
   if (!orgs.data) return <Loading />
   const shown = byOwner(orgs.data, owner).filter((o) => matchesText(o, find))
-  // A won lead is a client and leaves the Pipeline; a status not in meta.lead_statuses isn't shown.
-  const groups = stages(shown, meta.lead_statuses.filter((s) => s !== 'won'))
+  // Leads: the lead statuses, Won left out (a won lead is a client), then Won at the end from the won clients. A status
+  // not in the kind's list isn't shown.
+  const groups: Stage[] =
+    segment === 'lead'
+      ? [
+          ...stages(shown.filter((o) => o.kind === 'lead'), meta.lead_statuses.filter((s) => s !== 'won')),
+          wonStage(shown.filter((o) => o.kind === 'client')),
+        ]
+      : stages(shown, statusesOf(meta, segment))
+  const locked = segment === 'lead' ? 'won' : undefined
   const heads = [
     { name: 'Name' }, { name: 'Sector' }, { name: 'Next step' }, { name: 'Value', numeric: true }, { name: 'Owner' },
     { name: 'Last contact' },
@@ -115,12 +143,13 @@ export function PipelinePage() {
 
   return (
     <div className="tn-stack">
-      <h1 className="tn-custom-sr-only">Pipeline</h1>
+      <h1 className="tn-custom-sr-only">Leads pipeline</h1>
       <div className="tn-custom-filterbar">
         <Dropdown className="tn-custom-filter" aria-label="Owner" value={owner} onChange={setOwner}
           options={ownerOptions(orgs.data, me.email, owner)} />
+        <SegmentedControl aria-label="Kind" value={segment} onChange={chooseSegment} options={SEGMENT_OPTIONS} />
         <SegmentedControl aria-label="View" value={view} onChange={chooseView}
-          options={[{ value: 'list', label: 'List' }, { value: 'columns', label: 'Columns' }]} />
+          options={[{ value: 'list', label: 'List' }, { value: 'columns', label: 'Board' }]} />
         <div className="tn-custom-filterbar-end">
           <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
             value={find} onChange={(e) => setFind(e.target.value)} />
@@ -130,12 +159,13 @@ export function PipelinePage() {
       {notice && <Alert tone="success">{notice}</Alert>}
       {moveError && <Alert tone="error">{moveError}</Alert>}
       {groups.every((g) => g.orgs.length === 0) ? (
-        <ColumnEmpty>{filtering ? 'Nothing matches these filters.' : 'No leads yet.'}</ColumnEmpty>
+        <ColumnEmpty>{filtering ? 'Nothing matches these filters.' : `No ${NOUN[segment]} yet.`}</ColumnEmpty>
       ) : view === 'columns' ? (
-        <PipelineColumns stages={groups} onOpen={(o) => drawer.open(o.slug)} onMove={moveTo} />
+        <PipelineColumns stages={groups} noun={NOUN[segment]} title={TITLE[segment]} locked={locked}
+          onOpen={(o) => drawer.open(o.slug)} onMove={moveTo} />
       ) : (
         <div className="tn-table-wrap">
-          <table className="tn-custom-table tn-custom-pipeline-table" aria-label="Leads by stage">
+          <table className="tn-custom-table tn-custom-pipeline-table" aria-label={TITLE[segment]}>
             {!phone && (
               <thead>
                 <tr>

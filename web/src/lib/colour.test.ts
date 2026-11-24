@@ -5,10 +5,12 @@ import {
 } from './colour'
 
 const { meta } = SESSION
-const statuses = [...meta.lead_statuses, ...meta.client_statuses]
+const statuses = Array.from(new Set([
+  ...meta.lead_statuses, ...meta.client_statuses, ...meta.partner_statuses, ...meta.referrer_statuses,
+]))
 
 describe('stage colour', () => {
-  test('every lead and client status has its own entry, and no entry is left over', () => {
+  test('every status of every kind has its own entry, and no entry is left over', () => {
     expect(Object.keys(STAGE).sort()).toEqual([...statuses].sort())
     for (const s of statuses) expect(stageColour(s)).toBe(STAGE[s])
   })

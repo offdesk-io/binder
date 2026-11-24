@@ -15,10 +15,10 @@ test('search finds an organisation and opens it', async ({ page, request }) => {
   await expect(page).toHaveURL(new RegExp(`org=${org.slug}`))
 })
 
-test('the list opens an organisation', async ({ page, request }) => {
+test('the Clients page opens a client', async ({ page, request }) => {
   const name = unique('Listed Ltd')
-  await newOrg(request, name)
-  await page.goto('/list')
+  await newOrg(request, name, { kind: 'client' })
+  await page.goto('/clients')
   await page.getByRole('link', { name }).click()
   await expect(page.getByRole('dialog', { name })).toBeVisible()
   await expect(page).toHaveURL(/\?org=/)
@@ -102,25 +102,93 @@ test('the owner dropdown filters the pipeline and stays in the address', async (
   await expect(page.getByRole('link', { name: theirs })).toBeVisible()
 })
 
-test('the list kind chips filter and stay in the address', async ({ page, request }) => {
-  const name = unique('Kind Lead')
-  await newOrg(request, name)
+test('the old List address lands on Clients, and Clients holds clients only', async ({ page, request }) => {
+  const client = unique('Only Client')
+  const lead = unique('Only Lead')
+  await newOrg(request, client, { kind: 'client' })
+  await newOrg(request, lead)
   await page.goto('/list')
-  await expect(page.getByRole('link', { name })).toBeVisible()
-  await page.getByRole('button', { name: /^Clients/ }).click()
-  await expect(page).toHaveURL(/kind=client/)
-  await expect(page.getByRole('link', { name })).toHaveCount(0)
+  await expect(page).toHaveURL(/\/clients/)
+  await expect(page.getByRole('link', { name: client })).toBeVisible()
+  await expect(page.getByRole('link', { name: lead })).toHaveCount(0)
+})
+
+test('the top menu is Overview, Leads pipeline and Clients', async ({ page }) => {
+  await page.goto('/')
+  const nav = page.getByRole('navigation', { name: 'Main' }).or(page.getByRole('banner'))
+  await expect(nav.getByRole('link', { name: 'Leads pipeline' }).first()).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Clients' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'List', exact: true })).toHaveCount(0)
+})
+
+test('the pipeline switches to Partners and back, and remembers the choice', async ({ page, request }) => {
+  const partner = unique('Seg Partner')
+  const lead = unique('Seg Lead')
+  await newOrg(request, partner, { kind: 'partner' })
+  await newOrg(request, lead)
+  await page.goto('/pipeline')
+  await expect(page.getByRole('link', { name: lead })).toBeVisible()
+  await page.getByRole('radio', { name: 'Partners' }).click()
+  await expect(page.getByRole('link', { name: partner })).toBeVisible()
+  await expect(page.getByRole('link', { name: lead })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Identified/ })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('button', { name: /^Clients/ })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('button', { name: /^Leads/ }).click()
-  await expect(page).toHaveURL(/kind=lead/)
+  await expect(page.getByRole('radio', { name: 'Partners' })).toBeChecked()
+  await expect(page.getByRole('link', { name: partner })).toBeVisible()
+  await page.getByRole('radio', { name: 'Leads' }).click()
+  await expect(page.getByRole('link', { name: lead })).toBeVisible()
+})
+
+test('a lead moved to Won in the drawer shows in the Won group and on Clients', async ({ page, request }) => {
+  const name = unique('Wins Soon')
+  await newOrg(request, name)
+  await page.goto('/pipeline')
+  await page.getByRole('link', { name }).click()
+  const drawer = page.getByRole('dialog', { name })
+  await drawer.getByRole('button', { name: 'Status', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Won' }).click()
+  await drawer.getByRole('button', { name: 'Close' }).click()
+  const won = page.locator('tbody', { has: page.getByRole('button', { name: /^Won/ }) })
+  await expect(won.getByRole('link', { name })).toBeVisible()
+  await page.goto('/clients')
   await expect(page.getByRole('link', { name })).toBeVisible()
 })
 
-test('a fresh list is A to Z', async ({ page, request }) => {
+test('a lead dragged to Won on the Board becomes a client', async ({ page, request }) => {
+  const name = unique('Drag Won')
+  const org = await newOrg(request, name)
+  await page.goto('/pipeline')
+  await page.getByRole('radio', { name: 'Board' }).click()
+  const card = page.locator('[draggable="true"]', { has: page.getByRole('link', { name }) })
+  const wonBody = page.locator('[data-stage="won"] .tenon-column__body')
+  // Seven columns are wider than the screen, so the drag is sent as events rather than pointer moves: a real
+  // pointer would need the board to scroll while it drags.
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer())
+  await card.dispatchEvent('dragstart', { dataTransfer })
+  await wonBody.dispatchEvent('dragover', { dataTransfer })
+  await wonBody.dispatchEvent('drop', { dataTransfer })
+  await expect(wonBody.getByRole('link', { name })).toBeVisible()
+  await expect.poll(async () => (await (await request.get(`/api/orgs/${org.id}`)).json()).kind).toBe('client')
+  await page.reload()
+  await expect(wonBody.getByRole('link', { name })).toBeVisible()
+})
+
+test('the Organisation page shows who introduced a lead, and the partner lists it', async ({ page, request }) => {
+  const partnerName = unique('Intro Partner')
+  const leadName = unique('Intro Lead')
+  const partner = await newOrg(request, partnerName, { kind: 'partner' })
+  const lead = await newOrg(request, leadName, { introduced_by_id: partner.id })
+  await page.goto(`/o/${lead.slug}`)
+  await page.getByRole('link', { name: partnerName }).click()
+  await expect(page).toHaveURL(new RegExp(`/o/${partner.slug}`))
+  await expect(page.getByRole('heading', { name: 'Introduced' })).toBeVisible()
+  await expect(page.getByRole('link', { name: leadName })).toBeVisible()
+})
+
+test('a fresh Clients page is A to Z', async ({ page, request }) => {
   const stamp = Date.now().toString(36)
-  for (const n of [`Zed ${stamp}`, `Alpha ${stamp}`, `Mid ${stamp}`]) await newOrg(request, n)
-  await page.goto('/list')
+  for (const n of [`Zed ${stamp}`, `Alpha ${stamp}`, `Mid ${stamp}`]) await newOrg(request, n, { kind: 'client' })
+  await page.goto('/clients')
   await expect(page).not.toHaveURL(/sort=/)
   const names = await page.locator('a[data-org-open]').allTextContents()
   const sorted = [...names].sort((a, b) => {

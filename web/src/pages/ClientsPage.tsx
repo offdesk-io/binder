@@ -5,7 +5,6 @@ import { api, type OrgSort } from '../api/endpoints'
 import type { Org } from '../api/types'
 import { useNewOrg } from '../app/newOrg'
 import { useSession } from '../app/session'
-import { FilterChips } from '../components/FilterChips'
 import { Loading } from '../components/Loading'
 import { NextStep, OrgCard } from '../components/OrgCard'
 import { OrgDrawer } from '../components/OrgDrawer'
@@ -20,7 +19,6 @@ import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
 
 export interface ListFilters {
-  kind: string
   status: string
   owner: string
   tag: string
@@ -28,7 +26,7 @@ export interface ListFilters {
 
 export function filterOrgs(orgs: Org[], f: ListFilters): Org[] {
   return byOwner(orgs, f.owner).filter(
-    (o) => (!f.kind || o.kind === f.kind) && (!f.status || o.status === f.status) && (!f.tag || o.tags.includes(f.tag)),
+    (o) => (!f.status || o.status === f.status) && (!f.tag || o.tags.includes(f.tag)),
   )
 }
 
@@ -44,32 +42,26 @@ const SORTS: DropdownOption<OrgSort>[] = [
   { value: 'value', label: 'Value' },
 ]
 
-export function ListPage() {
+export function ClientsPage() {
   const { meta, me } = useSession()
   const phone = useIsPhone()
   const [params, setParams] = useSearchParams()
   const [find, setFind] = useState('')
-  // `won` is never stored: a won lead is an active client.
-  const leadStatuses = meta.lead_statuses.filter((s) => s !== 'won')
-  const kindRaw = params.get('kind') ?? ''
-  const kind = (meta.kinds as string[]).includes(kindRaw) ? kindRaw : ''
-  const statuses = kind === 'client' ? meta.client_statuses : kind === 'lead' ? leadStatuses : [...leadStatuses, ...meta.client_statuses]
+  const statuses = meta.client_statuses
   const statusRaw = params.get('status') ?? ''
   const f: ListFilters = {
-    kind,
     status: statuses.includes(statusRaw) ? statusRaw : '',
     owner: params.get('owner') ?? '',
     tag: params.get('tag') ?? '',
   }
   const raw = params.get('sort')
   const sort: OrgSort = SORTS.some((s) => s.value === raw) ? (raw as OrgSort) : 'name'
-  const orgs = useApi(() => api.orgs({ sort }), [sort], { keep: true })
+  const orgs = useApi(() => api.orgs({ kind: 'client', sort }), [sort], { keep: true })
 
   const put = (key: string, value: string) => {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value)
     else next.delete(key)
-    if (key === 'kind') next.delete('status')
     setParams(next, { replace: true })
   }
 
@@ -79,38 +71,28 @@ export function ListPage() {
    * has loaded there is no row to replace, and the load in flight will bring the saved record. */
   function changed(saved: Org) {
     if (!orgs.data) return
-    orgs.setData((prev) => (prev ?? []).map((o) => (o.id === saved.id ? saved : o)))
+    orgs.setData((prev) => (prev ?? []).flatMap((o) => (o.id !== saved.id ? [o] : saved.kind === 'client' ? [saved] : [])))
   }
 
   /** A new organisation gets its row, whatever would hide it is cleared, and it opens in the drawer. The row is added
    * at once so focus has somewhere to return, and the list is asked for again so the server's order puts it in place. */
   function created(o: Org) {
-    if (orgs.data) orgs.setData((prev) => [o, ...(prev ?? []).filter((x) => x.id !== o.id)])
-    orgs.reload()
+    const mine = o.kind === 'client'
+    if (mine && orgs.data) orgs.setData((prev) => [o, ...(prev ?? []).filter((x) => x.id !== o.id)])
+    if (mine) orgs.reload()
     setFind('')
-    drawer.open(o.slug, filterOrgs([o], f).length === 0 ? ['kind', 'status', 'owner', 'tag'] : [])
+    drawer.open(o.slug, mine && filterOrgs([o], f).length === 0 ? ['status', 'owner', 'tag'] : [])
   }
   useNewOrg(created)
 
   const all = orgs.data ?? []
   const rows = filterOrgs(all, f).filter((o) => matchesText(o, find))
-  const kindCounts = filterOrgs(all, { ...f, kind: '' }).filter((o) => matchesText(o, find))
-
+  
   return (
     <div className="tn-stack">
-      <h1 className="tn-custom-sr-only">Organisations</h1>
+      <h1 className="tn-custom-sr-only">Clients</h1>
       {orgs.data && (
         <div className="tn-custom-filterbar">
-          <FilterChips
-            label="Kind"
-            value={f.kind}
-            onChange={(v) => put('kind', v)}
-            chips={[
-              { value: '', label: 'All', count: kindCounts.length },
-              { value: 'lead', label: 'Leads', count: kindCounts.filter((o) => o.kind === 'lead').length },
-              { value: 'client', label: 'Clients', count: kindCounts.filter((o) => o.kind === 'client').length },
-            ]}
-          />
           <div className="tn-custom-filterbar-end">
             <Input type="search" className="tn-custom-find" aria-label="Filter organisations" placeholder="Filter organisations…"
               value={find} onChange={(e) => setFind(e.target.value)} />
@@ -139,7 +121,7 @@ export function ListPage() {
       ) : (
         <div className="tn-table-wrap">
           <table className="tn-custom-table">
-            <caption>{rows.length === 1 ? '1 organisation' : `${rows.length} organisations`}</caption>
+            <caption>{rows.length === 1 ? '1 client' : `${rows.length} clients`}</caption>
             <thead>
               <tr>
                 <th scope="col">Name</th>

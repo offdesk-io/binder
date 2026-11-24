@@ -9,8 +9,8 @@ export function unique(base: string): string {
   return `${base} ${Date.now().toString(36)}x${n}`
 }
 
-export async function newOrg(request: APIRequestContext, name: string): Promise<Org> {
-  const r = await request.post('/api/orgs', { data: { name } })
+export async function newOrg(request: APIRequestContext, name: string, extra: Record<string, unknown> = {}): Promise<Org> {
+  const r = await request.post('/api/orgs', { data: { name, ...extra } })
   expect(r.ok()).toBeTruthy()
   return r.json()
 }

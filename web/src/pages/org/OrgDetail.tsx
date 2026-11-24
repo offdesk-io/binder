@@ -16,6 +16,7 @@ import { ago, label, money, person, safeHref } from '../../lib/format'
 import { saveErrorText } from '../../lib/forms'
 import { useApi } from '../../lib/useApi'
 import { useIsPhone } from '../../lib/useIsPhone'
+import { IntroducedSection } from './IntroducedSection'
 import { PeopleSection } from './PeopleSection'
 import { FrameContext, Section, type Frame } from './Section'
 import { TimelineSection } from './TimelineSection'
@@ -101,6 +102,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
   const caption = (
     <p className="tenon-caption tn-custom-faint">
       {label(org.kind)} · owned by {person(org.owner_email)}
+      {org.introduced_by && <> · Introduced by <Link to={`/o/${org.introduced_by.slug}`}>{org.introduced_by.name}</Link></>}
       {org.website && <> · {siteLink}</>}
     </p>
   )
@@ -127,7 +129,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           setOrg(o)
           timeline.reload()
         }}
-        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/list'))}
+        onDeleted={() => (frame === 'drawer' && onDeleted ? onDeleted() : navigate('/pipeline'))}
       />
       <QuickLog
         open={log !== undefined}
@@ -163,6 +165,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
           {caption}
           {(notice ?? refreshError) && <Alert tone="error">{notice ?? `Could not refresh: ${refreshError}`}</Alert>}
           {overview}
+          <IntroducedSection org={org} />
           <PeopleSection orgId={org.id} contacts={contacts} onChanged={timeline.reload} />
           <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} limit={5} moreHref={`/o/${org.slug}`} />
           <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
@@ -197,6 +200,7 @@ export function OrgDetail({ frame, org, setOrg, reloadOrg, refreshError, onChang
         <div className="tn-grid tn-custom-split">
           <div className="tn-col-8 tn-stack">
             {overview}
+            <IntroducedSection org={org} />
             <TimelineSection items={timeline} contacts={contacts.data ?? []} onEdit={setLog} />
             <ResearchSection subject={{ kind: 'org', id: org.id }} orgId={org.id} people={contacts} />
           </div>

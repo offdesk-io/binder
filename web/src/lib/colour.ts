@@ -32,6 +32,9 @@ export const STAGE: Record<string, Colour> = {
   paused: tone('warning', 'var(--tenon-text-warning)'),
   parked: NEUTRAL,
   past: NEUTRAL,
+  identified: chart(2),
+  in_talks: chart(4),
+  terms_sent: chart(9),
 }
 
 /** A stage's colour. A status the map does not know is neutral, as it is on the board. */

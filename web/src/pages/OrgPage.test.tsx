@@ -184,3 +184,47 @@ test('with Bench off the Work section is not shown and Work is not asked for', a
   expect(screen.queryByRole('heading', { name: 'Work' })).toBeNull()
   expect(calls.some((c) => c.key === 'GET /api/orgs/1/work')).toBe(false)
 })
+
+test('a lead or client shows who introduced it, linking to that page', async () => {
+  const intro = { id: 8, slug: 'pixel', name: 'Pixel Partners', kind: 'partner' as const }
+  stubs({ 'GET /api/orgs/by-slug/acme': () => ({ ...acme, introduced_by_id: 8, introduced_by: intro }) })
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(screen.getByText(/Introduced by/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Pixel Partners' })).toHaveAttribute('href', '/o/pixel')
+  expect(screen.queryByRole('heading', { name: 'Introduced' })).toBeNull()
+})
+
+test('a lead with nobody behind it shows no Introduced by', async () => {
+  stubs()
+  page()
+  await screen.findByRole('heading', { level: 1, name: 'Acme' })
+  expect(screen.queryByText(/Introduced by/)).toBeNull()
+})
+
+test('a partner lists what it introduced, each linking to its page with its status', async () => {
+  const partner = org({
+    id: 1, slug: 'acme', name: 'Acme', kind: 'partner', status: 'active',
+    introduced: [
+      { id: 3, slug: 'bolt', name: 'Bolt', kind: 'lead', status: 'contacted' },
+      { id: 4, slug: 'cobalt', name: 'Cobalt', kind: 'client', status: 'paused' },
+    ],
+  })
+  stubs({ 'GET /api/orgs/by-slug/acme': () => partner })
+  page()
+  const section = (await screen.findByRole('heading', { name: 'Introduced' })).closest('.tenon-column')!
+  expect(within(section as HTMLElement).getByRole('link', { name: 'Bolt' })).toHaveAttribute('href', '/o/bolt')
+  expect(within(section as HTMLElement).getByRole('link', { name: 'Cobalt' })).toHaveAttribute('href', '/o/cobalt')
+  expect(section).toHaveTextContent('Contacted')
+  expect(section).toHaveTextContent('Paused')
+  expect(screen.getByText(/Partner · owned by/)).toBeInTheDocument()
+})
+
+test('a referrer that has introduced nobody says so, and its status picker is its own', async () => {
+  const user = userEvent.setup()
+  stubs({ 'GET /api/orgs/by-slug/acme': () => org({ id: 1, kind: 'referrer', status: 'identified' }) })
+  page()
+  expect(await screen.findByText('Nobody introduced yet.')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Status' }))
+  expect(screen.getAllByRole('menuitemradio').map((b) => b.textContent)).toEqual(['Identified', 'In talks', 'Active', 'Paused'])
+})

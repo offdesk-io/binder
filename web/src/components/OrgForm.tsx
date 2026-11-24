@@ -1,8 +1,8 @@
-import { Alert, Button, Field, Modal, SegmentedControl } from '@tiagopedras/tenon'
+import { Alert, Button, Dropdown, Field, Modal, SegmentedControl } from '@tiagopedras/tenon'
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/endpoints'
-import type { Kind, Org, OrgFields, Who } from '../api/types'
+import type { Kind, Org, OrgFields, OrgPatch, Who } from '../api/types'
 import { useSession } from '../app/session'
 import { changed, orNull, saveErrorText, text } from '../lib/forms'
 import { ConfirmDelete } from './ConfirmDelete'
@@ -10,6 +10,8 @@ import { ConfirmDelete } from './ConfirmDelete'
 export interface OrgFormState {
   name: string
   kind: Kind
+  /** The introducer's id as text, or '' for none. */
+  introduced_by: string
   owner_email: string
   website: string
   sector: string
@@ -28,6 +30,7 @@ export function orgForm(org: Org | undefined, me: Who): OrgFormState {
   return {
     name: text(org?.name),
     kind: org?.kind ?? 'lead',
+    introduced_by: org?.introduced_by_id == null ? '' : String(org.introduced_by_id),
     owner_email: org ? text(org.owner_email) : me.email,
     website: text(org?.website),
     sector: text(org?.sector),
@@ -60,6 +63,16 @@ export function orgBody(f: OrgFormState): OrgFields {
   }
 }
 
+const KINDS: { value: Kind; label: string }[] = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'client', label: 'Client' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'referrer', label: 'Referrer' },
+]
+
+/** Only a lead or client is introduced by someone. */
+const isIntroduced = (kind: Kind) => kind === 'lead' || kind === 'client'
+
 interface Props {
   open: boolean
   /** Left out for a new organisation. */
@@ -70,6 +83,18 @@ interface Props {
   onDeleted?: () => void
 }
 
+/** None, then every partner and referrer except the record itself. The record's current introducer stays listed even if
+ * the list has not loaded. */
+function introducerOptions(all: Org[], base: Org | undefined) {
+  const list = all.filter((o) => o.id !== base?.id)
+  const current = base?.introduced_by
+  if (current && !list.some((o) => o.id === current.id)) list.push({ id: current.id, name: current.name, kind: current.kind } as Org)
+  return [
+    { value: '', label: 'None' },
+    ...list.map((o) => ({ value: String(o.id), label: `${o.name} (${o.kind})` })),
+  ]
+}
+
 export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   const { me } = useSession()
   const [base, setBase] = useState(org)
@@ -77,6 +102,18 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
   const [error, setError] = useState<string>()
   const [nameError, setNameError] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [introducers, setIntroducers] = useState<Org[]>([])
+
+  // The partners and referrers a lead or client can be introduced by. A failed load leaves the picker with None.
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    Promise.all([api.orgs({ kind: 'partner', sort: 'name' }), api.orgs({ kind: 'referrer', sort: 'name' })]).then(
+      ([partners, referrers]) => { if (live) setIntroducers([...partners, ...referrers]) },
+      () => {},
+    )
+    return () => { live = false }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -101,13 +138,17 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
     try {
       const body = orgBody(form)
       let saved: Org
+      const introducer = isIntroduced(form.kind) && form.introduced_by !== '' ? Number(form.introduced_by) : null
       if (base) {
-        const diff = changed<OrgFields>(base, body)
+        const diff: Omit<OrgPatch, 'updated_at'> = changed<OrgFields>(base, body)
+        if (form.kind !== base.kind) diff.kind = form.kind
+        // A partner or referrer has no introducer: the server clears it, so nothing is sent.
+        if (isIntroduced(form.kind) && introducer !== base.introduced_by_id) diff.introduced_by_id = introducer
         saved = Object.keys(diff).length === 0
           ? base
           : await api.patchOrg(base.id, { ...diff, updated_at: base.updated_at })
       } else {
-        saved = await api.createOrg({ ...body, kind: form.kind })
+        saved = await api.createOrg({ ...body, kind: form.kind, ...(introducer === null ? {} : { introduced_by_id: introducer }) })
       }
       onSaved(saved)
     } catch (e) {
@@ -154,14 +195,23 @@ export function OrgForm({ open, org, onClose, onSaved, onDeleted }: Props) {
       <form id="org-form" className="tn-stack" onSubmit={(e) => { e.preventDefault(); void save() }}>
         {error && <Alert tone="error">{error}</Alert>}
         <Field label="Name" required error={nameError} value={form.name} onChange={set('name')} autoFocus />
-        {!base && (
+        <div className="tenon-field">
+          <span className="tenon-field__label">Kind</span>
+          <SegmentedControl
+            aria-label="Kind"
+            value={form.kind}
+            onChange={(kind) => setForm((f) => ({ ...f, kind }))}
+            options={KINDS}
+          />
+        </div>
+        {isIntroduced(form.kind) && (
           <div className="tenon-field">
-            <span className="tenon-field__label">Kind</span>
-            <SegmentedControl
-              aria-label="Kind"
-              value={form.kind}
-              onChange={(kind) => setForm((f) => ({ ...f, kind }))}
-              options={[{ value: 'lead', label: 'Lead' }, { value: 'client', label: 'Client' }]}
+            <span className="tenon-field__label">Introduced by</span>
+            <Dropdown
+              aria-label="Introduced by"
+              value={form.introduced_by}
+              onChange={(v) => setForm((f) => ({ ...f, introduced_by: v }))}
+              options={introducerOptions(introducers, base)}
             />
           </div>
         )}

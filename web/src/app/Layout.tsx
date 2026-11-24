@@ -12,8 +12,8 @@ import { Wordmark } from './Wordmark'
 
 const NAV = [
   { to: '/', label: 'Overview', end: true },
-  { to: '/pipeline', label: 'Pipeline', end: false },
-  { to: '/list', label: 'List', end: false },
+  { to: '/pipeline', label: 'Leads pipeline', end: false },
+  { to: '/clients', label: 'Clients', end: false },
 ]
 
 /** On a phone the views are a tab bar at the foot of the screen; on a desktop they are the AppHeader's tabs. */

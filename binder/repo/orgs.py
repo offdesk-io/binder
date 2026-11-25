@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
 from ..statuses import INTRODUCER_KINDS, SECTORS, check_transition, initial_status
-from . import like, row
+from . import hooks as hook_queue, like, row
 
 FIELDS = ("name", "website", "sector", "description", "size", "location", "owner_email", "source",
           "value_estimate", "tags", "summary", "next_step", "next_step_due", "introduced_by_id")
@@ -170,7 +170,7 @@ def create(conn: sqlite3.Connection, data: Dict[str, Any], by: str,
 
 
 def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str,
-           owners: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+           owners: Optional[Sequence[str]] = None, events: bool = False) -> Dict[str, Any]:
     """A PATCH may change the kind, to fix a record filed as the wrong one. The
     record then takes the new kind's first status, or `status` from the same
     PATCH checked against the new kind, and history records the move like any
@@ -180,7 +180,11 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
 
     A record that is or becomes a referrer keeps one primary contact: made,
     named after it, if it has none, renamed with it, and holding the `person`
-    fields. A record that stops being a referrer keeps its contacts."""
+    fields. A record that stops being a referrer keeps its contacts.
+
+    With `events` (the core's webhook is set), a change of status queues an
+    event for the core in the same transaction: `org.won` for a lead won,
+    `org.moved` for any other move (binder/hooks.py)."""
     expected = patch.pop("updated_at")
     person = patch.pop("person", None) or {}
     conn.execute("BEGIN IMMEDIATE")
@@ -224,6 +228,12 @@ def update(conn: sqlite3.Connection, org_id: int, patch: Dict[str, Any], by: str
         sets["updated_at"], sets["updated_by"] = at, by
         conn.execute("UPDATE organisations SET %s WHERE id = ?" % ", ".join("%s = ?" % k for k in sets),
                      list(sets.values()) + [org_id])
+        if events and (kind_changed or status != current["status"]):
+            to = new_status or status
+            hook_queue.queue(conn, "org.won" if to == "won" else "org.moved", {
+                "org": {"id": org_id, "slug": current["slug"], "name": sets.get("name", current["name"]),
+                        "kind": kind, "status": status},
+                "from": current["status"], "to": to, "by": by}, at)
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")

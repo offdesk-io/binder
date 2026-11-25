@@ -9,6 +9,7 @@ errors come back as tool errors with its own message.
 BINDER_URL is Binder's address (default http://127.0.0.1:8770, on the same machine as the core)."""
 
 import os
+import re
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 from urllib.parse import quote
 
@@ -35,6 +36,9 @@ UPDATED_AT = {"type": "string", "minLength": 1,
 
 class Failed(Exception):
     """A plain sentence for the model."""
+
+
+UNREADABLE = "Binder gave an answer this tool could not read. Try again later."
 
 
 def _obj(props: Dict[str, Any], required: List[str]) -> Dict[str, Any]:
@@ -115,11 +119,19 @@ class Binder:
         except httpx.HTTPError:
             raise Failed("Binder did not answer. Try again later.") from None
         if r.status_code < 400:
-            return r.json() if r.content else None
+            try:
+                return r.json() if r.content else None
+            except ValueError:
+                raise Failed(UNREADABLE) from None
         try:
-            detail = r.json().get("detail") or ""
+            body = r.json()
         except ValueError:
-            detail = ""
+            body = None
+        detail = body.get("detail") if isinstance(body, dict) else None
+        if isinstance(detail, list):   # a list of {loc, msg}: name the first
+            first = detail[0] if detail and isinstance(detail[0], dict) else {}
+            detail = "%s: %s" % (".".join(str(p) for p in first.get("loc", [])[1:]) or "request", first.get("msg", ""))
+        detail = _cut(detail, 160) if isinstance(detail, str) else ""
         if r.status_code == 409:
             raise Failed("It changed since you read it; read it again with binder.org and use its new updated_at.")
         if r.status_code == 401:
@@ -181,13 +193,15 @@ async def org(b: Binder, args: Dict[str, Any]) -> str:
     lines.append("")
     if contacts:
         lines.append("Contacts:")
-        for c in contacts:
+        for c in contacts[:MAX_ROWS]:
             bits = [x for x in (c.get("role"), c.get("email"), c.get("phone")) if x]
             if c.get("is_primary"):
                 bits.append("primary")
             if c.get("connector") or c.get("is_referrer"):
                 bits.append("key person")
             lines.append("- #%d %s%s" % (c["id"], c["name"], ", " + ", ".join(bits) if bits else ""))
+        if len(contacts) > MAX_ROWS:
+            lines.append("… and %d more contacts, not shown." % (len(contacts) - MAX_ROWS))
     else:
         lines.append("No contacts.")
     if interactions:
@@ -286,6 +300,29 @@ HANDLERS: Dict[str, Callable[[Binder, Dict[str, Any]], Awaitable[str]]] = {
 }
 
 
+def _fits(value: Any, schema: Dict[str, Any]) -> bool:
+    """The few JSON Schema rules these tools use: type (one or a list), enum, pattern, minLength, items, anyOf."""
+    if "anyOf" in schema:
+        return any(_fits(value, s) for s in schema["anyOf"])
+    types_ = schema.get("type")
+    types_ = [types_] if isinstance(types_, str) else types_ or []
+    ok = {"string": lambda v: isinstance(v, str), "null": lambda v: v is None,
+          "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
+          "array": lambda v: isinstance(v, list)}
+    if types_ and not any(ok[t](value) for t in types_):
+        return False
+    if isinstance(value, str):
+        if "enum" in schema and value not in schema["enum"]:
+            return False
+        if "pattern" in schema and not re.match(schema["pattern"], value):
+            return False
+        if len(value) < schema.get("minLength", 0):
+            return False
+    if isinstance(value, list) and "items" in schema:
+        return all(_fits(v, schema["items"]) for v in value)
+    return True
+
+
 def _check(name: str, args: Dict[str, Any]) -> None:
     tool = next(t for t in TOOLS if t.name == name)
     schema = tool.input_schema
@@ -295,6 +332,11 @@ def _check(name: str, args: Dict[str, Any]) -> None:
     extra = [k for k in args if k not in schema["properties"]]
     if extra:
         raise Failed("Unknown argument %s." % ", ".join(extra))
+    for key, value in args.items():
+        prop = schema["properties"][key]
+        if not _fits(value, prop):
+            allowed = " (one of %s)" % ", ".join(prop["enum"]) if "enum" in prop else ""
+            raise Failed("%s is not valid%s; see the tool's schema." % (key, allowed))
 
 
 def _result(text: str, error: bool = False) -> types.CallToolResult:
@@ -318,6 +360,9 @@ def make_server(http: httpx.AsyncClient) -> Server:
             return _result(await HANDLERS[name](Binder(http, token), args))
         except Failed as e:
             return _result(str(e), error=True)
+        except (KeyError, TypeError, ValueError, AttributeError, IndexError):
+            # Binder answered with a shape this tool does not expect: a short sentence, never the exception.
+            return _result(UNREADABLE, error=True)
 
     return Server("binder", on_list_tools=list_tools, on_call_tool=call_tool)
 

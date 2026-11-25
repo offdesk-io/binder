@@ -182,3 +182,50 @@ async def test_binder_down_is_a_plain_error(acme):
     r = await call(srv, "find", {"query": "acme"})
     assert r.is_error and "Binder did not answer" in text(r)
     assert "Bearer" not in text(r)
+
+
+def mock_server(handler):
+    import httpx
+    from binder_mcp.server import make_server
+    return make_server(httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://binder"))
+
+
+@pytest.mark.parametrize("status, body, ctype", [
+    (500, b"[1, 2]", "application/json"),                                   # an error body that is not an object
+    (422, b'{"detail": [{"loc": ["q"], "msg": "bad"}]}', "application/json"),  # a detail that is a list
+    (502, b"<html>Bad gateway</html>", "text/html"),                         # not JSON at all
+    (200, b"<html>not json</html>", "text/html"),                            # a 2xx that is not JSON
+    (200, b'{"unexpected": true}', "application/json"),                      # JSON of the wrong shape
+])
+async def test_an_unexpected_reply_is_a_short_plain_error(status, body, ctype):
+    import httpx
+    srv = mock_server(lambda req: httpx.Response(status, content=body, headers={"content-type": ctype}))
+    r = await call(srv, "find", {"query": "acme"})
+    out = text(r)
+    assert r.is_error
+    assert len(out) < 200 and "Traceback" not in out and "Error(" not in out and "<html>" not in out
+
+
+@pytest.mark.parametrize("name, args, word", [
+    ("find", {"query": 5}, "query"),
+    ("find", {"query": "x", "kind": "planet"}, "kind"),
+    ("org", {"slug": ["a"]}, "slug"),
+    ("log", {"slug": "acme-studio", "type": "call", "summary": "x", "contact_ids": ["one"]}, "contact_ids"),
+    ("log", {"slug": "acme-studio", "type": "call", "summary": "x", "contact_ids": 3}, "contact_ids"),
+    ("next_step", {"slug": "acme-studio", "next_step": 7, "updated_at": "x"}, "next_step"),
+    ("next_step", {"slug": "acme-studio", "next_step": "x", "due": "tomorrow", "updated_at": "x"}, "due"),
+    ("move", {"slug": "acme-studio", "status": None, "updated_at": "x"}, "status"),
+])
+async def test_arguments_of_the_wrong_type_are_refused_before_binder(server, seen, name, args, word):
+    r = await call(server, name, args)
+    assert r.is_error and word in text(r)
+    assert seen == []
+
+
+async def test_org_lists_at_most_fifty_contacts_and_says_how_many_more(server, direct, acme):
+    for n in range(55):
+        direct.post("/api/orgs/%d/contacts" % acme["org"]["id"], json={"name": "Person %02d" % n})
+    out = text(await call(server, "org", {"slug": "acme-studio"}))
+    shown = out.split("Contacts:\n")[1].split("Last interactions")[0]
+    assert shown.count("- #") == 50
+    assert "and 6 more contacts" in out

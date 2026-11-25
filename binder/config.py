@@ -21,6 +21,16 @@ BINDER_OWNERS lists who an organisation can be handled by, as
 `email=Name` pairs separated by commas. It is kept out of the repo, since the
 names are real people's. Unset, the list is empty and only "nobody" can be
 chosen.
+BINDER_CORE_TOKEN_KEY is the Offdesk core's token key (the same hex as the
+core's CORE_TOKEN_KEY, at least 64 hex digits). Set, a request carrying the
+core's signed token as `Authorization: Bearer` acts for the person or agent
+it names (binder/auth.py); unset, tokens are refused.
+BINDER_ADMINS lists, by email and separated by commas, who may export or
+erase what Binder holds about one person (binder/api/subject.py) through the
+core's token. Signed-in team members may do it through Binder's own app.
+BINDER_CORE_HOOK_URL is where Binder tells the core that something happened
+(a lead moved, a client won), signed with BINDER_CORE_HOOK_SECRET
+(binder/hooks.py). Unset, no events are kept or sent.
 """
 
 import os
@@ -55,6 +65,10 @@ class Settings:
     bench_core: str = ""  # the core/ folder of a Bench checkout, for todo.py
     bench_file: str = ""  # a todo.md to read instead of Bench, for local development
     owners: Tuple[Tuple[str, str], ...] = ()  # (email, name) pairs a record can be handled by
+    core_token_key: bytes = field(default=b"", repr=False)  # a secret: checks the core's tokens; empty is off
+    admins: Tuple[str, ...] = ()  # who may export and erase through the core's token
+    hook_url: str = ""  # the core's webhook for Binder's events; empty is off
+    hook_secret: str = field(default="", repr=False)  # a secret: signs those events
 
 
 def parse_owners(raw: str) -> Tuple[Tuple[str, str], ...]:
@@ -70,6 +84,43 @@ def parse_owners(raw: str) -> Tuple[Tuple[str, str], ...]:
             raise ConfigError("BINDER_OWNERS names %s twice." % email)
         out.append((email, name))
     return tuple(out)
+
+
+def parse_token_key(raw: str) -> bytes:
+    if not raw:
+        return b""
+    try:
+        key = bytes.fromhex(raw.strip())
+    except ValueError:
+        raise ConfigError("BINDER_CORE_TOKEN_KEY must be hex, the same as the core's CORE_TOKEN_KEY.")
+    if len(key) < 32:
+        raise ConfigError("BINDER_CORE_TOKEN_KEY must be at least 32 bytes (64 hex digits).")
+    return key
+
+
+def parse_admins(raw: str) -> Tuple[str, ...]:
+    out = []
+    for part in raw.split(","):
+        email = part.strip().lower()
+        if not email:
+            continue
+        if "@" not in email:
+            raise ConfigError("BINDER_ADMINS needs emails separated by commas, not %r." % part.strip())
+        if email not in out:
+            out.append(email)
+    return tuple(out)
+
+
+def check_hook_url(url: str, secret: str) -> str:
+    if not url:
+        return ""
+    parts = urlsplit(url)
+    loopback = parts.scheme == "http" and parts.hostname in LOOPBACK
+    if not (parts.scheme == "https" or loopback):
+        raise ConfigError("BINDER_CORE_HOOK_URL must be https (or loopback).")
+    if not secret:
+        raise ConfigError("BINDER_CORE_HOOK_URL needs BINDER_CORE_HOOK_SECRET, the secret the core's webhook checks.")
+    return url
 
 
 def load_settings(env: Mapping[str, str]) -> Settings:
@@ -132,4 +183,8 @@ def load_settings(env: Mapping[str, str]) -> Settings:
         bench_core=bench_core,
         bench_file=bench_file,
         owners=parse_owners(env.get("BINDER_OWNERS", "")),
+        core_token_key=parse_token_key(env.get("BINDER_CORE_TOKEN_KEY", "")),
+        admins=parse_admins(env.get("BINDER_ADMINS", "")),
+        hook_url=check_hook_url(env.get("BINDER_CORE_HOOK_URL", ""), env.get("BINDER_CORE_HOOK_SECRET", "")),
+        hook_secret=env.get("BINDER_CORE_HOOK_SECRET", ""),
     )

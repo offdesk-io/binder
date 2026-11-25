@@ -6,11 +6,11 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import JSONResponse
 
-from . import ai as ai_module, bench as bench_module, errors, jobs, web
+from . import ai as ai_module, bench as bench_module, errors, hooks as hooks_module, jobs, web
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
-from .api import contacts, interactions, misc, orgs, people, research, summarise, thanks
+from .api import contacts, interactions, misc, orgs, people, research, subject, summarise, thanks
 from .repo import research as research_repo
 
 _FROM_SETTINGS = object()
@@ -18,11 +18,13 @@ _FROM_SETTINGS = object()
 
 def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
                run_job: Optional[Callable[[Callable[[], None]], None]] = None,
-               bench: Any = _FROM_SETTINGS) -> FastAPI:
+               bench: Any = _FROM_SETTINGS, hooks: Any = _FROM_SETTINGS) -> FastAPI:
     """`ai` and `run_job` are for tests: the AI to use (None for none), and
     how a background job starts (default: its own thread). `bench` is the
     Bench board reader (None for off); by default it comes from the settings,
-    and only then does the background refresh timer start."""
+    and only then does the background refresh timer start. `hooks` is the
+    sender of events to the core (None for off); likewise, its thread starts
+    only when it comes from the settings."""
     conn = connect(settings.db_path)
     migrate(conn, settings.db_path)
     research_repo.fail_interrupted(conn)  # a run does not survive a restart
@@ -34,6 +36,9 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     app.state.run_job = run_job or jobs.in_thread
     app.state.bench = bench_module.from_settings(settings) if bench is _FROM_SETTINGS else bench
     app.state.bench_refresher = None
+    app.state.hooks = hooks_module.from_settings(settings) if hooks is _FROM_SETTINGS else hooks
+    if hooks is _FROM_SETTINGS and app.state.hooks is not None:
+        app.state.hooks.start()
     if app.state.bench is not None:
         refresh_job = run_job or functools.partial(jobs.in_thread, name="bench-refresh")
         app.state.bench_refresher = jobs.Refresher(settings.db_path, app.state.bench, refresh_job)
@@ -75,5 +80,6 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     api.include_router(interactions.router)
     api.include_router(research.router)
     api.include_router(summarise.router)
+    api.include_router(subject.router)
     app.include_router(api)
     return app

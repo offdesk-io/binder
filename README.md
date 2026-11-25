@@ -44,6 +44,70 @@ board; it never writes `todo.md`. A refresh runs every 10 minutes, and when the
 cache is more than a minute old as an organisation opens. While Bench is down,
 it retries at most once a minute.
 
+## The Offdesk core
+
+Binder is a module of the Offdesk core: the core's PA and agents read and
+write Binder through an MCP server that ships here, in `mcp/` (the
+`binder-mcp` package, Python 3.10 or newer, with `mcp` and `httpx` pinned to
+the core's versions). It never imports Binder: it calls Binder's HTTP API at
+`BINDER_URL` (default `http://127.0.0.1:8770`). Its tools are `find`, `org`,
+`pipeline` and `people` (reads) and `log`, `next_step` and `move` (writes, no
+deletes); the core names them `binder.find` and so on. `mcp/HOWTO.md` tells
+the PA how to use them, and is copied into the core's install
+(`installs/offdesk/howto/binder.md`); change both together.
+
+Each call carries the core's signed token, which the MCP server passes on as
+`Authorization: Bearer`. Binder checks it with `BINDER_CORE_TOKEN_KEY` (the
+same hex as the core's `CORE_TOKEN_KEY`, `binder/tokens.py`) and acts for the
+person it names (`sub`), through the agent its `agent` claim names. A write
+is recorded (`updated_by`, `author_email`, `by_email`) as the person when the
+PA acts for them (`agent` is `pa`); as `agent:<name>` for an agent of the team
+(`sub` is `agent:<name>`); and as `<email> via <agent>` for a routine or a
+person's own agent, for example `ana@example.com via routine:r1` or
+`ana@example.com via agent:helper`, so the web can show both later. A request
+with a token never reads the sign-in headers, and writes still need
+`X-Binder: 1`. Without the key every token is refused.
+
+Events carry an `id`, their queue row's. Delivery is at least once (an event
+whose answer was lost is sent again), so a receiver drops a repeated id; the
+core does.
+
+Binder tells the core when a record changes status: `org.won` for a lead won,
+`org.moved` for any other move. Each event is queued in the same transaction
+as the move (`hook_queue`, migration 010) and sent by a background thread to
+`BINDER_CORE_HOOK_URL`, signed with `BINDER_CORE_HOOK_SECRET` as the core's
+webhooks expect (`X-Offdesk-Timestamp`, and `X-Offdesk-Signature` over
+`<timestamp>.<body>`). Failures are retried after 30 seconds, doubling up to
+an hour, for a day (`binder/hooks.py`). Without the URL nothing is queued.
+
+`GET /api/subject?email=` exports, and `POST /api/subject/erase` erases, what
+Binder holds about one person (see the API below). Through the core's token
+only someone in `BINDER_ADMINS` may; a signed-in team member may through
+Binder itself.
+
+The MCP server's tests run Binder's app in process, from their own venv:
+
+```
+python3.12 -m venv mcp/.venv && mcp/.venv/bin/pip install -e './mcp[dev]' -e '.[dev]'
+(cd mcp && .venv/bin/pytest -q)
+```
+
+On the server (the owner runs these):
+
+1. The core's set-up installs `mcp/` into the core's venv
+   (`/opt/core/app/.venv`) from a copy of `/opt/binder/app/mcp`, and again
+   whenever it changed: after a deploy that changes `mcp/`, run the core's
+   `setup-server.sh --apply`.
+2. Put the core's `CORE_TOKEN_KEY` (from `/etc/core/core.env`) in
+   `/etc/binder/binder.env` as `BINDER_CORE_TOKEN_KEY`, and the admins in
+   `BINDER_ADMINS`.
+3. For events: an agent in the core's install with the trigger
+   `{ webhook = "binder", secret_env = "HOOK_BINDER" }`; one new secret
+   (`openssl rand -hex 32`) as `HOOK_BINDER` in `/etc/core/core.env` and as
+   `BINDER_CORE_HOOK_SECRET` in `/etc/binder/binder.env`, with
+   `BINDER_CORE_HOOK_URL=http://127.0.0.1:8780/api/hooks/binder`.
+4. Restart both: `systemctl restart binder.service core.service`.
+
 ## Deploy
 
 Offdesk's own install is `https://binder.offdesk.io`, on the same server as
@@ -309,13 +373,40 @@ A partner moves freely between `identified`, `contacted`, `in_talks`, `terms_sen
 `active` and `paused`, and a referrer between the same steps without
 `terms_sent`.
 
+### A person's data
+
+- **Export** (`GET /api/subject?email=`): `{email, contacts, interactions,
+  research}`. `contacts` is every contact with that email (any case, on any
+  organisation), each as a Contact with its `thanks` rows; `interactions` is
+  every interaction naming one of them; `research` is every research brief
+  about one of them.
+- **Erase** (`POST /api/subject/erase`, `{email, confirm: true}`; without
+  `confirm: true` it is 422 and nothing changes): each such contact is
+  renamed `Erased`, loses its role, email, phone, LinkedIn, postal address,
+  relationship and star, and its notes say when it was erased; its thanks
+  rows lose `what` and `note`; its research briefs are deleted; each
+  interaction naming one of them keeps its type and date, and its summary
+  becomes a line saying when it was erased, with no next step; events for the
+  core that name them are dropped. It runs with SQLite's `secure_delete` on
+  and optimises the search index afterwards. Answers `{contacts,
+  interactions, research}`, the numbers erased. One line in `erasures` keeps
+  when, by whom and how many, never the data. An email nobody has changes
+  nothing. Not erased (known gaps until the core's step 7): a referrer kept
+  as an organisation named after the person, the person named in free text
+  elsewhere, and copies outside the live database (nightly copies for 30
+  days, the copies taken before each deploy and migration).
+- Both need a signed-in team member, or the core's token for someone in
+  `BINDER_ADMINS` acting through the PA (`agent` is `pa`); an agent's token,
+  or an admin's routine or own agent, is 403. An email without `@` is 422.
+
 ### Saves and errors
 
 Every PATCH carries the `updated_at` it loaded. A stale one gets 409.
 
 Every error body has `detail`, a sentence to show people:
 
-- 401 not signed in, 403 wrong team or missing `X-Binder`, 404 not found.
+- 401 not signed in, or a bad or expired core token; 403 wrong team or
+  missing `X-Binder`; 404 not found.
 - 409: a stale save adds `current`, the record as it is now.
 - 422: a broken rule. Request validation adds `errors`, a list of
   `{loc, msg, type}`, and `detail` joins them as `field: message`.

@@ -19,7 +19,7 @@ def list_interactions(org_id: int, db: sqlite3.Connection = Depends(get_db)):
 @router.post("/orgs/{org_id}/interactions", status_code=201)
 def log_interaction(org_id: int, body: InteractionCreate, db: sqlite3.Connection = Depends(get_db),
                     who: Identity = Depends(guard)):
-    return interactions.create(db, org_id, body.model_dump(), who.email)
+    return interactions.create(db, org_id, body.model_dump(), who.by)
 
 
 @router.get("/orgs/{org_id}/timeline")
@@ -37,7 +37,7 @@ def contact_interactions(contact_id: int, db: sqlite3.Connection = Depends(get_d
 @router.patch("/interactions/{interaction_id}")
 def patch_interaction(interaction_id: int, body: InteractionPatch, db: sqlite3.Connection = Depends(get_db),
                       who: Identity = Depends(guard)):
-    return interactions.update(db, interaction_id, body.model_dump(exclude_unset=True), who.email)
+    return interactions.update(db, interaction_id, body.model_dump(exclude_unset=True), who.by)
 
 
 @router.delete("/interactions/{interaction_id}", status_code=204)

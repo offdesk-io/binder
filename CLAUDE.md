@@ -15,10 +15,11 @@ Read before changing anything:
 - Plan 5, deploy: `docs/superpowers/plans/2026-11-16-binder-5-deploy.md`
 - Plan 6, UI consistency with Bench: `docs/superpowers/plans/2026-11-18-binder-6-ui-consistency.md`; follow-up: `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`
 - Binder 8, people and thanks (key connectors, the People kind on the pipeline, year-end thanks): `docs/superpowers/specs/2026-11-24-binder-8-people-thanks-design.md`
+- Binder 9, a module of the Offdesk core (its MCP server in `mcp/`, the core's token, events for the core, export and erasure): the core repository's `docs/superpowers/specs/2026-11-25-core-9a-binder-module-design.md`
 
 ## Where the work stands
 
-There are six plans, each one spec → plan → build → review:
+The plans, each one spec → plan → build → review:
 
 1. Core API: merged to `main`.
 2. Frontend (React + Vite + TypeScript + Tenon, desktop and phone): done.
@@ -33,6 +34,13 @@ There are six plans, each one spec → plan → build → review:
    list grouped by stage, kind chips and A to Z on the List, Owner
    dropdown; `docs/superpowers/plans/2026-11-18-binder-6b-pipeline-list.md`):
    merged to `main` (PR #11) and live.
+8. People and thanks: merged to `main` (PR #22).
+9. A module of the Offdesk core (core step 9a), on `feature/binder-9-module`:
+   the core's signed token (`binder/tokens.py`, `binder/auth.py`), events
+   for the core (`binder/hooks.py`, migration 010), export and erasure of a
+   person's data (`binder/api/subject.py`, migration 011), and the MCP
+   server in `mcp/` with its how-to. The web is unchanged. Server steps are
+   in the README, "The Offdesk core".
 
 ## Run and test
 
@@ -86,6 +94,13 @@ services and never run in CI.
   - Once a migration has been deployed, never edit it: add a new one.
 - **Search.** The FTS5 table is `search(kind, ref_id, org_id, title, body)`.
   Triggers keep it up to date. Bind `ref_id` and `org_id` as ints.
+- **The core.** `mcp/` is its own package for the Offdesk core (Python 3.10
+  or newer, its own `mcp/.venv`); it calls Binder's HTTP API only and never
+  imports `binder`, and Binder never imports it. `mcp/HOWTO.md` has a copy in
+  the core's `installs/offdesk/howto/binder.md`. Run its tests (README, "The
+  Offdesk core") whenever an API it uses changes. Events for the core are
+  queued with the change, inside its transaction (`repo/hooks.py`), never
+  sent from a request.
 - **Sign-in.**
   - `BINDER_AUTH=header` trusts the `X-Offdesk-Email`, `X-Offdesk-Name` and
     `X-Offdesk-Teams` headers from nginx. Unset means local development with a
@@ -93,6 +108,8 @@ services and never run in CI.
   - Both modes listen on loopback only.
   - Every non-GET request needs `X-Binder: 1`.
   - Only the team named by `BINDER_TEAM` gets in.
+  - `Authorization: Bearer` is the core's token, checked with
+    `BINDER_CORE_TOKEN_KEY`; such a request never reads the sign-in headers.
 
 ## Rules for the frontend
 

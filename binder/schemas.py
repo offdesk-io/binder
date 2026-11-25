@@ -202,3 +202,25 @@ class SummariseBody(_Body):
     text: str = Field(min_length=1, max_length=30000)
 
     _text = field_validator("text")(not_blank)
+
+
+def subject_email(v: str) -> str:
+    """The email a person is found by: trimmed and lower case."""
+    v = v.strip().lower()
+    if "@" not in v or len(v) > 320:
+        raise ValueError("must be an email address")
+    return v
+
+
+def confirmed(v: Optional[bool]) -> bool:
+    if v is not True:
+        raise ValueError("must be true: erasing cannot be undone")
+    return v
+
+
+class SubjectErase(_Body):
+    email: str
+    confirm: Optional[bool] = Field(default=None, validate_default=True)
+
+    _email = field_validator("email")(subject_email)
+    _confirm = field_validator("confirm")(confirmed)

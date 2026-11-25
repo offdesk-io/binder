@@ -59,6 +59,13 @@ jobs:
           .venv/bin/pip install --quiet -e '.[dev]'
           .venv/bin/pytest -q
 
+      # The MCP server for the Offdesk core (mcp/), against Binder's app in process.
+      - name: MCP server suite
+        run: |
+          python3.14 -m venv mcp/.venv
+          mcp/.venv/bin/pip install --quiet -e './mcp[dev]' -e '.[dev]'
+          (cd mcp && .venv/bin/pytest -q)
+
       - name: Shell scripts
         run: shellcheck -S warning deploy/*.sh
 

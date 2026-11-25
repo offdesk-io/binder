@@ -59,10 +59,18 @@ the PA how to use them, and is copied into the core's install
 Each call carries the core's signed token, which the MCP server passes on as
 `Authorization: Bearer`. Binder checks it with `BINDER_CORE_TOKEN_KEY` (the
 same hex as the core's `CORE_TOKEN_KEY`, `binder/tokens.py`) and acts for the
-person it names; a token for `agent:<name>` or `routine:<id>` acts for the
-team and is recorded as that agent. A request with a token never reads the
-sign-in headers, and writes still need `X-Binder: 1`. Without the key every
-token is refused.
+person it names (`sub`), through the agent its `agent` claim names. A write
+is recorded (`updated_by`, `author_email`, `by_email`) as the person when the
+PA acts for them (`agent` is `pa`); as `agent:<name>` for an agent of the team
+(`sub` is `agent:<name>`); and as `<email> via <agent>` for a routine or a
+person's own agent, for example `ana@example.com via routine:r1` or
+`ana@example.com via agent:helper`, so the web can show both later. A request
+with a token never reads the sign-in headers, and writes still need
+`X-Binder: 1`. Without the key every token is refused.
+
+Events carry an `id`, their queue row's. Delivery is at least once (an event
+whose answer was lost is sent again), so a receiver drops a repeated id; the
+core does.
 
 Binder tells the core when a record changes status: `org.won` for a lead won,
 `org.moved` for any other move. Each event is queued in the same transaction

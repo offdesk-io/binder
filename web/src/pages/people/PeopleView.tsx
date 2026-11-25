@@ -71,7 +71,7 @@ export function PeopleView({ find }: { find: string }) {
   }
   return (
     <div className="tn-table-wrap">
-      <table className="tn-custom-table tn-custom-people-table" aria-label="Key people">
+      <table className="tn-custom-table" aria-label="Key people">
         <thead>
           <tr>
             {HEADS.map((h) => (

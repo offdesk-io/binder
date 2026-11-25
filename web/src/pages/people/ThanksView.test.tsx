@@ -4,7 +4,7 @@ import { expect, test } from 'vitest'
 import type { ThanksPut } from '../../api/types'
 import { todayIso } from '../../lib/format'
 import { keyPerson, thanks } from '../../test/fixtures'
-import { renderApp, stubFetch } from '../../test/render'
+import { appTree, renderApp, stubFetch } from '../../test/render'
 import { ThanksView, years } from './ThanksView'
 
 const Y = new Date().getFullYear()
@@ -128,4 +128,64 @@ test('with nobody yet it says how to add someone', async () => {
   stubFetch({ [`GET /api/thanks?year=${Y}`]: () => [] })
   renderApp(<ThanksView year={Y} />)
   expect(await screen.findByText(/No key people yet/)).toBeInTheDocument()
+})
+
+test('a save that comes back after the year changed leaves the new year alone', async () => {
+  const user = userEvent.setup()
+  let release!: (t: unknown) => void
+  const older = [{ person: bea, thanks: null }, { person: marta, thanks: null }]
+  stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`GET /api/thanks?year=${Y - 1}`]: () => older,
+    [`PUT /api/thanks/8/${Y}`]: () => new Promise((r) => { release = r }),
+  })
+  const { rerender } = renderApp(<ThanksView year={Y} />)
+  await user.click(await screen.findByLabelText('Sent to Marta'))
+  rerender(appTree(<ThanksView year={Y - 1} />))
+  expect(await screen.findByText('0 of 2 sent')).toBeInTheDocument()
+  release(thanks({ id: 2, contact_id: 8, year: Y, sent_on: `${Y}-12-10` }))
+  await new Promise((r) => setTimeout(r, 20))
+  expect(screen.getByText('0 of 2 sent')).toBeInTheDocument()
+  expect(screen.getByLabelText('Sent to Marta')).not.toBeChecked()
+})
+
+test('ticking then unticking during the round trip ends with sent_on null', async () => {
+  const user = userEvent.setup()
+  let release!: (t: unknown) => void
+  let n = 0
+  const calls = stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`PUT /api/thanks/8/${Y}`]: (b) =>
+      ++n === 1
+        ? new Promise((r) => { release = r })
+        : thanks({ id: 2, contact_id: 8, year: Y, sent_on: (b as ThanksPut).sent_on ?? null, updated_at: 'second' }),
+  })
+  renderApp(<ThanksView year={Y} />)
+  const box = await screen.findByLabelText('Sent to Marta')
+  await user.click(box)
+  expect(box).toBeChecked()
+  await user.click(box)
+  expect(box).not.toBeChecked()
+  release(thanks({ id: 2, contact_id: 8, year: Y, sent_on: todayIso(), updated_at: 'first' }))
+  await waitFor(() => expect(n).toBe(2))
+  const puts = calls.filter((c) => c.key.startsWith('PUT'))
+  expect(puts[0].body).toEqual({ sent_on: todayIso(), updated_at: null })
+  expect(puts[1].body).toEqual({ sent_on: null, updated_at: 'first' })
+  expect(await screen.findByText('1 of 2 sent')).toBeInTheDocument()
+  expect(box).not.toBeChecked()
+})
+
+test('a 409 with no current in its body is shown as an error, and the line keeps what was typed', async () => {
+  const user = userEvent.setup()
+  stubFetch({
+    [`GET /api/thanks?year=${Y}`]: list,
+    [`PUT /api/thanks/9/${Y}`]: () =>
+      new Response(JSON.stringify({ detail: 'That conflicts with an existing record' }), { status: 409, headers: { 'Content-Type': 'application/json' } }),
+  })
+  renderApp(<ThanksView year={Y} />)
+  await user.type(await screen.findByLabelText('What for Bea'), '!')
+  await user.tab()
+  expect(await screen.findByText('That conflicts with an existing record')).toBeInTheDocument()
+  expect(screen.getByLabelText('What for Bea')).toHaveValue('Port wine!')
+  expect(screen.getByLabelText('Sent to Bea')).toBeChecked()
 })

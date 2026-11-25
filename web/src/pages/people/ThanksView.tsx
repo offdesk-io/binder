@@ -21,7 +21,8 @@ type Change = Omit<ThanksPut, 'updated_at'>
 interface LineProps {
   year: number
   item: ThanksItem
-  onSaved: (t: Thanks | null) => void
+  /** A save's answer, with the year it was made for. */
+  onSaved: (forYear: number, t: Thanks | null) => void
 }
 
 /** One key person's line: who and where to send it, what, whether it went, and a note. Each change saves on its own. */
@@ -30,6 +31,10 @@ function ThanksLine({ year, item, onSaved }: LineProps) {
   const t = item.thanks
   const [what, setWhat] = useState(t?.what ?? '')
   const [note, setNote] = useState(t?.note ?? '')
+  // Sent follows the click at once, so a second click during the round trip toggles what is on screen.
+  const [sent, setSent] = useState(!!t?.sent_on)
+  // The row as the server last gave it, to put Sent back when a save fails.
+  const last = useRef<Thanks | null>(t)
   const [error, setError] = useState<string>()
   // A change made while a save is in flight waits here and goes out after it, on the row the save returned.
   const inflight = useRef(false)
@@ -49,17 +54,24 @@ function ThanksLine({ year, item, onSaved }: LineProps) {
         try {
           const saved = await api.putThanks(p.id, year, { ...next, updated_at: stamp.current })
           stamp.current = saved.updated_at
-          onSaved(saved)
+          last.current = saved
+          onSaved(year, saved)
         } catch (e) {
           pending.current = {}
-          setError(saveErrorText(e))
-          if (e instanceof ApiError && e.status === 409) {
+          // A stale save carries `current` (the row, or null when there is none): show that. Any other failure,
+          // a 409 without it included, is only an error, and the fields keep what was typed.
+          if (e instanceof ApiError && e.status === 409 && e.current !== undefined) {
+            setError(saveErrorText(e))
             const current = (e.current ?? null) as Thanks | null
             stamp.current = current?.updated_at ?? null
-            onSaved(current)
+            last.current = current
+            onSaved(year, current)
             setWhat(current?.what ?? '')
             setNote(current?.note ?? '')
+          } else {
+            setError(e instanceof ApiError ? e.detail : saveErrorText(e))
           }
+          setSent(!!last.current?.sent_on)
         }
       }
     } finally {
@@ -88,8 +100,11 @@ function ThanksLine({ year, item, onSaved }: LineProps) {
       <Input aria-label={`What for ${p.name}`} placeholder="What" value={what} maxLength={200}
         onChange={(e) => setWhat(e.target.value)} onBlur={() => leave('what', what)} />
       <label className="tn-custom-check">
-        <input type="checkbox" aria-label={`Sent to ${p.name}`} checked={!!t?.sent_on}
-          onChange={(e) => void save({ sent_on: e.target.checked ? todayIso() : null })} />
+        <input type="checkbox" aria-label={`Sent to ${p.name}`} checked={sent}
+          onChange={(e) => {
+            setSent(e.target.checked)
+            void save({ sent_on: e.target.checked ? todayIso() : null })
+          }} />
         Sent
       </label>
       <Input aria-label={`Note for ${p.name}`} placeholder="Note" value={note} maxLength={2000}
@@ -102,10 +117,15 @@ function ThanksLine({ year, item, onSaved }: LineProps) {
 /** The year-end checklist for `year`: every key person, what they get, and whether it has gone. */
 export function ThanksView({ year }: { year: number }) {
   const list = useApi(() => api.thanks(year), [year])
+  // The year on screen. A save made for another year answers after the page has moved on, and is left out.
+  const shown = useRef(year)
+  shown.current = year
   const items = list.data ?? []
   const sent = items.filter((r) => r.thanks?.sent_on).length
-  const replace = (contactId: number, t: Thanks | null) =>
+  const replace = (contactId: number, forYear: number, t: Thanks | null) => {
+    if (shown.current !== forYear || !list.data) return
     list.setData((prev) => (prev ?? []).map((r) => (r.person.id === contactId ? { ...r, thanks: t } : r)))
+  }
 
   if (list.error) return <Alert tone="error">{list.error.message}</Alert>
   if (!list.data) return <Loading />
@@ -117,7 +137,7 @@ export function ThanksView({ year }: { year: number }) {
       <p className="tenon-caption tn-custom-muted">{sent} of {items.length} sent</p>
       <ul className="tn-custom-rows">
         {items.map((r) => (
-          <ThanksLine key={`${year}:${r.person.id}`} year={year} item={r} onSaved={(t) => replace(r.person.id, t)} />
+          <ThanksLine key={`${year}:${r.person.id}`} year={year} item={r} onSaved={(forYear, t) => replace(r.person.id, forYear, t)} />
         ))}
       </ul>
     </div>

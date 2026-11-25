@@ -883,3 +883,15 @@ test('leaving People goes back to the organisation views', async () => {
   expect(await screen.findByRole('link', { name: 'Acme' })).toBeInTheDocument()
   expect(within(screen.getByRole('radiogroup', { name: 'View' })).getAllByRole('radio').map((r) => r.textContent)).toEqual(['List', 'Board'])
 })
+
+test('New in the header on People opens the new organisation in the drawer', async () => {
+  const user = userEvent.setup()
+  stubFetch({ ...peopleRoutes, ...cobaltRoutes })
+  localStorage.setItem('binder.pipeline.kind', 'people')
+  inLayout()
+  await screen.findByRole('link', { name: 'Marta Example' })
+  await user.click(screen.getByRole('button', { name: 'New' }))
+  await user.type(screen.getByLabelText(/^Name/), 'Cobalt')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  expect(await screen.findByRole('dialog', { name: 'Cobalt' })).toBeInTheDocument()
+})

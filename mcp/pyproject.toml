@@ -1,0 +1,28 @@
+[project]
+name = "binder-mcp"
+version = "0.1.0"
+description = "Binder's tools for the Offdesk core, over MCP (stdio)"
+requires-python = ">=3.10"
+license = "MIT"
+# The same versions the Offdesk core runs, since the core's environment is where this is installed.
+dependencies = [
+  "mcp==2.3.0",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+# The tests also need Binder itself, from the folder above: pip install -e '.[dev]' -e ..
+dev = ["pytest>=8", "anyio>=4"]
+
+[project.scripts]
+binder-mcp = "binder_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["binder_mcp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

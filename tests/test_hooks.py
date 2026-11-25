@@ -204,3 +204,36 @@ def test_the_move_wakes_the_sender(setup):
     assert not hooks.woken.is_set()
     move(c, org, "contacted")
     assert hooks.woken.is_set()
+
+
+# The same vector is in the core's tests, checked by its webhook handler.
+VECTOR_SECRET, VECTOR_STAMP = "vector-secret", "1764000000"
+VECTOR_BODY = b'{"event":"org.moved","id":1}'
+VECTOR_SIGNATURE = "sha256=6d53571adbcc74c264502839dd63219936413c67d0d499d244f993eeb680ed7c"
+
+
+def test_the_signature_matches_the_shared_vector():
+    assert Hooks("x.db", URL, VECTOR_SECRET).sign(VECTOR_STAMP, VECTOR_BODY) == VECTOR_SIGNATURE
+
+
+def test_each_event_carries_its_queue_id_so_the_core_can_drop_a_repeat(setup):
+    c, hooks, clock, sender, db = setup()
+    org = c.post("/api/orgs", json={"name": "Acme Studio"}).json()
+    org = move(c, org, "contacted")
+    move(c, org, "in_conversation")
+    hooks.tick()
+    ids = [json.loads(body)["id"] for _, body, _ in sender.calls]
+    assert ids == [r["id"] for r in rows(db)]
+    assert len(set(ids)) == 2
+
+
+def test_one_failing_event_does_not_hold_back_the_next(setup):
+    c, hooks, clock, sender, db = setup(answers=[500, 202])
+    org = c.post("/api/orgs", json={"name": "Acme Studio"}).json()
+    org = move(c, org, "contacted")
+    move(c, org, "in_conversation")
+    hooks.tick()
+    first, second = rows(db)
+    assert first["sent_at"] is None and first["error"] == "HTTP 500"
+    assert second["sent_at"] is not None
+    assert [json.loads(b)["to"] for _, b, _ in sender.calls] == ["contacted", "in_conversation"]

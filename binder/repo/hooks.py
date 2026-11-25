@@ -10,10 +10,12 @@ from . import row
 
 
 def queue(conn: sqlite3.Connection, event: str, data: Dict[str, Any], at: str) -> None:
-    """Call with a transaction open. The body is what the core receives, as sent."""
-    body = json.dumps(dict(data, event=event, at=at), ensure_ascii=False, separators=(",", ":"))
-    conn.execute("INSERT INTO hook_queue(event, body, created_at, next_at) VALUES (?,?,?,?)",
-                 (event, body, at, at))
+    """Call with a transaction open. The body is what the core receives, as sent. Its `id` is the row's:
+    an event may arrive twice (sent, then the answer lost), so the receiver drops a repeated id."""
+    cur = conn.execute("INSERT INTO hook_queue(event, body, created_at, next_at) VALUES (?,'',?,?)",
+                       (event, at, at))
+    body = json.dumps(dict(data, id=cur.lastrowid, event=event, at=at), ensure_ascii=False, separators=(",", ":"))
+    conn.execute("UPDATE hook_queue SET body = ? WHERE id = ?", (body, cur.lastrowid))
 
 
 def due(conn: sqlite3.Connection, now: str, limit: int = 50) -> List[Dict[str, Any]]:

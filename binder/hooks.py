@@ -7,7 +7,8 @@ request never waits on the core. Each try is signed afresh as the core's webhook
 `X-Offdesk-Timestamp` (seconds since 1970) and `X-Offdesk-Signature: sha256=<hex>` of the HMAC-SHA256,
 keyed by BINDER_CORE_HOOK_SECRET, of `<timestamp>.<body>`. Anything but a 2xx is tried again after 30
 seconds, then twice as long each time up to an hour, and given up a day after the event. Rows sent or
-given up are forgotten a week later. Without BINDER_CORE_HOOK_URL there is no sender and nothing is queued."""
+given up are forgotten a week later. Delivery is at least once: an event whose answer was lost is sent
+again, with the same `id` (its queue row's) in the body, and the core drops a repeated id. Without BINDER_CORE_HOOK_URL there is no sender and nothing is queued."""
 
 import datetime
 import hashlib

@@ -10,7 +10,7 @@ from . import ai as ai_module, bench as bench_module, errors, hooks as hooks_mod
 from .auth import guard
 from .config import Settings
 from .db import connect, migrate
-from .api import contacts, interactions, misc, orgs, people, research, summarise, thanks
+from .api import contacts, interactions, misc, orgs, people, research, subject, summarise, thanks
 from .repo import research as research_repo
 
 _FROM_SETTINGS = object()
@@ -80,5 +80,6 @@ def create_app(settings: Settings, ai: Any = _FROM_SETTINGS,
     api.include_router(interactions.router)
     api.include_router(research.router)
     api.include_router(summarise.router)
+    api.include_router(subject.router)
     app.include_router(api)
     return app

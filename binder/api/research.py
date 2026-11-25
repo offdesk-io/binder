@@ -38,14 +38,14 @@ def _launch(request: Request, db: sqlite3.Connection, run: Dict[str, Any]) -> Di
 def research_org(org_id: int, request: Request, db: sqlite3.Connection = Depends(get_db),
                  who: Identity = Depends(guard)):
     need_ai(request)
-    return _launch(request, db, research.start(db, who.email, org_id=org_id))
+    return _launch(request, db, research.start(db, who.by, org_id=org_id))
 
 
 @router.post("/contacts/{contact_id}/research", status_code=202)
 def research_contact(contact_id: int, request: Request, db: sqlite3.Connection = Depends(get_db),
                      who: Identity = Depends(guard)):
     need_ai(request)
-    return _launch(request, db, research.start(db, who.email, contact_id=contact_id))
+    return _launch(request, db, research.start(db, who.by, contact_id=contact_id))
 
 
 @router.get("/orgs/{org_id}/research")

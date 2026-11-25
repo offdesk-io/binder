@@ -18,7 +18,7 @@ def list_contacts(org_id: int, db: sqlite3.Connection = Depends(get_db)):
 @router.post("/orgs/{org_id}/contacts", status_code=201)
 def add_contact(org_id: int, body: ContactCreate, db: sqlite3.Connection = Depends(get_db),
                 who: Identity = Depends(guard)):
-    return contacts.create(db, org_id, body.model_dump(), who.email)
+    return contacts.create(db, org_id, body.model_dump(), who.by)
 
 
 @router.get("/contacts/{contact_id}")
@@ -29,7 +29,7 @@ def get_contact(contact_id: int, db: sqlite3.Connection = Depends(get_db)):
 @router.patch("/contacts/{contact_id}")
 def patch_contact(contact_id: int, body: ContactPatch, db: sqlite3.Connection = Depends(get_db),
                   who: Identity = Depends(guard)):
-    return contacts.update(db, contact_id, body.model_dump(exclude_unset=True), who.email)
+    return contacts.update(db, contact_id, body.model_dump(exclude_unset=True), who.by)
 
 
 @router.delete("/contacts/{contact_id}", status_code=204)

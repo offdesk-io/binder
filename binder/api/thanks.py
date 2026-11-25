@@ -26,4 +26,4 @@ def year_list(request: Request, year: Optional[int] = Query(default=None, ge=200
 @router.put("/{contact_id}/{year}")
 def put_thanks(contact_id: int, body: ThanksPut, year: int = Path(ge=2000, le=2100),
                db: sqlite3.Connection = Depends(get_db), who: Identity = Depends(guard)):
-    return thanks.put(db, contact_id, year, body.model_dump(exclude_unset=True), who.email)
+    return thanks.put(db, contact_id, year, body.model_dump(exclude_unset=True), who.by)

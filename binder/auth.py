@@ -8,9 +8,13 @@ another site can post with the visitor's cookie but cannot set that header.
 The Offdesk core calls Binder with its own signed token instead, as
 `Authorization: Bearer <token>`, checked with BINDER_CORE_TOKEN_KEY
 (binder/tokens.py). Such a request acts for the person the token names and
-never reads the sign-in headers; a token for `agent:<name>` or
-`routine:<id>` acts for the team and is recorded as that agent. Without the
-key set, every token is refused. Writes still need `X-Binder: 1`.
+never reads the sign-in headers. The core sends two shapes: `sub` is a
+person's email and `agent` is who acts for them (`pa`, a person's own agent,
+or `routine:<id>`); or `sub` is `agent:<name>`, an agent of the team. Writes
+are recorded (`by`) as the person when the PA acts, as `agent:<name>` for an
+agent of the team, and as `<email> via <agent>` otherwise, for example
+`ana@example.com via routine:r1` or `ana@example.com via agent:helper`.
+Without the key set, every token is refused. Writes still need `X-Binder: 1`.
 """
 
 from dataclasses import dataclass
@@ -31,14 +35,23 @@ class Identity:
     name: str
     teams: Tuple[str, ...]
     token: bool = False  # came with the core's token, not the sign-in
+    via: str = ""  # the token's `agent` claim: who acts for them ("pa", an agent's name, "routine:<id>")
 
     @property
     def agent(self) -> bool:
-        return self.email.startswith(AGENT_PREFIXES)
+        """An agent of the team, not a person."""
+        return self.email.startswith(AGENT_PREFIX)
+
+    @property
+    def by(self) -> str:
+        """How a write is recorded: the person, the team's agent, or `<email> via <agent>`."""
+        if self.agent or not self.via or self.via == "pa":
+            return self.email
+        return "%s via %s" % (self.email, self.via if ":" in self.via else AGENT_PREFIX + self.via)
 
 
 DEV_IDENTITY = Identity("dev@binder.local", "Dev", ("offdesk",))
-AGENT_PREFIXES = ("agent:", "routine:")
+AGENT_PREFIX = "agent:"
 
 
 def identity_from_headers(headers: Mapping[str, str], settings: Settings) -> Identity:
@@ -65,10 +78,10 @@ def identity_from_token(authorization: str, settings: Settings) -> Identity:
     except TokenError as e:
         raise HTTPException(401, "Bad token: %s" % e)
     sub = claims["sub"].strip()
-    if sub.startswith(AGENT_PREFIXES):
-        kind, _, name = sub.partition(":")
-        return Identity(sub, "%s: %s" % (kind, name), (settings.team,), token=True)
-    return Identity(sub.lower(), sub.lower(), (settings.team,), token=True)
+    via = claims.get("agent") if isinstance(claims.get("agent"), str) else ""
+    if sub.startswith(AGENT_PREFIX):
+        return Identity(sub, "agent: %s" % sub[len(AGENT_PREFIX):], (settings.team,), token=True, via=via)
+    return Identity(sub.lower(), sub.lower(), (settings.team,), token=True, via=via)
 
 
 def guard(request: Request) -> Identity:

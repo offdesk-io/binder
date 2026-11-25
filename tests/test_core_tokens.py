@@ -62,7 +62,7 @@ def test_malformed_tokens_are_refused(token):
 
 
 @pytest.mark.parametrize("claims", [{"sub": "ana@example.com"}, [1, 2], {"sub": "", "exp": 1300},
-                                    {"exp": 1300}, {"sub": 5, "exp": 1300}])
+                                    {"exp": 1300}, {"sub": 5, "exp": 1300}, {"sub": "  ", "exp": 1300}])
 def test_signed_tokens_with_bad_claims_are_refused(claims):
     with pytest.raises(TokenError, match="malformed"):
         verify(KEY, make(claims), now=1000)

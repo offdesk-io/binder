@@ -14,8 +14,8 @@ from tests.conftest import OWNERS, WRITE
 from tests.test_core_tokens import KEY_HEX, make
 
 
-def bearer(sub):
-    tok = make({"sub": sub, "agent": "pa", "exp": int(time.time()) + 300})
+def bearer(sub, agent="pa"):
+    tok = make({"sub": sub, "agent": agent, "exp": int(time.time()) + 300})
     return {"authorization": "Bearer " + tok, "x-binder": "1"}
 
 
@@ -119,11 +119,14 @@ def test_an_admins_token_may_export_and_erase(app, records):
     assert r.status_code == 200
 
 
-@pytest.mark.parametrize("sub", ["rui@example.com", "agent:digest"])
-def test_other_tokens_may_not(app, records, sub):
+@pytest.mark.parametrize("sub, agent", [("rui@example.com", "pa"), ("agent:digest", "digest"),
+                                        ("ines@example.com", "routine:r1"), ("ines@example.com", "helper")])
+def test_other_tokens_may_not(app, records, sub, agent):
+    # Only an admin through the PA: not another person, an agent of the team, or an admin's routine or own agent.
     c, _ = app
-    assert c.get("/api/subject", params={"email": "bo@example.com"}, headers=bearer(sub)).status_code == 403
-    assert c.post("/api/subject/erase", json={"email": "bo@example.com"}, headers=bearer(sub)).status_code == 403
+    h = bearer(sub, agent)
+    assert c.get("/api/subject", params={"email": "bo@example.com"}, headers=h).status_code == 403
+    assert c.post("/api/subject/erase", json={"email": "bo@example.com", "confirm": True}, headers=h).status_code == 403
 
 
 def test_erase_needs_x_binder_and_an_email(app, records):

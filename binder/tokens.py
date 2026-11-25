@@ -40,7 +40,7 @@ def verify(key: bytes, token: str, now: Optional[float] = None) -> Dict[str, Any
         sub = claims["sub"]
     except (ValueError, KeyError, TypeError, binascii.Error):  # bad base64 or JSON, a missing claim, not an object
         raise TokenError("malformed") from None
-    if not isinstance(sub, str) or not sub:
+    if not isinstance(sub, str) or not sub.strip():
         raise TokenError("malformed")
     if exp < int(now if now is not None else time.time()):
         raise TokenError("expired")

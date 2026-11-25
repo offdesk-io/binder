@@ -29,7 +29,7 @@ def list_orgs(kind: str = None, status: str = None, owner: str = None, tag: str 
 @router.post("", status_code=201)
 def create_org(body: OrgCreate, request: Request, db: sqlite3.Connection = Depends(get_db),
                who: Identity = Depends(guard)):
-    return orgs.create(db, body.model_dump(exclude_unset=True), who.email, owners=_owners(request))
+    return orgs.create(db, body.model_dump(exclude_unset=True), who.by, owners=_owners(request))
 
 
 @router.get("/by-slug/{slug}")
@@ -46,7 +46,7 @@ def get_org(org_id: int, db: sqlite3.Connection = Depends(get_db)):
 def patch_org(org_id: int, body: OrgPatch, request: Request, db: sqlite3.Connection = Depends(get_db),
               who: Identity = Depends(guard)):
     hooks = request.app.state.hooks
-    out = orgs.update(db, org_id, body.model_dump(exclude_unset=True), who.email, owners=_owners(request),
+    out = orgs.update(db, org_id, body.model_dump(exclude_unset=True), who.by, owners=_owners(request),
                       events=hooks is not None)
     if hooks is not None:
         hooks.wake()

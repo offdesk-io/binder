@@ -74,9 +74,30 @@ def test_an_agent_token_acts_for_the_team_and_is_recorded_as_the_agent(make_app)
     assert r.json()["owner_email"] is None   # an agent is not on the owners list, so nobody handles it
 
 
-def test_a_routine_token_acts_for_the_team(make_app):
-    who = make_app().get("/api/whoami", headers=bearer("routine:r1", agent="routine")).json()
-    assert who["email"] == "routine:r1"
+@pytest.mark.parametrize("agent, by", [("routine:r1", "rui@example.com via routine:r1"),
+                                       ("helper", "rui@example.com via agent:helper")])
+def test_a_routine_or_personal_agent_is_recorded_as_the_person_via_it(make_app, agent, by):
+    # What the core sends: a routine or a person's own agent names the person, and itself in `agent`.
+    c = make_app()
+    assert c.get("/api/whoami", headers=bearer("rui@example.com", agent=agent)).json()["email"] == "rui@example.com"
+    r = c.post("/api/orgs", json={"name": "Acme Studio"}, headers=dict(bearer("rui@example.com", agent), **{"x-binder": "1"}))
+    assert r.status_code == 201
+    assert r.json()["updated_by"] == by
+    i = c.post("/api/orgs/%d/interactions" % r.json()["id"], json={"type": "note", "summary": "x"},
+               headers=dict(bearer("rui@example.com", agent), **{"x-binder": "1"}))
+    assert i.json()["author_email"] == by
+
+
+def test_the_pa_is_recorded_as_the_person(make_app):
+    r = make_app().post("/api/orgs", json={"name": "Acme Studio"},
+                        headers=dict(bearer("rui@example.com", "pa"), **{"x-binder": "1"}))
+    assert r.json()["updated_by"] == "rui@example.com"
+
+
+def test_a_token_whose_subject_is_blank_is_refused(make_app):
+    r = make_app().get("/api/whoami", headers={"authorization": "Bearer " + make(
+        {"sub": "   ", "agent": "pa", "exp": int(time.time()) + 60})})
+    assert r.status_code == 401
 
 
 def test_writes_with_a_token_still_need_x_binder(make_app):

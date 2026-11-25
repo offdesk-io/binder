@@ -4,6 +4,7 @@ import { api } from '../api/endpoints'
 import type { SearchHit } from '../api/types'
 import { Loading } from '../components/Loading'
 import { OrgDrawer } from '../components/OrgDrawer'
+import { Star } from '../components/Star'
 import { KindTag } from '../components/KindTag'
 import { StatusTag } from '../components/StatusTag'
 import { openInPlace } from '../lib/openInPlace'
@@ -61,7 +62,10 @@ export function SearchPage() {
                     {h.kind === 'org' ? (
                       <Link to={hitLink(h)} data-org-open={h.org_slug} onClick={(e) => openInPlace(e, () => drawer.open(h.org_slug))}>{h.title}</Link>
                     ) : (
-                      <Link to={hitLink(h)}>{h.title}</Link>
+                      <span className="tn-custom-person-name">
+                        {h.key_person && <Star />}
+                        <Link to={hitLink(h)}>{h.title}</Link>
+                      </span>
                     )}
                     {h.kind !== 'org' && <span className="tn-custom-faint">· {h.org_name}</span>}
                     {(h.org_kind === 'partner' || h.org_kind === 'referrer') && <KindTag kind={h.org_kind} />}

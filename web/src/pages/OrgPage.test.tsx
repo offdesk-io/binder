@@ -62,6 +62,15 @@ test('lists the people, with who to talk to flagged', async () => {
   expect(screen.getByText('Talk to')).toBeInTheDocument()
 })
 
+test('a key person in the People section has the star, and someone else does not', async () => {
+  stubs({ 'GET /api/orgs/1/contacts': () => [contact({ id: 5, name: 'Bo', connector: true }), contact({ id: 6, name: 'Cy' })] })
+  page()
+  const bo = (await screen.findByRole('link', { name: 'Bo' })).closest('li')!
+  expect(within(bo).getByRole('img', { name: 'Key person' })).toBeInTheDocument()
+  const cy = screen.getByRole('link', { name: 'Cy' }).closest('li')!
+  expect(within(cy).queryByRole('img', { name: 'Key person' })).toBeNull()
+})
+
 test('the timeline mixes logs and status changes', async () => {
   stubs({
     'GET /api/orgs/1/timeline': () => [

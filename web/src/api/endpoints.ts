@@ -1,7 +1,8 @@
 import { request } from './client'
 import type {
   ActivityItem, AttentionItem, Contact, ContactInput, ContactPatch, Interaction, InteractionInput,
-  InteractionPatch, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, TimelineItem, Who, Work,
+  InteractionPatch, KeyPerson, Kind, Meta, Org, OrgInput, OrgPatch, Research, SearchHit, Summary, Thanks, ThanksItem,
+  ThanksPut, TimelineItem, Who, Work,
 } from './types'
 
 export type OrgSort = 'updated' | 'name' | 'last_contact' | 'value' | 'won'
@@ -43,6 +44,7 @@ export const api = {
   createContact: (orgId: number, body: ContactInput) => request<Contact>('POST', `/api/orgs/${orgId}/contacts`, body),
   patchContact: (id: number, body: ContactPatch) => request<Contact>('PATCH', `/api/contacts/${id}`, body),
   deleteContact: (id: number) => request<void>('DELETE', `/api/contacts/${id}`),
+  people: (q?: string) => request<KeyPerson[]>('GET', `/api/people${query({ q })}`),
 
   timeline: (orgId: number) => request<TimelineItem[]>('GET', `/api/orgs/${orgId}/timeline`),
   contactInteractions: (contactId: number) => request<Interaction[]>('GET', `/api/contacts/${contactId}/interactions`),
@@ -57,4 +59,8 @@ export const api = {
   startContactResearch: (contactId: number) => request<Research>('POST', `/api/contacts/${contactId}/research`),
   work: (orgId: number) => request<Work>('GET', `/api/orgs/${orgId}/work`),
   summarise: (orgId: number, text: string) => request<Summary>('POST', '/api/summarise', { org_id: orgId, text }),
+
+  thanks: (year: number) => request<ThanksItem[]>('GET', `/api/thanks?year=${year}`),
+  putThanks: (contactId: number, year: number, body: ThanksPut) =>
+    request<Thanks>('PUT', `/api/thanks/${contactId}/${year}`, body),
 }

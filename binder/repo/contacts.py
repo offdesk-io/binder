@@ -6,15 +6,24 @@ from ..errors import Conflict, Invalid, NotFound
 from ..statuses import RELATIONSHIPS
 from . import orgs, row
 
-FIELDS = ("name", "role", "email", "phone", "linkedin_url", "notes", "is_primary", "relationship")
-SELECT = ("SELECT c.*, o.name AS org_name, o.slug AS org_slug FROM contacts c "
-          "JOIN organisations o ON o.id = c.org_id ")
+FIELDS = ("name", "role", "email", "phone", "linkedin_url", "notes", "is_primary", "relationship",
+          "connector", "postal_address")
+FLAGS = ("is_primary", "connector")  # stored as 0 or 1, read as booleans
+# A referrer's own person: the contact its organisation tracks in person_contact_id.
+IS_REFERRER = "(o.kind = 'referrer' AND o.person_contact_id = c.id)"
+SELECT = ("SELECT c.*, o.name AS org_name, o.slug AS org_slug, %s AS is_referrer FROM contacts c "
+          "JOIN organisations o ON o.id = c.org_id " % IS_REFERRER)
 
 
 def _out(r) -> Dict[str, Any]:
     d = row(r)
-    d["is_primary"] = bool(d["is_primary"])
+    for k in FLAGS + ("is_referrer",):
+        d[k] = bool(d[k])
     return d
+
+
+def _value(k: str, v: Any) -> Any:
+    return int(v) if k in FLAGS else v
 
 
 def _check(data: Dict[str, Any]) -> None:
@@ -59,7 +68,7 @@ def create(conn: sqlite3.Connection, org_id: int, data: Dict[str, Any], by: str)
         cur = conn.execute(
             "INSERT INTO contacts(org_id, created_at, updated_at, updated_by, %s) VALUES (?,?,?,?,%s)"
             % (", ".join(cols), ", ".join("?" * len(cols))),
-            [org_id, at, at, by] + [int(data[c]) if c == "is_primary" else data[c] for c in cols])
+            [org_id, at, at, by] + [_value(c, data[c]) for c in cols])
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -77,7 +86,7 @@ def update(conn: sqlite3.Connection, contact_id: int, patch: Dict[str, Any], by:
             raise Conflict(current)
         if patch.get("is_primary") is False:
             _keep_referrer_primary(conn, current)
-        sets = {k: (int(v) if k == "is_primary" else v) for k, v in patch.items() if k in FIELDS}
+        sets = {k: _value(k, v) for k, v in patch.items() if k in FIELDS}
         sets["updated_at"], sets["updated_by"] = now(), by
         if patch.get("is_primary"):
             _clear_primary(conn, current["org_id"], contact_id)  # before the update, see create()

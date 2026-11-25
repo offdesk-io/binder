@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import type { SearchHit } from '../api/types'
@@ -7,7 +7,7 @@ import { renderApp, stubFetch } from '../test/render'
 import { hitLink, SearchPage, Snippet } from './SearchPage'
 
 const hit = (o: Partial<SearchHit>): SearchHit => ({
-  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', org_kind: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, ...o,
+  kind: 'org', id: 1, org_id: 1, org_name: 'Acme', org_slug: 'acme', org_status: 'lead', org_kind: 'lead', title: 'Acme', snippet: '\u0002Acme\u0003 studio', contact_id: null, key_person: false, ...o,
 })
 
 test('each kind of hit links to its page', () => {
@@ -89,4 +89,17 @@ test('a partner or referrer hit carries its own kind chip, and a lead or client 
   expect(rows[1]).toContain('Referrer')
   expect(rows[1]).toContain('In talks')
   expect(rows[2]).not.toMatch(/Lead|Client|Partner|Referrer/)
+})
+
+test('a key person found by search has the star', async () => {
+  stubFetch({
+    'GET /api/search?q=bo': () => [
+      hit({ kind: 'contact', id: 5, title: 'Bo', key_person: true }),
+      hit({ kind: 'contact', id: 6, title: 'Bob' }),
+    ],
+  })
+  renderApp(<SearchPage />, '/search?q=bo')
+  const [bo, bob] = await screen.findAllByRole('listitem')
+  expect(within(bo).getByRole('img', { name: 'Key person' })).toBeInTheDocument()
+  expect(within(bob).queryByRole('img', { name: 'Key person' })).toBeNull()
 })

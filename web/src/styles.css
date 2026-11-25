@@ -323,3 +323,22 @@ a.tenon-button:hover { text-decoration: none; }
   .tn-custom-pipeline-columns { flex-direction: column; align-items: stretch; overflow-x: visible; }
   .tn-custom-pipeline-columns > .tn-custom-pipeline-column { flex: none; }
 }
+
+/* Key people. The star sits before a key person's name wherever they appear; a postal address keeps its lines. */
+.tn-custom-star { color: var(--tenon-text-warning); }
+.tn-custom-person-name { display: inline-flex; align-items: baseline; gap: var(--tenon-dimension-050); }
+.tn-custom-address { white-space: pre-line; }
+/* The reach buttons. On a phone each one takes the full width, so it is easy to tap. */
+.tn-custom-reach { display: flex; flex-wrap: wrap; gap: var(--tenon-dimension-050); }
+@media (max-width: 767px) {
+  .tn-custom-reach > * { flex: 1 1 100%; justify-content: center; }
+}
+/* The Thanks checklist: who and where, what, sent, and a note on one line; stacked on a phone. */
+.tn-custom-thanks-line {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) auto minmax(0, 2fr);
+  align-items: center; gap: var(--tenon-dimension-100);
+}
+.tn-custom-thanks-line > .tenon-alert { grid-column: 1 / -1; }
+@media (max-width: 767px) {
+  .tn-custom-thanks-line { grid-template-columns: minmax(0, 1fr); }
+}

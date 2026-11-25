@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
-import { activity, org } from '../test/fixtures'
+import { activity, keyPerson, org } from '../test/fixtures'
 import { renderApp, stubFetch } from '../test/render'
 import { HomePage } from './HomePage'
 
@@ -91,4 +91,32 @@ test('a card under Needs attention opens the drawer', async () => {
   renderApp(<HomePage />)
   await user.click(await screen.findByRole('link', { name: 'Acme' }))
   expect(await screen.findByRole('dialog')).toBeInTheDocument()
+})
+
+test('a quiet key person is under Needs attention after the organisations, linking to them', async () => {
+  stubFetch({
+    'GET /api/orgs': () => [],
+    'GET /api/attention': () => [
+      { org: org({ next_step_due: '2000-01-01' }), reasons: ['overdue'] },
+      { contact: keyPerson({ id: 8, name: 'Marta Example', role: 'Head of ops', org_name: 'Bolt', org_slug: 'bolt' }), reasons: ['quiet_connector'] },
+      { contact: keyPerson({ id: 9, name: 'Rita Example', connector: false, org_name: 'Rita Example', org_slug: 'rita',
+        referrer: { id: 4, slug: 'rita', name: 'Rita Example', status: 'active' } }), reasons: ['quiet_connector'] },
+    ],
+    'GET /api/activity?limit=30': () => [],
+  })
+  renderApp(<HomePage />)
+  const marta = await screen.findByRole('link', { name: 'Marta Example' })
+  expect(marta).toHaveAttribute('href', '/c/8')
+  const card = marta.closest('.tenon-card') as HTMLElement
+  expect(within(card).getByRole('img', { name: 'Key person' })).toBeInTheDocument()
+  expect(within(card).getByText('No contact in 90 days')).toHaveClass('tenon-tag--warning')
+  expect(within(card).getByText(/Head of ops/)).toBeInTheDocument()
+  const rita = screen.getByRole('link', { name: 'Rita Example' }).closest('.tenon-card') as HTMLElement
+  expect(within(rita).getByText('Referrer')).toBeInTheDocument()
+  const titles = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+  expect(titles).toEqual(['Acme', '★Marta Example', '★Rita Example'])
+  // They count towards Needs attention, and not towards a missed next step.
+  const panel = screen.getByTestId('figures')
+  expect(within(panel).getByText('3')).toBeInTheDocument()
+  expect(within(panel).getByText('1 with a missed next step')).toBeInTheDocument()
 })

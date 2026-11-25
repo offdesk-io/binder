@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from ..db import now
 from ..errors import Conflict, Invalid, NotFound
 from ..statuses import INTRODUCER_KINDS, SECTORS, check_transition, initial_status
-from . import row
+from . import like, row
 
 FIELDS = ("name", "website", "sector", "description", "size", "location", "owner_email", "source",
           "value_estimate", "tags", "summary", "next_step", "next_step_due", "introduced_by_id")
@@ -251,8 +251,7 @@ def list_(conn: sqlite3.Connection, kind: Optional[str] = None, status: Optional
     if tag:
         where.append("EXISTS (SELECT 1 FROM json_each(o.tags) WHERE value = ?)"); args.append(tag)
     if q:
-        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        where.append("o.name LIKE ? ESCAPE '\\'"); args.append("%" + escaped + "%")
+        where.append("o.name LIKE ? ESCAPE '\\'"); args.append(like(q))
     if won is not None:
         where.append("%s %s NULL" % (WON_AT, "IS NOT" if won else "IS"))
     sort = sort or ("won" if won else "updated")

@@ -16,6 +16,8 @@ import { readChoice, writeChoice } from '../lib/remembered'
 import { useApi } from '../lib/useApi'
 import { useIsPhone } from '../lib/useIsPhone'
 import { useOrgDrawer } from '../lib/useOrgDrawer'
+import { PeopleView } from './people/PeopleView'
+import { ThanksView, years } from './people/ThanksView'
 import { PipelineColumns } from './pipeline/PipelineColumns'
 import { StageGroup } from './pipeline/StageGroup'
 
@@ -23,19 +25,28 @@ type View = 'list' | 'columns'
 const VIEW_KEY = 'binder.pipeline.view'
 const VIEWS: readonly View[] = ['list', 'columns']
 
-/** Which records the page shows: leads (with the clients won from them), partners or referrers. */
-type Segment = 'lead' | 'partner' | 'referrer'
-const SEGMENTS: readonly Segment[] = ['lead', 'partner', 'referrer']
+/** On People the view switch reads People (the key people) and Thanks (the year-end checklist), kept apart from the
+ * organisation segments' List and Board. */
+type PeopleMode = 'people' | 'thanks'
+const PEOPLE_VIEW_KEY = 'binder.people.view'
+const PEOPLE_MODES: readonly PeopleMode[] = ['people', 'thanks']
+
+/** Which records the page shows: leads (with the clients won from them), partners, referrers, or the key people. */
+type OrgSegment = 'lead' | 'partner' | 'referrer'
+type Segment = OrgSegment | 'people'
+const SEGMENTS: readonly Segment[] = ['lead', 'partner', 'referrer', 'people']
 const SEGMENT_OPTIONS: { value: Segment; label: string }[] = [
   { value: 'lead', label: 'Leads' },
   { value: 'partner', label: 'Partners' },
   { value: 'referrer', label: 'Referrers' },
+  { value: 'people', label: 'People' },
 ]
-const NOUN: Record<Segment, string> = { lead: 'leads', partner: 'partners', referrer: 'referrers' }
-const TITLE: Record<Segment, string> = { lead: 'Leads by stage', partner: 'Partners by stage', referrer: 'Referrers by stage' }
+const NOUN: Record<OrgSegment, string> = { lead: 'leads', partner: 'partners', referrer: 'referrers' }
+const TITLE: Record<OrgSegment, string> = { lead: 'Leads by stage', partner: 'Partners by stage', referrer: 'Referrers by stage' }
 
-/** A segment's records. Leads come with every client ever won, which has no time limit. */
+/** A segment's records. Leads come with every client ever won, which has no time limit. People load their own list. */
 function load(segment: Segment): Promise<Org[]> {
+  if (segment === 'people') return Promise.resolve([])
   if (segment !== 'lead') return api.orgs({ kind: segment })
   return Promise.all([api.orgs({ kind: 'lead' }), api.orgs({ kind: 'client', won: true })]).then(([leads, won]) => [...leads, ...won])
 }
@@ -62,6 +73,9 @@ export function PipelinePage() {
   const [owner, setOwner] = useOwnerFilter()
   const [find, setFind] = useState('')
   const [view, setView] = useState<View>(() => readChoice(VIEW_KEY, VIEWS, 'list'))
+  const [peopleMode, setPeopleMode] = useState<PeopleMode>(() => readChoice(PEOPLE_VIEW_KEY, PEOPLE_MODES, 'people'))
+  const [findPeople, setFindPeople] = useState('')
+  const [year, setYear] = useState(() => new Date().getFullYear())
   const [moveError, setMoveError] = useState<string>()
   const moving = useRef(new Set<number>())
   const drawer = useOrgDrawer()
@@ -70,6 +84,11 @@ export function PipelinePage() {
     setView(v)
     setMoveError(undefined)
     writeChoice(VIEW_KEY, v)
+  }
+
+  function choosePeopleMode(m: PeopleMode) {
+    setPeopleMode(m)
+    writeChoice(PEOPLE_VIEW_KEY, m)
   }
 
   function chooseSegment(s: Segment) {
@@ -128,6 +147,32 @@ export function PipelinePage() {
   }
 
   const addOrganisation = useNewOrg(created)
+  const drawerEl = <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={changed} onDeleted={() => orgs.reload()} />
+  const kindSwitch = <SegmentedControl aria-label="Kind" value={segment} onChange={chooseSegment} options={SEGMENT_OPTIONS} />
+
+  if (segment === 'people') {
+    return (
+      <div className="tn-stack">
+        <h1 className="tn-custom-sr-only">Key people</h1>
+        <div className="tn-custom-filterbar">
+          {kindSwitch}
+          <SegmentedControl aria-label="View" value={peopleMode} onChange={choosePeopleMode}
+            options={[{ value: 'people', label: 'People' }, { value: 'thanks', label: 'Thanks' }]} />
+          <div className="tn-custom-filterbar-end">
+            {peopleMode === 'people' ? (
+              <Input type="search" className="tn-custom-find" aria-label="Filter people" placeholder="Filter people…"
+                value={findPeople} onChange={(e) => setFindPeople(e.target.value)} />
+            ) : (
+              <Dropdown className="tn-custom-filter" aria-label="Year" value={String(year)} onChange={(v) => setYear(Number(v))}
+                options={years().map((y) => ({ value: String(y), label: String(y) }))} />
+            )}
+          </div>
+        </div>
+        {peopleMode === 'people' ? <PeopleView find={findPeople} /> : <ThanksView year={year} />}
+        {drawerEl}
+      </div>
+    )
+  }
 
   if (orgs.error) return <Alert tone="error">{orgs.error.message}</Alert>
   if (!orgs.data) return <Loading />
@@ -155,7 +200,7 @@ export function PipelinePage() {
       <div className="tn-custom-filterbar">
         <Dropdown className="tn-custom-filter" aria-label="Handled by" value={owner} onChange={setOwner}
           options={ownerOptions(orgs.data, me.email, owner, meta.owners)} />
-        <SegmentedControl aria-label="Kind" value={segment} onChange={chooseSegment} options={SEGMENT_OPTIONS} />
+        {kindSwitch}
         <SegmentedControl aria-label="View" value={view} onChange={chooseView}
           options={[{ value: 'list', label: 'List' }, { value: 'columns', label: 'Board' }]} />
         <div className="tn-custom-filterbar-end">
@@ -190,7 +235,7 @@ export function PipelinePage() {
           </table>
         </div>
       )}
-      <OrgDrawer slug={drawer.slug} onClose={drawer.close} onChanged={changed} onDeleted={() => orgs.reload()} />
+      {drawerEl}
     </div>
   )
 }

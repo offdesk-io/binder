@@ -54,3 +54,17 @@ test('research and summarise routes', async () => {
     'POST /api/summarise',
   ])
 })
+
+test('people and thanks routes', async () => {
+  const calls = capture()
+  await api.people()
+  await api.people('ma & co')
+  await api.thanks(2026)
+  await api.putThanks(5, 2026, { what: 'Wine', updated_at: null })
+  expect(calls()).toEqual([
+    'GET /api/people',
+    'GET /api/people?q=ma+%26+co',
+    'GET /api/thanks?year=2026',
+    'PUT /api/thanks/5/2026',
+  ])
+})

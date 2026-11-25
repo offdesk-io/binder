@@ -17,6 +17,9 @@ export interface ContactFormState {
   notes: string
   is_primary: boolean
   relationship: string
+  /** Not on the form: the Key connector toggle saves it on its own. Carried so a new person starts unstarred. */
+  connector: boolean
+  postal_address: string
 }
 
 export function contactForm(c?: Contact): ContactFormState {
@@ -29,6 +32,8 @@ export function contactForm(c?: Contact): ContactFormState {
     notes: text(c?.notes),
     is_primary: c?.is_primary ?? false,
     relationship: text(c?.relationship),
+    connector: c?.connector ?? false,
+    postal_address: text(c?.postal_address),
   }
 }
 
@@ -42,6 +47,8 @@ export function contactBody(f: ContactFormState): ContactFields {
     notes: orNull(f.notes),
     is_primary: f.is_primary,
     relationship: f.relationship || null,
+    connector: f.connector,
+    postal_address: orNull(f.postal_address),
   }
 }
 
@@ -162,6 +169,8 @@ export function ContactForm({ open, orgId, contact, onClose, onSaved, onDeleted 
             Who to talk to
           </label>
         </div>
+        <Field label="Postal address" multiline rows={3} maxLength={1000} value={form.postal_address}
+          onChange={set('postal_address')} hint="For the year-end thanks" />
         <Field label="Notes" multiline rows={3} value={form.notes} onChange={set('notes')} />
       </form>
     </Modal>

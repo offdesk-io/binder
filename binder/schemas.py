@@ -129,6 +129,8 @@ class ContactCreate(_Body):
     notes: Optional[str] = None
     is_primary: bool = False
     relationship: Optional[str] = None
+    connector: bool = False
+    postal_address: Optional[str] = Field(default=None, max_length=1000)
 
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
@@ -144,8 +146,10 @@ class ContactPatch(_Body):
     notes: Optional[str] = None
     is_primary: Optional[bool] = None
     relationship: Optional[str] = None
+    connector: Optional[bool] = None
+    postal_address: Optional[str] = Field(default=None, max_length=1000)
 
-    _name = field_validator("name")(not_null)
+    _name = field_validator("name", "connector")(not_null)
     _email = field_validator("email")(lower_email)
     _linkedin = field_validator("linkedin_url")(web_url)
 
@@ -174,6 +178,17 @@ class InteractionPatch(_Body):
     _required = field_validator("type", "summary", "happened_at")(not_null)
     _when = field_validator("happened_at")(iso_datetime)
     _due = field_validator("next_step_due")(iso_date)
+
+
+class ThanksPut(_Body):
+    """Creates or changes one person's thanks for one year. `updated_at` is the
+    row's as it was loaded, left out (or null) when there was no row yet."""
+    updated_at: Optional[str] = None
+    what: Optional[str] = Field(default=None, max_length=200)
+    sent_on: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=2000)
+
+    _sent = field_validator("sent_on")(iso_date)
 
 
 def not_blank(v: str) -> str:

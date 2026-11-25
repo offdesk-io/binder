@@ -1,4 +1,4 @@
-import type { ActivityItem, Brief, BenchTask, Contact, Interaction, Org, Research } from '../api/types'
+import type { ActivityItem, Brief, BenchTask, Contact, Interaction, KeyPerson, Org, Research, Thanks } from '../api/types'
 
 export const AT = '2026-11-10T12:00:00.000000+00:00'
 
@@ -15,7 +15,23 @@ export function org(o: Partial<Org> = {}): Org {
 export function contact(o: Partial<Contact> = {}): Contact {
   return {
     id: 5, org_id: 1, org_name: 'Acme', org_slug: 'acme', name: 'Bo', role: null, email: null,
-    phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null,
+    phone: null, linkedin_url: null, notes: null, is_primary: false, relationship: null, connector: false,
+    postal_address: null, is_referrer: false,
+    created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
+  }
+}
+
+export function keyPerson(o: Partial<KeyPerson> = {}): KeyPerson {
+  return {
+    id: 5, org_id: 1, name: 'Bo', role: null, email: null, phone: null, linkedin_url: null, connector: true,
+    postal_address: null, org_name: 'Acme', org_slug: 'acme', referrer: null, last_contact: null, introduced_count: 0,
+    ...o,
+  }
+}
+
+export function thanks(o: Partial<Thanks> = {}): Thanks {
+  return {
+    id: 1, contact_id: 5, year: 2026, what: null, sent_on: null, note: null,
     created_at: AT, updated_at: AT, updated_by: 'ana@example.com', ...o,
   }
 }

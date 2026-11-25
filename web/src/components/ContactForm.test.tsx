@@ -49,3 +49,18 @@ test('a conflict loads their version into the form and says so', async () => {
   expect(screen.getByLabelText('Role')).toHaveValue('CTO')
   expect(screen.getByLabelText('Phone')).toHaveValue('')
 })
+
+test('the postal address is on the form, and an edit sends it alone', async () => {
+  const user = userEvent.setup()
+  const bo = contact()
+  const calls = stubFetch({ 'PATCH /api/contacts/5': () => bo })
+  renderApp(<ContactForm open orgId={1} contact={bo} onClose={() => {}} onSaved={() => {}} />)
+  await user.type(screen.getByLabelText('Postal address'), '1 Example Street{Enter}Porto')
+  await user.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(calls).toHaveLength(1))
+  expect(calls[0].body).toEqual({ postal_address: '1 Example Street\nPorto', updated_at: bo.updated_at })
+})
+
+test('a new person starts unstarred with no address', () => {
+  expect(contactBody(contactForm())).toMatchObject({ connector: false, postal_address: null })
+})

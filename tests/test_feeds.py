@@ -76,3 +76,88 @@ def test_today_follows_the_configured_zone(client, monkeypatch):
     conn = db(client)
     assert feeds.attention(conn, tz="Europe/Lisbon") == []
     assert [i["reasons"] for i in feeds.attention(conn, tz="Pacific/Auckland")] == [["overdue"]]  # already the 12th there
+
+
+# Key people with no log in 90 days
+
+
+def _key(client, org, name, **kw):
+    r = client.post("/api/orgs/%d/contacts" % org["id"], json=dict(kw, name=name, connector=True))
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def _log(client, org, day, contact_ids=()):
+    client.post("/api/orgs/%d/interactions" % org["id"], json={
+        "type": "call", "summary": "x", "happened_at": day + "T10:00:00+00:00", "contact_ids": list(contact_ids)})
+
+
+def _quiet_people(conn, today):
+    return [(i["contact"]["name"], i["reasons"]) for i in feeds.attention(conn, today=today) if "contact" in i]
+
+
+def test_a_key_person_is_quiet_after_90_days_without_a_log(client, org):
+    conn = db(client)
+    bea = _key(client, org, "Bea")
+    _log(client, org, "2026-08-14", [bea["id"]])  # 89 days before 2026-11-11
+    assert _quiet_people(conn, "2026-11-11") == []
+    conn.execute("UPDATE interactions SET happened_at = '2026-08-12T10:00:00.000000+00:00'")  # 91 days
+    assert _quiet_people(conn, "2026-11-11") == [("Bea", ["quiet_connector"])]
+
+
+def test_a_key_person_never_logged_counts_from_when_they_were_added(client, org):
+    conn = db(client)
+    bea = _key(client, org, "Bea")
+    conn.execute("UPDATE contacts SET created_at = '2026-08-14T10:00:00.000000+00:00' WHERE id = ?", (bea["id"],))
+    assert _quiet_people(conn, "2026-11-11") == []
+    conn.execute("UPDATE contacts SET created_at = '2026-08-12T10:00:00.000000+00:00' WHERE id = ?", (bea["id"],))
+    assert _quiet_people(conn, "2026-11-11") == [("Bea", ["quiet_connector"])]
+
+
+def test_quiet_key_people_come_after_organisations_a_to_z(client, org):
+    conn = db(client)
+    for name in ("Zed", "abe"):
+        _key(client, org, name)
+    conn.execute("UPDATE contacts SET created_at = ?", (OLD,))
+    client.post("/api/orgs", json={"name": "Due", "next_step_due": "2026-11-01"})
+    items = feeds.attention(conn, today="2026-11-11")
+    assert [i["org"]["name"] if "org" in i else i["contact"]["name"] for i in items][-2:] == ["abe", "Zed"]
+    assert "org" in items[0]
+    assert items[-1]["contact"]["org_slug"] == org["slug"]
+
+
+def test_a_log_without_them_does_not_count(client, org):
+    conn = db(client)
+    _key(client, org, "Bea")
+    conn.execute("UPDATE contacts SET created_at = ?", (OLD,))
+    _log(client, org, "2026-11-10")
+    assert _quiet_people(conn, "2026-11-11") == [("Bea", ["quiet_connector"])]
+
+
+def test_a_referrers_person_is_nudged_only_while_the_referrer_is_active(client):
+    conn = db(client)
+    ref = client.post("/api/orgs", json={"name": "Rita Example", "kind": "referrer"}).json()
+    conn.execute("UPDATE contacts SET created_at = ?", (OLD,))
+    assert _quiet_people(conn, "2026-11-11") == []  # identified
+    client.patch("/api/orgs/%d" % ref["id"], json={"updated_at": ref["updated_at"], "status": "active"})
+    assert _quiet_people(conn, "2026-11-11") == [("Rita Example", ["quiet_connector"])]
+    _log(client, ref, "2026-11-01")  # any log on the referrer is with them
+    assert _quiet_people(conn, "2026-11-11") == []
+    # The referrer itself stays out of the organisation items.
+    assert all("org" not in i for i in feeds.attention(conn, today="2026-11-11"))
+
+
+def test_a_starred_person_at_an_inactive_referrer_still_counts(client):
+    conn = db(client)
+    ref = client.post("/api/orgs", json={"name": "Rita Example", "kind": "referrer"}).json()
+    rita = client.get("/api/contacts/%d" % ref["person"]["contact_id"]).json()
+    client.patch("/api/contacts/%d" % rita["id"], json={"updated_at": rita["updated_at"], "connector": True})
+    conn.execute("UPDATE contacts SET created_at = ?", (OLD,))
+    assert _quiet_people(conn, "2026-11-11") == [("Rita Example", ["quiet_connector"])]
+
+
+def test_the_attention_route_returns_quiet_people(client, org):
+    _key(client, org, "Bea")
+    db(client).execute("UPDATE contacts SET created_at = ?", (OLD,))
+    items = client.get("/api/attention").json()
+    assert [i["contact"]["name"] for i in items if "contact" in i] == ["Bea"]

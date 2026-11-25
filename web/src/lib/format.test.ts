@@ -63,6 +63,7 @@ describe('format', () => {
     expect(statusLine(null, 'lead')).toBe('Added as Lead')
     expect(statusLine('lead', 'contacted')).toBe('Moved from Lead to Contacted')
     expect(REASON_TEXT.quiet).toBe('No contact in 14 days')
+    expect(REASON_TEXT.quiet_connector).toBe('No contact in 90 days')
   })
 })
 

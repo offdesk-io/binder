@@ -367,20 +367,29 @@ A partner moves freely between `identified`, `contacted`, `in_talks`, `terms_sen
 
 ### A person's data
 
-- **Export** (`GET /api/subject?email=`): `{email, contacts, interactions}`.
-  `contacts` is every contact with that email (any case, on any
+- **Export** (`GET /api/subject?email=`): `{email, contacts, interactions,
+  research}`. `contacts` is every contact with that email (any case, on any
   organisation), each as a Contact with its `thanks` rows; `interactions` is
-  every interaction naming one of them.
-- **Erase** (`POST /api/subject/erase`, `{email}`): each such contact is
+  every interaction naming one of them; `research` is every research brief
+  about one of them.
+- **Erase** (`POST /api/subject/erase`, `{email, confirm: true}`; without
+  `confirm: true` it is 422 and nothing changes): each such contact is
   renamed `Erased`, loses its role, email, phone, LinkedIn, postal address,
   relationship and star, and its notes say when it was erased; its thanks
-  rows lose `what` and `note`; each interaction naming one of them keeps its
-  type and date, and its summary becomes a line saying when it was erased,
-  with no next step. Answers `{contacts, interactions}`, the numbers erased.
-  One line in `erasures` keeps when, by whom and how many, never the data.
-  An email nobody has changes nothing.
+  rows lose `what` and `note`; its research briefs are deleted; each
+  interaction naming one of them keeps its type and date, and its summary
+  becomes a line saying when it was erased, with no next step; events for the
+  core that name them are dropped. It runs with SQLite's `secure_delete` on
+  and optimises the search index afterwards. Answers `{contacts,
+  interactions, research}`, the numbers erased. One line in `erasures` keeps
+  when, by whom and how many, never the data. An email nobody has changes
+  nothing. Not erased (known gaps until the core's step 7): a referrer kept
+  as an organisation named after the person, the person named in free text
+  elsewhere, and copies outside the live database (nightly copies for 30
+  days, the copies taken before each deploy and migration).
 - Both need a signed-in team member, or the core's token for someone in
-  `BINDER_ADMINS` (an agent's token is 403). An email without `@` is 422.
+  `BINDER_ADMINS` acting through the PA (`agent` is `pa`); an agent's token,
+  or an admin's routine or own agent, is 403. An email without `@` is 422.
 
 ### Saves and errors
 

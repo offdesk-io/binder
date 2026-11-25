@@ -1,9 +1,14 @@
 """What Binder holds about one person, found by email: every contact with that
-email (on any organisation) and the interactions that name one of them.
-Export returns it all; erasure removes the contacts' personal fields, the text
-of those interactions and the thanks kept for them, and writes one line to
-`erasures` saying when, by whom and how much, never what."""
+email (on any organisation), the interactions that name one of them and the
+research briefs about them. Export returns it all. Erasure removes the
+contacts' personal fields, the text of those interactions, the thanks kept for
+them, their research briefs (and those briefs' search rows), and any event for
+the core still kept that names them; it writes one line to `erasures` saying
+when, by whom and how much, never what. It runs with `secure_delete` on, and
+the search index is optimised afterwards, so the erased text does not linger
+in the file's free pages or old index segments."""
 
+import json
 import sqlite3
 from typing import Any, Dict, List
 
@@ -41,18 +46,38 @@ def export(conn: sqlite3.Connection, email: str) -> Dict[str, Any]:
         i["contact_ids"] = [r[0] for r in conn.execute(
             "SELECT contact_id FROM interaction_contacts WHERE interaction_id = ? ORDER BY contact_id", (iid,))]
         interactions.append(i)
-    return {"email": email, "contacts": contacts, "interactions": interactions}
+    research = []
+    if cids:
+        for r in conn.execute("SELECT * FROM research WHERE contact_id IN (%s) ORDER BY id" % ",".join("?" * len(cids)),
+                              cids):
+            d = row(r)
+            for k in ("brief", "sources"):
+                if d[k]:
+                    try:
+                        d[k] = json.loads(d[k])
+                    except ValueError:
+                        pass
+            research.append(d)
+    return {"email": email, "contacts": contacts, "interactions": interactions, "research": research}
 
 
 def erase(conn: sqlite3.Connection, email: str, by: str) -> Dict[str, int]:
     at = now()
     day = at[:10]
+    conn.execute("PRAGMA secure_delete = ON")  # deleted and overwritten text is zeroed in the file, not left behind
     conn.execute("BEGIN IMMEDIATE")
     try:
         cids = _contact_ids(conn, email)
         iids = _interaction_ids(conn, cids)
+        briefs = 0
         if cids:
             marks = ",".join("?" * len(cids))
+            # Events for the core that name one of them (a referrer named after the person), sent or not.
+            names = [r[0] for r in conn.execute("SELECT name FROM contacts WHERE id IN (%s)" % marks, cids)]
+            for text in [json.dumps(n, ensure_ascii=False) for n in names] + [json.dumps(email)]:
+                conn.execute("DELETE FROM hook_queue WHERE instr(body, ?) > 0", (text,))
+            # Their research briefs; the delete trigger removes the briefs' search rows.
+            briefs = conn.execute("DELETE FROM research WHERE contact_id IN (%s)" % marks, cids).rowcount
             conn.execute(
                 "UPDATE contacts SET name = ?, %s, notes = ?, connector = 0, updated_at = ?, updated_by = ? "
                 "WHERE id IN (%s)" % (", ".join("%s = NULL" % f for f in PERSONAL), marks),
@@ -67,10 +92,13 @@ def erase(conn: sqlite3.Connection, email: str, by: str) -> Dict[str, int]:
         if cids:
             conn.execute("INSERT INTO erasures(at, by, contacts, interactions, what) VALUES (?,?,?,?,?)",
                          (at, by, len(cids), len(iids),
-                          "Personal fields of %d contact(s) and the text of %d interaction(s); contact ids %s"
-                          % (len(cids), len(iids), ", ".join(str(c) for c in cids))))
+                          "Personal fields of %d contact(s), the text of %d interaction(s) and %d research brief(s); "
+                          "contact ids %s" % (len(cids), len(iids), briefs, ", ".join(str(c) for c in cids))))
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
         raise
-    return {"contacts": len(cids), "interactions": len(iids)}
+    if cids:
+        # Merge the search index's segments, so the old text is not kept in an older one.
+        conn.execute("INSERT INTO search(search) VALUES ('optimize')")
+    return {"contacts": len(cids), "interactions": len(iids), "research": briefs}

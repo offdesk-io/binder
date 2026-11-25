@@ -212,7 +212,15 @@ def subject_email(v: str) -> str:
     return v
 
 
+def confirmed(v: Optional[bool]) -> bool:
+    if v is not True:
+        raise ValueError("must be true: erasing cannot be undone")
+    return v
+
+
 class SubjectErase(_Body):
     email: str
+    confirm: Optional[bool] = Field(default=None, validate_default=True)
 
     _email = field_validator("email")(subject_email)
+    _confirm = field_validator("confirm")(confirmed)

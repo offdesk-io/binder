@@ -2,6 +2,7 @@
 admin's token (step 7); a signed-in team member can through Binder's own app. Erasure keeps a line saying
 what was erased and when, without the erased data."""
 
+import json
 import time
 
 import pytest
@@ -44,6 +45,24 @@ def records(app):
     alone = c.post("/api/orgs/%d/interactions" % acme["id"], json={
         "type": "note", "summary": "Kim only", "contact_ids": [kim["id"]]}).json()
     c.put("/api/thanks/%d/2026" % bo["id"], json={"what": "Wine", "note": "Prefers red", "updated_at": None})
+    _, db = app
+    conn = connect(db)
+    try:
+        # A finished research brief about Bo, and one about the organisation.
+        brief = json.dumps({"overview": "Bo Example runs Acme; Zanzibarian roots", "people": [{"name": "Bo Example"}]})
+        for contact in (bo["id"], None):
+            cur = conn.execute("INSERT INTO research(org_id, contact_id, status, run_at, author_email) "
+                               "VALUES (?, ?, 'running', '2026-11-01T10:00:00.000000+00:00', 'ana@example.com')",
+                               (acme["id"], contact))
+            conn.execute("UPDATE research SET status = 'done', brief = ? WHERE id = ?",
+                         (brief if contact else json.dumps({"overview": "Acme makes things"}), cur.lastrowid))
+        # An event for the core that names Bo, waiting to be sent.
+        conn.execute("INSERT INTO hook_queue(event, body, created_at, next_at) VALUES ('org.moved', ?, 'x', 'x')",
+                     (json.dumps({"org": {"name": "Bo Example"}, "by": "ana@example.com"}),))
+        conn.execute("INSERT INTO hook_queue(event, body, created_at, next_at) VALUES ('org.moved', ?, 'x', 'x')",
+                     (json.dumps({"org": {"name": "Acme Studio"}}),))
+    finally:
+        conn.close()
     return {"acme": acme, "bo": bo, "bo2": bo2, "kim": kim, "met": met, "alone": alone}
 
 
@@ -58,18 +77,20 @@ def test_export_returns_every_contact_with_that_email_and_their_interactions(app
     assert (bo["phone"], bo["org_name"], bo["postal_address"]) == ("+351 900 000 000", "Acme Studio", "1 Example Street")
     assert bo["thanks"][0]["what"] == "Wine"
     assert [i["id"] for i in out["interactions"]] == [records["met"]["id"]]
+    [brief] = out["research"]
+    assert brief["contact_id"] == records["bo"]["id"] and "Zanzibarian" in json.dumps(brief["brief"])
     assert out["interactions"][0]["summary"] == "Bo said the budget is tight"
 
 
 def test_export_of_an_unknown_email_is_empty(app, records):
     c, _ = app
     assert c.get("/api/subject", params={"email": "nobody@example.com"}).json() == {
-        "email": "nobody@example.com", "contacts": [], "interactions": []}
+        "email": "nobody@example.com", "contacts": [], "interactions": [], "research": []}
 
 
 def test_erase_removes_personal_fields_and_interaction_text_and_leaves_a_line(app, records):
     c, db = app
-    r = c.post("/api/subject/erase", json={"email": "bo@example.com"})
+    r = c.post("/api/subject/erase", json={"email": "bo@example.com", "confirm": True})
     assert r.status_code == 200, r.text
     done = r.json()
     assert (done["contacts"], done["interactions"]) == (2, 1)
@@ -89,11 +110,18 @@ def test_erase_removes_personal_fields_and_interaction_text_and_leaves_a_line(ap
     assert records["bo"]["id"] not in [t["person"]["id"] for t in c.get("/api/thanks", params={"year": 2026}).json()]
     assert c.get("/api/search", params={"q": "budget"}).json() == []
     assert c.get("/api/search", params={"q": "Bo"}).json() == []
+    assert c.get("/api/search", params={"q": "Bo Example"}).json() == []
+    assert c.get("/api/search", params={"q": "Zanzibarian"}).json() == []   # the person's brief is gone
+    assert [h["kind"] for h in c.get("/api/search", params={"q": "Acme makes"}).json()] == ["research"]
     assert c.get("/api/subject", params={"email": "bo@example.com"}).json()["contacts"] == []
     conn = connect(db)
     try:
         [line] = [dict(r) for r in conn.execute("SELECT * FROM erasures")]
         assert tuple(conn.execute("SELECT what, note FROM thanks").fetchone()) == (None, None)
+        assert conn.execute("SELECT count(*) FROM research WHERE contact_id IS NOT NULL").fetchone()[0] == 0
+        assert conn.execute("SELECT count(*) FROM research").fetchone()[0] == 1
+        bodies = [r[0] for r in conn.execute("SELECT body FROM hook_queue")]
+        assert len(bodies) == 1 and "Bo Example" not in bodies[0]
     finally:
         conn.close()
     assert line["by"] == "ana@example.com" and line["at"] and (line["contacts"], line["interactions"]) == (2, 1)
@@ -104,7 +132,8 @@ def test_erase_removes_personal_fields_and_interaction_text_and_leaves_a_line(ap
 
 def test_erasing_nobody_changes_nothing(app, records):
     c, db = app
-    assert c.post("/api/subject/erase", json={"email": "nobody@example.com"}).json() == {"contacts": 0, "interactions": 0}
+    assert c.post("/api/subject/erase", json={"email": "nobody@example.com", "confirm": True}).json() == {
+        "contacts": 0, "interactions": 0, "research": 0}
     conn = connect(db)
     try:
         assert conn.execute("SELECT count(*) FROM erasures").fetchone()[0] == 0
@@ -115,7 +144,7 @@ def test_erasing_nobody_changes_nothing(app, records):
 def test_an_admins_token_may_export_and_erase(app, records):
     c, _ = app
     assert c.get("/api/subject", params={"email": "bo@example.com"}, headers=bearer("ines@example.com")).status_code == 200
-    r = c.post("/api/subject/erase", json={"email": "bo@example.com"}, headers=bearer("ines@example.com"))
+    r = c.post("/api/subject/erase", json={"email": "bo@example.com", "confirm": True}, headers=bearer("ines@example.com"))
     assert r.status_code == 200
 
 
@@ -132,7 +161,11 @@ def test_other_tokens_may_not(app, records, sub, agent):
 def test_erase_needs_x_binder_and_an_email(app, records):
     c, _ = app
     headers = {k: v for k, v in WRITE.items() if k != "x-binder"}
-    r = TestClient(c.app).post("/api/subject/erase", json={"email": "bo@example.com"}, headers=headers)
+    r = TestClient(c.app).post("/api/subject/erase", json={"email": "bo@example.com", "confirm": True}, headers=headers)
     assert r.status_code == 403
-    assert c.post("/api/subject/erase", json={"email": "  "}).status_code == 422
+    assert c.post("/api/subject/erase", json={"email": "  ", "confirm": True}).status_code == 422
+    for body in ({"email": "bo@example.com"}, {"email": "bo@example.com", "confirm": False}):
+        r = c.post("/api/subject/erase", json=body)
+        assert r.status_code == 422 and "confirm" in r.json()["detail"]
+    assert c.get("/api/subject", params={"email": "bo@example.com"}).json()["contacts"]   # nothing erased
     assert c.get("/api/subject", params={"email": "nope"}).status_code == 422

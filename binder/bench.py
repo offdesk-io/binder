@@ -2,7 +2,9 @@
 
 The board's format lives in Bench's core/todo.js and core/todo.py, so this
 module loads todo.py from a Bench checkout (BINDER_BENCH_CORE) rather than
-keeping a third copy. A task links to an organisation with `[lead:: <slug>]`.
+keeping a third copy. A task links to an organisation with `[lead:: <slug>]`, or
+with the generic reference `[ref:: binder:org/<slug>]` (Offdesk core step 9b), any
+number of them on a task.
 """
 
 import hashlib
@@ -22,6 +24,10 @@ TIMEOUT_S = 10
 # A tag Bench does not know is kept in `extra` as written: `[lead:: x]` or `` `lead:x` ``, any case.
 _LEAD_FIELD_RE = re.compile(r"^\[lead::\s*([^\]]*)\]$", re.I)
 _LEAD_CODE_RE = re.compile(r"^`lead:([^`]*)`$", re.I)
+# A reference, as a Bench from before references keeps it in `extra`, or as its `refs` holds it.
+_REF_FIELD_RE = re.compile(r"^\[ref::\s*([^\]]*)\]$", re.I)
+_REF_CODE_RE = re.compile(r"^`ref:([^`]*)`$", re.I)
+_ORG_REF_RE = re.compile(r"^binder:org/(\S+)$")
 _TODO_CACHE: Dict[str, ModuleType] = {}
 
 
@@ -106,9 +112,22 @@ class HttpSource:
             raise BenchError("Could not reach Bench: %s" % getattr(e, "reason", e))
 
 
-def lead_of(task: Any) -> str:
-    """The task's lead slug: its `lead` field once Bench knows the tag, until then the `[lead:: x]` or
-    `` `lead:x` `` kept in `extra`. The value is slugified the way organisations are, or "" when blank."""
+def _refs(task: Any) -> List[str]:
+    """The task's references as written: Bench's `refs` once it knows the tag, and any `[ref:: x]` or
+    `` `ref:x` `` an older Bench left in `extra`."""
+    out = [str(r).strip() for r in (getattr(task, "refs", None) or [])]
+    for raw in getattr(task, "extra", []) or []:
+        text = raw.strip()
+        m = _REF_FIELD_RE.match(text) or _REF_CODE_RE.match(text)
+        if m:
+            out.append(m.group(1).strip())
+    return [r for r in out if r]
+
+
+def leads_of(task: Any) -> List[str]:
+    """Every organisation the task points at, by slug, without repeats: its lead first (the `lead` field once
+    Bench knows the tag, until then the `[lead:: x]` or `` `lead:x` `` kept in `extra`), then each
+    `[ref:: binder:org/<slug>]` in the order written. Slugified the way organisations are."""
     value = getattr(task, "lead", "") or ""
     if not value.strip():
         for raw in getattr(task, "extra", []) or []:
@@ -117,7 +136,18 @@ def lead_of(task: Any) -> str:
             if m:
                 value = m.group(1)
                 break
-    return slugify(value.strip()) if value.strip() else ""
+    out: List[str] = []
+    for raw in [value] + [m.group(1) for m in (_ORG_REF_RE.match(r) for r in _refs(task)) if m]:
+        slug = slugify(raw.strip()) if raw.strip() else ""
+        if slug and slug not in out:
+            out.append(slug)
+    return out
+
+
+def lead_of(task: Any) -> str:
+    """The first organisation the task points at (leads_of()), or "" for none."""
+    found = leads_of(task)
+    return found[0] if found else ""
 
 
 def task_key(task: Any) -> str:
@@ -162,7 +192,8 @@ def _state(task: Any, finished: bool) -> str:
 
 
 def linked_tasks(todo: ModuleType, text: str) -> List[Dict[str, Any]]:
-    """Every top-level task with a lead tag, in board order. `done` is true only for finished work;
+    """Every top-level task with a lead tag or a reference to an organisation, in board order, under the first
+    organisation it points at (lead_of(): the cache holds one per task). `done` is true only for finished work;
     a cancelled task has `cancelled` set and `done` false."""
     out = []
     for t in todo.parse_doc(text):

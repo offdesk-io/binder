@@ -1,5 +1,7 @@
 """Every tool against an in-process Binder, through an in-process MCP client."""
 
+import json
+
 import pytest
 from mcp import Client
 
@@ -7,7 +9,7 @@ from conftest import meta, token
 
 pytestmark = pytest.mark.anyio
 
-READS = {"find", "org", "pipeline", "people"}
+READS = {"find", "org", "pipeline", "people", "ref"}
 WRITES = {"log", "next_step", "move"}
 
 
@@ -95,6 +97,31 @@ async def test_org_shows_the_record_contacts_and_last_five(server, acme):
 async def test_org_unknown(server):
     r = await call(server, "org", {"slug": "nope"})
     assert r.is_error and "nope" in text(r)
+
+
+async def test_ref_resolves_an_organisation_for_the_core(server, acme, monkeypatch):
+    monkeypatch.setenv("BINDER_WEB_URL", "https://binder.example.com/")
+    r = await call(server, "ref", {"kind": "org", "id": "acme-studio"})
+    assert not r.is_error, text(r)
+    got = json.loads(text(r))
+    assert got == {"title": "Acme Studio", "url": "https://binder.example.com/o/acme-studio",
+                   "summary": "Lead, stage lead; next: Send the deck, due 2026-12-01"}
+
+
+async def test_ref_of_an_unknown_record_is_missing_not_an_error(server, acme):
+    r = await call(server, "ref", {"kind": "org", "id": "nope"})
+    assert not r.is_error and json.loads(text(r)) == {"missing": True}
+
+
+async def test_ref_without_a_web_address_gives_no_link(server, acme, monkeypatch):
+    monkeypatch.delenv("BINDER_WEB_URL", raising=False)
+    got = json.loads(text(await call(server, "ref", {"kind": "org", "id": "acme-studio"})))
+    assert got["title"] == "Acme Studio" and got["url"] == ""
+
+
+async def test_ref_knows_only_organisations(server, acme):
+    r = await call(server, "ref", {"kind": "person", "id": "bo"})
+    assert r.is_error and "kind" in text(r)
 
 
 async def test_pipeline(server, direct, acme):

@@ -33,7 +33,9 @@ real research call and one real summarise call about a made-up company: it
 costs money and never runs in CI.
 
 Binder reads Bench's `work` board to show each organisation's tasks: those
-tagged `[lead:: <slug>]`. On the server it uses its own sign-in token,
+tagged `[lead:: <slug>]`, or carrying the Offdesk core's generic reference
+`[ref:: binder:org/<slug>]`. A task that points at several organisations shows
+under the first (its lead, else its first such reference). On the server it uses its own sign-in token,
 `BINDER_BENCH_TOKEN`, against `BINDER_BENCH_URL` (default
 `https://bench.offdesk.io`) and `BINDER_BENCH_BOARD` (default `work`), and
 parses the board with Bench's `core/todo.py` from `BINDER_BENCH_CORE`. For
@@ -51,8 +53,14 @@ write Binder through an MCP server that ships here, in `mcp/` (the
 `binder-mcp` package, Python 3.10 or newer, with `mcp` and `httpx` pinned to
 the core's versions). It never imports Binder: it calls Binder's HTTP API at
 `BINDER_URL` (default `http://127.0.0.1:8770`). Its tools are `find`, `org`,
-`pipeline` and `people` (reads) and `log`, `next_step` and `move` (writes, no
-deletes); the core names them `binder.find` and so on. `mcp/HOWTO.md` tells
+`pipeline`, `people` and `ref` (reads) and `log`, `next_step` and `move` (writes,
+no deletes); the core names them `binder.find` and so on. `ref` is the core's:
+it resolves a reference between modules, `binder:org/<slug>`, and answers with
+JSON, `{"title", "url", "summary"}` or `{"missing": true}`; its link is
+`<BINDER_WEB_URL>/o/<slug>`, from `BINDER_WEB_URL` in the tool's environment
+(none when unset). It includes Binder's base path when it has one: the Offdesk
+install, where Binder runs under `/binder` (`BINDER_BASE`), sets
+`https://os.offdesk.io/binder`, and the router's `o/:slug` sits under it. `mcp/HOWTO.md` tells
 the PA how to use them, and is copied into the core's install
 (`installs/offdesk/howto/binder.md`); change both together.
 
@@ -278,7 +286,7 @@ with microseconds; dates (`next_step_due`) are `YYYY-MM-DD`.
 - **Status change** (`/api/orgs/{id}/status-history`): `id`, `org_id`,
   `from_status`, `to_status`, `at`, `by_email`.
 - **Bench task** (`GET /api/orgs/{id}/work`, answering a **Work** record):
-  a task tagged `[lead:: <slug>]` with that organisation's slug. `task_key`,
+  a task tagged `[lead:: <slug>]` or `[ref:: binder:org/<slug>]` with that organisation's slug. `task_key`,
   `board`, `title`, `state` (`Done` for finished work, `Cancelled` for a
   cancelled one, otherwise the column it sits in), `done` (bool: finished work
   only), `cancelled` (bool: ticked and cancelled or archived in Bench), `done_on`

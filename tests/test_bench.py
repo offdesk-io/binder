@@ -149,6 +149,44 @@ def test_lead_of_reads_both_forms_whatever_the_case_and_slugifies(bench_core, li
     assert bench.lead_of(task) == expected
 
 
+@pytest.mark.parametrize("line, expected", [
+    ("- [ ] **E** [ref:: binder:org/acme-studio] `id:dd0005`", "acme-studio"),
+    ("- [ ] **F** `ref:binder:org/Birch-Co` `id:dd0006`", "birch-co"),
+    ("- [ ] **G** [ref:: calls:call/x-1] [ref:: binder:org/gamma] `id:dd0007`", "gamma"),
+    ("- [ ] **H** [lead:: acme-studio] [ref:: binder:org/gamma] `id:dd0008`", "acme-studio"),
+    ("- [ ] **I** [ref:: binder:person/ana] `id:dd0009`", ""),
+])
+def test_lead_of_reads_the_generic_reference_as_well(bench_core, line, expected):
+    todo = bench.load_todo(bench_core)
+    (task,) = todo.parse_doc("## 1. Leads\n\n### To do\n\n" + line + "\n")
+    assert bench.lead_of(task) == expected
+
+
+def test_leads_of_gives_every_organisation_a_task_points_at_once(bench_core):
+    todo = bench.load_todo(bench_core)
+    (task,) = todo.parse_doc("## 1. Leads\n\n### To do\n\n- [ ] **J** [lead:: acme-studio] [ref:: binder:org/gamma] "
+                             "[ref:: binder:org/acme-studio] [ref:: calls:call/x] `id:dd0010`\n")
+    assert bench.leads_of(task) == ["acme-studio", "gamma"]
+
+
+def test_a_task_found_only_by_its_reference_is_linked(bench_core):
+    todo = bench.load_todo(bench_core)
+    text = ("## 1. Leads\n\n### To do\n\n- [ ] **Joint pitch** [ref:: calls:call/x] [ref:: binder:org/gamma] "
+            "[ref:: binder:org/acme-studio] `id:dd0011`\n")
+    links = bench.linked_tasks(todo, text)
+    assert [(l["slug"], l["task_key"]) for l in links] == [("gamma", "dd0011")]
+
+
+class _OldTask:
+    """A task as a Bench todo.py from before references reads it: the tag left in `extra`."""
+    lead = ""
+    extra = ["[ref:: binder:org/acme-studio]"]
+
+
+def test_lead_of_reads_a_reference_an_older_bench_left_in_extra():
+    assert bench.lead_of(_OldTask()) == "acme-studio"
+
+
 def test_load_todo_is_cached_by_path(bench_core):
     assert bench.load_todo(bench_core) is bench.load_todo(bench_core + "/")
 

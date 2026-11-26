@@ -27,4 +27,7 @@ happened last time; and to write down what was just done.
   helped, suggest thanking them.
 - **No deletes.** Binder's tools never delete anything. If something should go, say so to the person
   and let them do it in Binder.
+- **Links from other modules.** A Bench task can point at an organisation with `binder:org/<slug>`; read
+  it with `binder.org` and that slug. `binder.ref` is how the core turns such a link into a name; you do
+  not need it.
 - Binder records every write as the person you act for, or as you when you work for the team.

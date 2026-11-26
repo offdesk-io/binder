@@ -16,6 +16,6 @@ async def test_it_starts_on_stdio_and_lists_its_tools():
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = (await session.list_tools()).tools
-            assert {t.name for t in tools} == {"find", "org", "pipeline", "people", "log", "next_step", "move"}
+            assert {t.name for t in tools} == {"find", "org", "pipeline", "people", "ref", "log", "next_step", "move"}
             r = await session.call_tool("find", {"query": "acme"}, meta={"offdesk/token": "a.b"})
             assert r.is_error and "Binder did not answer" in r.content[0].text

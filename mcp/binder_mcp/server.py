@@ -6,7 +6,14 @@ without one is refused here before Binder is reached. Every request carries `X-B
 asks of writes. Answers are short plain text for the model, never Binder's JSON in full; Binder's
 errors come back as tool errors with its own message.
 
-BINDER_URL is Binder's address (default http://127.0.0.1:8770, on the same machine as the core)."""
+BINDER_URL is Binder's address (default http://127.0.0.1:8770, on the same machine as the core). BINDER_WEB_URL is
+the address people open Binder at (https://binder.example.com), for the links `ref` gives; unset, it gives none.
+
+`ref` is for the core rather than the model: it resolves a reference between modules (`binder:org/<slug>`, core
+step 9b) and answers with a small JSON object, `{"title", "url", "summary"}`, or `{"missing": true}` when there is
+no such record."""
+
+import json
 
 import os
 import re
@@ -35,7 +42,11 @@ UPDATED_AT = {"type": "string", "minLength": 1,
 
 
 class Failed(Exception):
-    """A plain sentence for the model."""
+    """A plain sentence for the model, with Binder's status when it answered with one."""
+
+    def __init__(self, message: str, status: Optional[int] = None):
+        super().__init__(message)
+        self.status = status
 
 
 UNREADABLE = "Binder gave an answer this tool could not read. Try again later."
@@ -63,6 +74,12 @@ TOOLS = [
         {"query": {"type": "string", "description": "Only people whose name, role or organisation matches."}}, []),
         description="The key people: the connectors to thank and keep close, and each referrer's own person, "
                     "with when we last spoke to them."),
+    types.Tool(name="ref", annotations=READ, input_schema=_obj({
+        "kind": {"type": "string", "enum": ["org"], "description": "What the reference names: org."},
+        "id": {"type": "string", "minLength": 1, "description": "The record's id: an organisation's slug."}},
+        ["kind", "id"]),
+        description="What a reference to Binder names (binder:org/<slug>), as JSON for the Offdesk core: its "
+                    "title, a link and a one-line summary, or missing."),
     types.Tool(name="log", annotations=WRITE, input_schema=_obj({
         "slug": SLUG,
         "type": {"type": "string", "enum": TYPES},
@@ -136,7 +153,7 @@ class Binder:
             raise Failed("It changed since you read it; read it again with binder.org and use its new updated_at.")
         if r.status_code == 401:
             raise Failed("Binder refused the call: %s" % (detail or "not signed in"))
-        raise Failed(detail or "Binder answered %d" % r.status_code)
+        raise Failed(detail or "Binder answered %d" % r.status_code, status=r.status_code)
 
     async def org(self, slug: str) -> Dict[str, Any]:
         return await self.request("GET", "/api/orgs/by-slug/%s" % quote(slug, safe=""))
@@ -266,6 +283,24 @@ async def people(b: Binder, args: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+KIND_NAMES = {"lead": "Lead", "client": "Client", "partner": "Partner", "referrer": "Referrer"}
+
+
+async def ref(b: Binder, args: Dict[str, Any]) -> str:
+    try:
+        o = await b.org(args["id"])
+    except Failed as e:
+        if getattr(e, "status", None) == 404:
+            return json.dumps({"missing": True})
+        raise
+    web = os.environ.get("BINDER_WEB_URL", "").strip().rstrip("/")
+    summary = "%s, stage %s" % (KIND_NAMES.get(o["kind"], o["kind"]), o["status"])
+    if o.get("next_step"):
+        summary += "; " + _next(o)
+    return json.dumps({"title": o["name"], "url": "%s/o/%s" % (web, quote(o["slug"], safe="")) if web else "",
+                       "summary": _cut(summary, 200)})
+
+
 async def log(b: Binder, args: Dict[str, Any]) -> str:
     o = await b.org(args["slug"])
     body = {k: args[k] for k in ("type", "summary", "happened_at", "next_step", "next_step_due", "contact_ids")
@@ -295,7 +330,7 @@ async def move(b: Binder, args: Dict[str, Any]) -> str:
 
 
 HANDLERS: Dict[str, Callable[[Binder, Dict[str, Any]], Awaitable[str]]] = {
-    "find": find, "org": org, "pipeline": pipeline, "people": people,
+    "find": find, "org": org, "pipeline": pipeline, "people": people, "ref": ref,
     "log": log, "next_step": next_step, "move": move,
 }
 

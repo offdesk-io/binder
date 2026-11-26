@@ -58,7 +58,9 @@ no deletes); the core names them `binder.find` and so on. `ref` is the core's:
 it resolves a reference between modules, `binder:org/<slug>`, and answers with
 JSON, `{"title", "url", "summary"}` or `{"missing": true}`; its link is
 `<BINDER_WEB_URL>/o/<slug>`, from `BINDER_WEB_URL` in the tool's environment
-(none when unset). `mcp/HOWTO.md` tells
+(none when unset). It includes Binder's base path when it has one: the Offdesk
+install, where Binder runs under `/binder` (`BINDER_BASE`), sets
+`https://os.offdesk.io/binder`, and the router's `o/:slug` sits under it. `mcp/HOWTO.md` tells
 the PA how to use them, and is copied into the core's install
 (`installs/offdesk/howto/binder.md`); change both together.
 

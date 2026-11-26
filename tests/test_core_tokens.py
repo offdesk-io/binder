@@ -29,6 +29,16 @@ def make(claims, key=KEY) -> str:
     return body + "." + b64(hmac.new(key, body.encode(), hashlib.sha256).digest())
 
 
+# A PA turn's token may also name the teams of its sign-in, an optional claim Binder does not use.
+PERSON_TEAMS = ("eyJzdWIiOiJhbmFAZXhhbXBsZS5jb20iLCJhZ2VudCI6InBhIiwiZXhwIjoxMzAwLCJ0ZWFtcyI6WyJvZmZkZXNrIl19"
+                ".qoOGLP7X9KLqeFNhrCsvfJLTLbOqguQEKS5CFIonzf0")
+
+
+def test_a_core_token_naming_teams_verifies_and_the_teams_change_nothing():
+    claims = verify(KEY, PERSON_TEAMS, now=1001)
+    assert claims["sub"] == "ana@example.com" and claims["teams"] == ["offdesk"]
+
+
 def test_the_core_vectors_verify():
     assert verify(KEY, PERSON, now=1001) == {"sub": "ana@example.com", "agent": "pa", "exp": 1300}
     assert verify(KEY, AGENT, now=1300)["sub"] == "agent:digest"

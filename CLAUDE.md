@@ -41,6 +41,10 @@ The plans, each one spec → plan → build → review:
    person's data (`binder/api/subject.py`, migration 011), and the MCP
    server in `mcp/` with its how-to. The web is unchanged. Server steps are
    in the README, "The Offdesk core".
+10. References between modules (core step 9b), on `feature/binder-9b-refs`:
+   `binder.ref` in `mcp/` resolves `binder:org/<slug>` for the core, and the
+   Work section reads `[ref:: binder:org/<slug>]` as well as `[lead:: ]`
+   (`binder/bench.py`).
 
 ## Run and test
 
